@@ -1,0 +1,45 @@
+# Secrets: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Node / Nx (frontend)
+node_modules/
+dist/
+tmp/
+out-tsc/
+coverage/
+.angular/
+**/.nx/cache
+**/.nx/workspace-data
+**/.nx/polygraph
+**/.nx/self-healing
+**/.nx/migrate-runs
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Java / Maven (backend)
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+hs_err_pid*
+
+# IDEs
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+.factorypath
+.vscode/*
+!.vscode/extensions.json
+*.sublime-workspace
+.claude/settings.local.json
+.claude/worktrees/
+
+# OS
+.DS_Store
+Thumbs.db
