@@ -1,0 +1,70 @@
+.ui-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ui-field .ui-field__label {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ui-field .ui-field__required {
+  margin-inline-start: 2px;
+  color: var(--color-danger);
+}
+
+.ui-field .ui-field__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.ui-field .ui-field__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.ui-field .ui-field__error-icon {
+  flex: none;
+}
+
+/* The control is projected: encapsulation is off and every selector starts with .ui-field. */
+.ui-field .ui-control {
+  inline-size: 100%;
+  min-block-size: var(--control-height);
+  padding-block: 10px;
+  padding-inline: 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.ui-field textarea.ui-control {
+  min-block-size: 96px;
+  resize: block;
+}
+
+.ui-field .ui-control::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.ui-field .ui-control:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--color-text);
+  box-shadow: var(--focus-ring);
+}
+
+.ui-field--invalid .ui-control {
+  border-color: var(--color-danger);
+  border-width: 2px;
+}

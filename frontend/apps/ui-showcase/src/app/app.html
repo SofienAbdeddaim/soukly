@@ -1,0 +1,117 @@
+<main class="mx-auto flex max-w-6xl flex-col gap-12 px-4 py-8 md:px-8">
+  <header class="flex flex-wrap items-center justify-between gap-4">
+    <div class="flex flex-col gap-2">
+      <h1 class="text-4xl text-text">{{ t().title }}</h1>
+      <p class="text-text-muted">{{ t().intro }}</p>
+    </div>
+    <button
+      ui-button
+      variant="ghost"
+      type="button"
+      data-testid="toggle-direction"
+      lang="fr"
+      (click)="toggleDirection()"
+    >
+      {{ t().toggleDirection }}
+    </button>
+  </header>
+
+  <section class="flex flex-col gap-4" aria-labelledby="buttons-title">
+    <h2 id="buttons-title" class="text-2xl">{{ t().buttons }}</h2>
+    <div class="flex flex-wrap items-center gap-3 rounded-lg bg-surface p-6 shadow-card">
+      <button ui-button type="button">{{ t().primary }}</button>
+      <button ui-button variant="secondary" type="button">{{ t().secondary }}</button>
+      <button ui-button variant="ghost" type="button">{{ t().ghost }}</button>
+      <button ui-button size="lg" type="button">{{ t().large }}</button>
+      <button ui-button type="button" loading>{{ t().loading }}</button>
+      <button ui-button variant="secondary" type="button" loading>{{ t().loading }}</button>
+      <button ui-button type="button" disabled>{{ t().disabled }}</button>
+      <button ui-button variant="secondary" type="button">
+        <svg lucideCamera uiButtonIcon [size]="20" aria-hidden="true"></svg>
+        {{ t().withIcon }}
+      </button>
+      <button ui-button variant="ghost" type="button">
+        {{ t().next }}
+        <svg
+          lucideArrowRight
+          class="ui-flip-rtl"
+          [size]="20"
+          aria-hidden="true"
+          data-testid="arrow-icon"
+        ></svg>
+      </button>
+      <a ui-button variant="ghost" href="#cards-title">{{ t().link }}</a>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-4" aria-labelledby="fields-title">
+    <h2 id="fields-title" class="text-2xl">{{ t().fields }}</h2>
+    <div class="grid gap-6 rounded-lg bg-surface p-6 shadow-card md:grid-cols-2">
+      <ui-field [label]="t().titleLabel" [hint]="t().titleHint" required>
+        <input uiControl type="text" [placeholder]="t().titlePlaceholder" />
+      </ui-field>
+      <ui-field [label]="t().priceLabel" [error]="t().priceError" required>
+        <input uiControl type="text" inputmode="numeric" value="12,500" dir="ltr" />
+      </ui-field>
+      <ui-field [label]="t().categoryLabel">
+        <select uiControl>
+          <option value="">{{ t().categoryChoose }}</option>
+          @for (category of t().categories; track category) {
+          <option>{{ category }}</option>
+          }
+        </select>
+      </ui-field>
+      <ui-field [label]="t().descriptionLabel">
+        <textarea uiControl rows="3"></textarea>
+      </ui-field>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-4" aria-labelledby="cards-title">
+    <h2 id="cards-title" class="text-2xl">{{ t().cards }}</h2>
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5">
+      @for (listing of t().listings; track $index) {
+      <ui-listing-card
+        [title]="listing.title"
+        [price]="listing.price"
+        [city]="listing.city"
+        [dateLabel]="listing.date"
+        [typeLabel]="listing.type"
+        [imageUrl]="$index === 0 ? imageUrl : null"
+        href="#cards-title"
+        [favorite]="favorites()[$index]"
+        [favoriteLabel]="favorites()[$index] ? t().removeFavorite : t().favorite"
+        (favoriteToggle)="setFavorite($index, $event)"
+      />
+      }
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-4" aria-labelledby="skeletons-title">
+    <h2 id="skeletons-title" class="text-2xl">{{ t().skeletons }}</h2>
+    <div class="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5" aria-busy="true">
+      <ui-skeleton variant="card" />
+      <div class="flex flex-col gap-3 rounded-lg bg-surface p-6">
+        <ui-skeleton variant="block" blockSize="96px" />
+        <ui-skeleton />
+        <ui-skeleton inlineSize="70%" />
+        <ui-skeleton inlineSize="40%" />
+      </div>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-4" aria-labelledby="toasts-title">
+    <h2 id="toasts-title" class="text-2xl">{{ t().toasts }}</h2>
+    <div class="flex flex-wrap gap-3 rounded-lg bg-surface p-6 shadow-card">
+      <button ui-button variant="ghost" type="button" (click)="showToast('info')">
+        {{ t().showInfo }}
+      </button>
+      <button ui-button variant="ghost" type="button" (click)="showToast('success')">
+        {{ t().showSuccess }}
+      </button>
+      <button ui-button variant="ghost" type="button" (click)="showToast('error')">
+        {{ t().showError }}
+      </button>
+    </div>
+  </section>
+</main>

@@ -17,9 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "baseUrl": ".",
     "paths": {
-      "@soukly/*": ["libs/*/src/index.ts"]
+      "@soukly/*": ["./libs/*/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]

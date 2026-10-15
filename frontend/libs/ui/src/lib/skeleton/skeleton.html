@@ -1,0 +1,10 @@
+@if (variant() === 'card') {
+<div class="bone bone--media"></div>
+<div class="card-body">
+  <div class="bone bone--line"></div>
+  <div class="bone bone--line bone--short"></div>
+  <div class="bone bone--line bone--price"></div>
+</div>
+} @else {
+<div class="bone" [class.bone--line]="variant() === 'line'"></div>
+}

@@ -14,7 +14,9 @@ Ce dépôt unique contient deux racines de code :
 | Node.js | 24 LTS (`frontend/.nvmrc`) ; 22.12 minimum |
 | pnpm | 10.28.0 (`packageManager` dans `frontend/package.json`) ; npm et yarn ne sont pas utilisés |
 | Nx | 23.3.0 |
-| Angular (devkit, schematics) | 22.2.2 |
+| Angular (devkit, schematics, build, CLI) | 22.2.2 |
+| Angular (framework, CDK) | 22.2.3 |
+| Tailwind CSS | 4.3.3 |
 | angular-eslint | 22.6.0 |
 | TypeScript | 6.0.x |
 | Java | 21 |
@@ -39,7 +41,12 @@ pnpm nx run-many -t lint test build
 pnpm prettier --check .
 ```
 
-Le workspace ne contient encore aucune application ni librairie (voir SETUP-04 et SETUP-05). Les alias `@soukly/<lib>` sont prêts dans `tsconfig.base.json` (`libs/<lib>/src/index.ts`).
+| Projet | Rôle | Commandes |
+| --- | --- | --- |
+| `libs/ui` (`@soukly/ui`) | design system : tokens, thème Tailwind, polices, composants de base, règle de lint RTL ([README](frontend/libs/ui/README.md)) | `pnpm nx test ui`, `pnpm nx lint ui` |
+| `apps/ui-showcase` | page de vérification visuelle des composants en LTR et en RTL, jamais déployée | `pnpm nx serve ui-showcase` (http://localhost:4200), `pnpm nx test ui-showcase` (test axe) |
+
+Les alias `@soukly/<lib>` pointent vers `libs/<lib>/src/index.ts` (`tsconfig.base.json`).
 
 ### Backend
 

@@ -1,0 +1,4 @@
+/* Global styles of the design system: fonts, tokens, then the base layer. */
+@import './fonts.css';
+@import './tokens.css';
+@import './base.css';

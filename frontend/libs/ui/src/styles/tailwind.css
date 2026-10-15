@@ -1,0 +1,50 @@
+/*
+ * Tailwind CSS v4 "preset" of Soukly: v4 has no JavaScript preset any more, the theme is CSS.
+ * An app imports, in its global stylesheet and in this order:
+ *   @import 'tailwindcss';
+ *   @import '<path to>/libs/ui/src/styles/tailwind.css';
+ *   @import '<path to>/libs/ui/src/styles/soukly.css';
+ *
+ * The theme only references the CSS variables of tokens.css, never a literal value.
+ * "inline" makes utilities use var(--color-primary) directly and "reference" stops Tailwind
+ * from emitting its own copy of the variables, so tokens.css stays the single definition.
+ * Tailwind's default palette, fonts, radii and shadows are removed: only Soukly roles exist.
+ */
+@source '../lib';
+
+@theme inline reference {
+  --color-*: initial;
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-text: var(--color-text);
+  --color-text-muted: var(--color-text-muted);
+  --color-brand: var(--color-brand);
+  --color-on-brand: var(--color-on-brand);
+  --color-accent: var(--color-accent);
+  --color-on-accent: var(--color-on-accent);
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-on-primary: var(--color-on-primary);
+  --color-decorative: var(--color-decorative);
+  --color-danger: var(--color-danger);
+  --color-success: var(--color-success);
+  --color-transparent: transparent;
+  --color-current: currentcolor;
+
+  --font-*: initial;
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+
+  --radius-*: initial;
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-full: var(--radius-full);
+
+  --shadow-*: initial;
+  --shadow-card: var(--shadow-card);
+  --shadow-overlay: var(--shadow-overlay);
+}
