@@ -1,0 +1,19 @@
+<app-showcase-section
+  [heading]="t().cards"
+  panelClass="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-5"
+>
+  @for (listing of t().listings; track $index) {
+  <ui-listing-card
+    [title]="listing.title"
+    [price]="listing.price"
+    [city]="listing.city"
+    [dateLabel]="listing.date"
+    [typeLabel]="listing.type"
+    [imageUrl]="$index === 0 ? imageUrl : null"
+    href="#"
+    [favorite]="favorites()[$index]"
+    [favoriteLabel]="favorites()[$index] ? t().removeFavorite : t().favorite"
+    (favoriteToggle)="setFavorite($index, $event)"
+  />
+  }
+</app-showcase-section>

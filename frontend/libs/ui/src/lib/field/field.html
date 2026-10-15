@@ -1,0 +1,14 @@
+<label class="ui-field__label" [for]="controlId()">
+  {{ label() }} @if (required()) {
+  <span class="ui-field__required" aria-hidden="true">*</span>
+  }
+</label>
+<ng-content />
+@if (hint()) {
+<p class="ui-field__hint" [id]="hintId()">{{ hint() }}</p>
+} @if (invalid()) {
+<p class="ui-field__error" [id]="errorId()">
+  <svg lucideCircleAlert class="ui-field__error-icon" [size]="16" aria-hidden="true"></svg>
+  <span>{{ error() }}</span>
+</p>
+}

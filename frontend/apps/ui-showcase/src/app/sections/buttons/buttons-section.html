@@ -1,0 +1,24 @@
+<app-showcase-section [heading]="t().buttons">
+  <button ui-button type="button">{{ t().primary }}</button>
+  <button ui-button variant="secondary" type="button">{{ t().secondary }}</button>
+  <button ui-button variant="ghost" type="button">{{ t().ghost }}</button>
+  <button ui-button size="lg" type="button">{{ t().large }}</button>
+  <button ui-button type="button" loading>{{ t().loading }}</button>
+  <button ui-button variant="secondary" type="button" loading>{{ t().loading }}</button>
+  <button ui-button type="button" disabled>{{ t().disabled }}</button>
+  <button ui-button variant="secondary" type="button">
+    <svg lucideCamera uiButtonIcon [size]="20" aria-hidden="true"></svg>
+    {{ t().withIcon }}
+  </button>
+  <button ui-button variant="ghost" type="button">
+    {{ t().next }}
+    <svg
+      lucideArrowRight
+      class="ui-flip-rtl"
+      [size]="20"
+      aria-hidden="true"
+      data-testid="arrow-icon"
+    ></svg>
+  </button>
+  <a ui-button variant="ghost" href="#">{{ t().link }}</a>
+</app-showcase-section>

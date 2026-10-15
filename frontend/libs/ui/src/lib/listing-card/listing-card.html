@@ -1,0 +1,36 @@
+<article class="card">
+  <div class="card__media">
+    @if (imageUrl(); as url) {
+    <img class="card__image" [src]="url" alt="" loading="lazy" decoding="async" />
+    } @else {
+    <div class="card__placeholder" data-testid="listing-card-placeholder">
+      <svg lucideImage [size]="40" [strokeWidth]="1.5" aria-hidden="true"></svg>
+    </div>
+    } @if (typeLabel()) {
+    <span class="card__badge">{{ typeLabel() }}</span>
+    }
+    <button
+      type="button"
+      class="card__favorite"
+      [class.card__favorite--active]="favorite()"
+      [attr.aria-label]="favoriteLabel()"
+      [attr.aria-pressed]="favorite()"
+      (click)="toggleFavorite()"
+    >
+      <svg lucideHeart [size]="22" aria-hidden="true"></svg>
+    </button>
+  </div>
+  <div class="card__body">
+    <h3 class="card__title">
+      @if (href()) {
+      <a class="card__link" [href]="href()">{{ title() }}</a>
+      } @else { {{ title() }} }
+    </h3>
+    <p class="card__price"><bdi dir="ltr">{{ price() }}</bdi></p>
+    <p class="card__meta">
+      <span>{{ city() }}</span>
+      <span aria-hidden="true"> · </span>
+      <time [attr.datetime]="dateTime() ?? null">{{ dateLabel() }}</time>
+    </p>
+  </div>
+</article>

@@ -1,32 +1,32 @@
 ## Ticket
 
-<!-- ID et lien de la fiche, par exemple SETUP-03. Un ticket = une PR. -->
+<!-- Ticket ID and link, for example SETUP-03. One ticket = one PR. -->
 
-## Avant / Après
+## Before / After
 
-**Avant :**
+**Before:**
 
-**Après :**
+**After:**
 
-<!-- Pour le front : captures FR et AR (RTL). -->
+<!-- Front end: FR and AR (RTL) screenshots. -->
 
-## Comment tester
+## How to test
 
-<!-- Commandes et étapes pour vérifier la PR en local. -->
+<!-- Commands and steps to check the PR locally. -->
 
-## Écarts avec le ticket et points « à confirmer »
+## Deviations from the ticket and points to confirm
 
-<!-- Ce qui diffère de la fiche, et le résultat des vérifications dans la documentation officielle. -->
+<!-- What differs from the ticket, and the result of the checks in the official documentation. -->
 
 ## Definition of Done
 
-- [ ] Critères Gherkin du ticket vérifiés
-- [ ] Lint, tests et build verts en local pour ce qui est touché (commandes du README)
-- [ ] CI verte (`ci-ok`)
-- [ ] Textes dans les 3 langues (fr, ar, en) et rendu RTL vérifié, ou sans objet
-- [ ] États de chargement, vide, erreur et accessibilité traités, ou sans objet
-- [ ] Migrations Flyway compatibles avec la version précédente, ou sans objet
-- [ ] Contrats d'événements documentés dans `docs/events/`, ou sans objet
-- [ ] Aucun secret, jeton ni donnée personnelle dans le code ou les logs
-- [ ] README à jour si les commandes ou la configuration changent
-- [ ] Aucune modification hors périmètre
+- [ ] Ticket Gherkin criteria checked
+- [ ] Lint, tests and build green locally for what is touched (README commands)
+- [ ] CI green (`ci-ok`)
+- [ ] Texts in the 3 languages (fr, ar, en) and RTL rendering checked, or not applicable
+- [ ] Loading, empty, error states and accessibility handled, or not applicable
+- [ ] Flyway migrations compatible with the previous version, or not applicable
+- [ ] Event contracts documented in `docs/events/`, or not applicable
+- [ ] No secret, token or personal data in code or logs
+- [ ] README up to date if commands or configuration change
+- [ ] No out-of-scope change

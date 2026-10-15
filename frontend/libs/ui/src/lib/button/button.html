@@ -1,0 +1,6 @@
+@if (loading()) {
+<span class="ui-button__spinner" aria-hidden="true"></span>
+} @else {
+<span class="ui-button__icon"><ng-content select="[uiButtonIcon]" /></span>
+}
+<span class="ui-button__label"><ng-content /></span>

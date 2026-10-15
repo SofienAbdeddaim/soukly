@@ -1,33 +1,37 @@
 # Soukly
 
-Site de petites annonces (ventes et services) pour la Tunisie, en trois langues (fr par défaut, ar en RTL, en), avec publication automatique sur Facebook et Instagram.
+Classified ads site (sales and services) for Tunisia, in three languages (French by default, Arabic in RTL, English), with automatic publishing to Facebook and Instagram.
 
-Ce dépôt unique contient deux racines de code :
+This single repository holds two code roots:
 
-- `frontend/` : workspace Nx (pnpm) pour le shell et les micro frontends Angular (Native Federation).
-- `backend/` : projet Maven multi-module Java 21 / Spring Boot.
+- `frontend/`: Nx workspace (pnpm) for the Angular shell and micro frontends (Native Federation).
+- `backend/`: multi-module Maven project, Java 21 / Spring Boot.
 
-## Prérequis et versions figées
+All documentation, comments, commits and PR descriptions in this repository are written in English.
 
-| Outil | Version |
+## Prerequisites and pinned versions
+
+| Tool | Version |
 | --- | --- |
-| Node.js | 24 LTS (`frontend/.nvmrc`) ; 22.12 minimum |
-| pnpm | 10.28.0 (`packageManager` dans `frontend/package.json`) ; npm et yarn ne sont pas utilisés |
+| Node.js | 24 LTS (`frontend/.nvmrc`); 22.12 minimum |
+| pnpm | 10.28.0 (`packageManager` in `frontend/package.json`); npm and yarn are not used |
 | Nx | 23.3.0 |
-| Angular (devkit, schematics) | 22.2.2 |
+| Angular (devkit, schematics, build, CLI) | 22.2.2 |
+| Angular (framework, CDK) | 22.2.3 |
+| Tailwind CSS | 4.3.3 |
 | angular-eslint | 22.6.0 |
 | TypeScript | 6.0.x |
 | Java | 21 |
-| Maven | 3.9.16 via le Maven Wrapper (`backend/mvnw`) |
+| Maven | 3.9.16 through the Maven Wrapper (`backend/mvnw`) |
 | Spring Boot | 4.0.8 |
 | Spring Cloud | 2025.1.3 |
 
-Les versions de Nx et d'Angular sont figées (sans `^`). Aucune version milestone ou RC n'est utilisée.
+Nx and Angular versions are pinned (no `^`). No milestone or RC version is used.
 
-## Démarrage
+## Getting started
 
 ```bash
-cp .env.example .env   # jamais commité
+cp .env.example .env   # never committed
 ```
 
 ### Frontend
@@ -39,18 +43,23 @@ pnpm nx run-many -t lint test build
 pnpm prettier --check .
 ```
 
-Le workspace ne contient encore aucune application ni librairie (voir SETUP-04 et SETUP-05). Les alias `@soukly/<lib>` sont prêts dans `tsconfig.base.json` (`libs/<lib>/src/index.ts`).
+| Project | Role | Commands |
+| --- | --- | --- |
+| `libs/ui` (`@soukly/ui`) | design system: tokens, Tailwind theme, fonts, base components, RTL lint rule ([README](frontend/libs/ui/README.md)) | `pnpm nx test ui`, `pnpm nx lint ui` |
+| `apps/ui-showcase` | visual check page of the components in LTR and RTL, never deployed | `pnpm nx serve ui-showcase` (http://localhost:4200), `pnpm nx test ui-showcase` (axe test) |
+
+The `@soukly/<lib>` aliases point to `libs/<lib>/src/index.ts` (`tsconfig.base.json`).
 
 ### Backend
 
 ```bash
 cd backend
-./mvnw -B verify                                  # compile et teste common et les 4 services
-./mvnw -pl listing-service spring-boot:run        # lance un service
+./mvnw -B verify                                  # compiles and tests common and the 4 services
+./mvnw -pl listing-service spring-boot:run        # runs one service
 curl http://localhost:8082/actuator/health        # {"status":"UP",...}
 ```
 
-`spring-boot:run` sur un service utilise `common` depuis le dépôt Maven local : lancer `./mvnw install -DskipTests` une fois avant, ou après une modification de `common`.
+`spring-boot:run` on a service uses `common` from the local Maven repository: run `./mvnw install -DskipTests` once before, and again after changing `common`.
 
 | Service | Port | Package |
 | --- | --- | --- |
@@ -58,98 +67,98 @@ curl http://localhost:8082/actuator/health        # {"status":"UP",...}
 | `user-service` | 8081 | `com.soukly.user` |
 | `listing-service` | 8082 | `com.soukly.listing` |
 | `social-publisher` | 8083 | `com.soukly.social` |
-| `common` (librairie) | - | `com.soukly.common` |
+| `common` (library) | - | `com.soukly.common` |
 
-Chaque service expose `GET /actuator/health`.
+Every service exposes `GET /actuator/health`.
 
-## Infrastructure locale
+## Local infrastructure
 
-Docker (avec Compose v2) suffit : PostgreSQL, Redpanda (API Kafka), Garage (stockage S3) et Mailpit (SMTP de test) démarrent avec une seule commande, sans autre installation.
+Docker (with Compose v2) is enough: PostgreSQL, Redpanda (Kafka API), Garage (S3 storage) and Mailpit (test SMTP) start with one command, with nothing else to install.
 
 ```bash
-cp .env.example .env                           # une fois ; valeurs factices à remplacer (change-me)
-docker compose up -d --wait                    # démarre l'infrastructure et attend qu'elle soit saine
-./scripts/infra-check.sh                       # vérifie bases, Kafka, S3, CORS, idempotence, profil tools
-docker compose --profile tools up -d --wait    # ajoute Redpanda Console et pgAdmin
-docker compose down                            # arrête, en conservant les données
-docker compose down -v                         # arrête et supprime les données (réinitialisation complète)
+cp .env.example .env                           # once; dummy values to replace (change-me)
+docker compose up -d --wait                    # starts the infrastructure and waits until it is healthy
+./scripts/infra-check.sh                       # checks databases, Kafka, S3, CORS, idempotence, tools profile
+docker compose --profile tools up -d --wait    # adds Redpanda Console and pgAdmin
+docker compose down                            # stops, keeping the data
+docker compose down -v                         # stops and deletes the data (full reset)
 ```
 
-Sans `.env`, Compose refuse de démarrer et nomme la variable manquante. Au premier démarrage, le service one-shot `garage-init` crée le layout Garage, importe la clé `soukly-app` (ID et secret lus dans `.env`), crée le bucket `soukly-listings`, lui donne les droits lecture et écriture, puis applique la règle CORS. Il peut être relancé sans effet de bord : `docker compose run --rm garage-init`.
+Without `.env`, Compose refuses to start and names the missing variable. On first start, the one-shot `garage-init` service creates the Garage layout, imports the `soukly-app` key (ID and secret read from `.env`), creates the `soukly-listings` bucket, grants it read and write, then applies the CORS rule. It can be re-run safely: `docker compose run --rm garage-init`.
 
-| Service | Port(s) hôte | Usage | Image |
+| Service | Host port(s) | Use | Image |
 | --- | --- | --- | --- |
-| `postgres` | 5432 | base de données | `postgres:18.6` |
-| `redpanda` | 19092 (Kafka externe), 9644 (admin) | broker | `redpandadata/redpanda:v26.2.4` |
-| `garage` | 3900 (API S3), 3903 (admin) | stockage photos | `dxflrs/garage:v2.4.1` |
-| `mailpit` | 1025 (SMTP), 8025 (interface web) | emails de test | `axllent/mailpit:v1.31.5` |
-| `garage-init` | - | initialisation one-shot de Garage | `amazon/aws-cli:2.38.0` |
-| `redpanda-console` | 8090 | interface Kafka (profil `tools`) | `redpandadata/console:v3.12.0` |
-| `pgadmin` | 5050 | interface Postgres (profil `tools`) | `dpage/pgadmin4:9.18.0` |
+| `postgres` | 5432 | database | `postgres:18.6` |
+| `redpanda` | 19092 (external Kafka), 9644 (admin) | broker | `redpandadata/redpanda:v26.2.4` |
+| `garage` | 3900 (S3 API), 3903 (admin) | photo storage | `dxflrs/garage:v2.4.1` |
+| `mailpit` | 1025 (SMTP), 8025 (web UI) | test emails | `axllent/mailpit:v1.31.5` |
+| `garage-init` | - | one-shot Garage setup | `amazon/aws-cli:2.38.0` |
+| `redpanda-console` | 8090 | Kafka UI (`tools` profile) | `redpandadata/console:v3.12.0` |
+| `pgadmin` | 5050 | Postgres UI (`tools` profile) | `dpage/pgadmin4:9.18.0` |
 
-Toutes les images sont épinglées sur une version exacte publiée en `linux/amd64` et `linux/arm64` (vérifié le 2026-10-14). PostgreSQL est au dernier patch de la version 18 (`18.6`).
+Every image is pinned to an exact version published for `linux/amd64` and `linux/arm64` (checked on 2026-10-14). PostgreSQL is on the latest patch of version 18 (`18.6`).
 
-- **PostgreSQL** : une base et un utilisateur par service (`soukly_user` / `user_svc`, `soukly_listing` / `listing_svc`, `soukly_social` / `social_svc`), créés au premier démarrage par `infra/postgres/init/01-databases.sh`. Chaque utilisateur ne peut se connecter qu'à sa base. Le script ne s'exécute que sur un volume vide : après un changement de mot de passe dans `.env`, réinitialiser avec `down -v`.
-- **Redpanda** : un nœud en mode `dev-container`. Les services lancés hors Docker utilisent `localhost:19092`, les conteneurs `redpanda:9092`. Les topics sont créés automatiquement à la première utilisation, en local uniquement.
-- **Garage** : accès path-style (`http://localhost:3900/soukly-listings/<clé>`), région `garage`. L'ID de clé suit le format Garage (`GK` + 24 caractères hexadécimaux) et le secret fait 64 caractères hexadécimaux. Garage réserve `PutBucketCors` au propriétaire du bucket : `garage-init` donne ce droit à la clé le temps de l'appel, puis le retire.
-- **Mailpit** : SMTP sur `localhost:1025` sans authentification, emails visibles sur http://localhost:8025.
+- **PostgreSQL**: one database and one user per service (`soukly_user` / `user_svc`, `soukly_listing` / `listing_svc`, `soukly_social` / `social_svc`), created on first start by `infra/postgres/init/01-databases.sh`. Each user can only connect to its own database. The script only runs on an empty volume: after changing a password in `.env`, reset with `down -v`.
+- **Redpanda**: one node in `dev-container` mode. Services running outside Docker use `localhost:19092`, containers use `redpanda:9092`. Topics are created automatically on first use, locally only.
+- **Garage**: path-style access (`http://localhost:3900/soukly-listings/<key>`), region `garage`. The key ID follows the Garage format (`GK` + 24 hex characters) and the secret has 64 hex characters. Garage restricts `PutBucketCors` to the bucket owner: `garage-init` grants this right to the key for the duration of the call, then removes it.
+- **Mailpit**: SMTP on `localhost:1025` without authentication, emails visible at http://localhost:8025.
 
-Budget mémoire hors profil `tools` : 2,1 Go au maximum (postgres 512 Mo, redpanda 1,2 Go, garage 256 Mo, mailpit 128 Mo).
+Memory budget without the `tools` profile: 2.1 GB at most (postgres 512 MB, redpanda 1.2 GB, garage 256 MB, mailpit 128 MB).
 
 ## CI
 
-Le workflow `.github/workflows/ci.yml` s'exécute sur chaque PR vers `main` et sur chaque push sur `main`. Il ne déploie rien, ne construit aucune image Docker et n'utilise aucun secret : le jeton est en lecture seule, y compris pour les PR ouvertes depuis un fork.
+The `.github/workflows/ci.yml` workflow runs on every PR to `main` and every push to `main`. It deploys nothing, builds no Docker image and uses no secret: the token is read-only, including for PRs opened from a fork.
 
-| Job | Ce qu'il vérifie | Quand |
+| Job | What it checks | When |
 | --- | --- | --- |
-| `changes` | quels dossiers ont changé (`dorny/paths-filter`) | toujours |
-| `frontend` | `pnpm install --frozen-lockfile`, `pnpm nx affected -t lint test build`, `pnpm prettier --check .` | si `frontend/**` ou `.github/**` a changé |
-| `backend` | `./mvnw -B verify` (tests d'intégration Testcontainers compris) | si `backend/**` ou `.github/**` a changé |
-| `ci-ok` | agrège les résultats : rouge si un job exécuté a échoué, vert si tous ont réussi ou ont été ignorés | toujours |
+| `changes` | which folders changed (`dorny/paths-filter`) | always |
+| `frontend` | `pnpm install --frozen-lockfile`, `pnpm nx affected -t lint test build`, `pnpm prettier --check .` | if `frontend/**` or `.github/**` changed |
+| `backend` | `./mvnw -B verify` (Testcontainers integration tests included) | if `backend/**` or `.github/**` changed |
+| `ci-ok` | aggregates the results: red if a job that ran failed, green if all succeeded or were skipped | always |
 
-Une PR qui ne touche que la documentation ignore `frontend` et `backend`, et `ci-ok` reste vert. Un nouveau commit sur une PR annule l'exécution en cours. `nx affected` compare la PR à sa branche cible : seuls les projets touchés sont vérifiés.
+A PR that only touches documentation skips `frontend` and `backend`, and `ci-ok` stays green. A new commit on a PR cancels the running execution. `nx affected` compares the PR with its target branch: only the touched projects are checked.
 
-Reproduire la CI en local :
+Reproduce the CI locally:
 
 ```bash
 cd frontend && pnpm install --frozen-lockfile && pnpm nx run-many -t lint test build && pnpm prettier --check .
-cd backend && ./mvnw -B verify                                         # Docker requis pour Testcontainers
-docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12        # vérifie les workflows
+cd backend && ./mvnw -B verify                                         # Docker required for Testcontainers
+docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12        # checks the workflows
 ```
 
-Dependabot (`.github/dependabot.yml`) propose chaque semaine les mises à jour npm, Maven, GitHub Actions et Docker, 5 PR ouvertes au maximum par écosystème.
+Dependabot (`.github/dependabot.yml`) proposes npm, Maven, GitHub Actions and Docker updates every week, with at most 5 open PRs per ecosystem.
 
-### Réglages manuels de la protection de `main`
+### Manual settings for `main` protection
 
-À appliquer par le mainteneur dans *Settings > Rules* (ou *Branches*), la CI ne les modifie pas :
+To be applied by the maintainer in *Settings > Rules* (or *Branches*); the CI does not change them:
 
-1. Exiger une pull request avant de merger (pas de push direct sur `main`).
-2. Exiger le check `ci-ok` (le seul obligatoire : un job ignoré ne bloque jamais une PR) et des branches à jour.
-3. Bloquer les force-push.
-4. Interdire la suppression de `main`.
-5. Dans *Settings > Actions > General* : `GITHUB_TOKEN` en lecture seule par défaut, et approbation requise pour les workflows des contributeurs externes.
+1. Require a pull request before merging (no direct push to `main`).
+2. Require the `ci-ok` check (the only required one: a skipped job never blocks a PR) and up-to-date branches.
+3. Block force pushes.
+4. Forbid deleting `main`.
+5. In *Settings > Actions > General*: `GITHUB_TOKEN` read-only by default, and approval required for workflows from outside contributors.
 
 ## Structure
 
 ```
 soukly/
 ├── README.md
-├── CLAUDE.md          # consignes pour Claude Code
-├── .editorconfig      # 2 espaces (front), 4 espaces (Java), LF, UTF-8
-├── .env.example       # variables attendues, valeurs factices
-├── .github/           # CI (workflows/ci.yml), Dependabot, modèle de PR
-├── docker-compose.yml # infrastructure locale
-├── infra/             # postgres/init (bases par service), garage (config et init)
+├── CLAUDE.md          # instructions for Claude Code
+├── .editorconfig      # 2 spaces (front), 4 spaces (Java), LF, UTF-8
+├── .env.example       # expected variables, dummy values
+├── .github/           # CI (workflows/ci.yml), Dependabot, PR template
+├── docker-compose.yml # local infrastructure
+├── infra/             # postgres/init (one database per service), garage (config and init)
 ├── scripts/           # infra-check.sh
-├── frontend/          # workspace Nx (pnpm)
-└── backend/           # Maven : common, gateway, user-service, listing-service, social-publisher
+├── frontend/          # Nx workspace (pnpm)
+└── backend/           # Maven: common, gateway, user-service, listing-service, social-publisher
 ```
 
 ## Conventions
 
-- Code, identifiants, packages et noms de fichiers en **anglais** (`Listing`, pas `Annonce`).
-- Commits au format [Conventional Commits](https://www.conventionalcommits.org/) avec l'ID du ticket en scope : `chore(SETUP-01): init monorepo`, `feat(ANN-04): add photo step`.
-- Branches `<type>/<ID>-<slug>`, par exemple `chore/SETUP-01-init-monorepo`.
-- Un ticket = une PR vers `main` ; pas de push direct sur `main`.
-- Aucun secret dans le dépôt (public) : seul `.env.example` est commité.
-- Aucun déploiement automatique.
+- Everything in **English**: code, identifiers, packages, file names (`Listing`, not `Annonce`), comments, documentation, commits and PR descriptions. Only user-facing copy is translated (fr, ar, en).
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with the ticket ID as scope: `chore(SETUP-01): init monorepo`, `feat(ANN-04): add photo step`.
+- Branches `<type>/<ID>-<slug>`, for example `chore/SETUP-01-init-monorepo`.
+- One ticket = one PR to `main`; no direct push to `main`.
+- No secret in the (public) repository: only `.env.example` is committed.
+- No automatic deployment.

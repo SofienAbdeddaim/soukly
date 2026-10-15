@@ -1,0 +1,18 @@
+<span class="ui-toast__icon" aria-hidden="true">
+  @switch (toast().type) { @case ('success') {
+  <svg lucideCircleCheck [size]="20"></svg>
+  } @case ('error') {
+  <svg lucideCircleAlert [size]="20"></svg>
+  } @default {
+  <svg lucideInfo [size]="20"></svg>
+  } }
+</span>
+<p class="ui-toast__message">{{ toast().message }}</p>
+<button
+  type="button"
+  class="ui-toast__close"
+  [attr.aria-label]="toast().closeLabel"
+  (click)="service.dismiss(toast().id)"
+>
+  <svg lucideX [size]="20" aria-hidden="true"></svg>
+</button>

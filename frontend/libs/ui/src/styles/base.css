@@ -1,0 +1,113 @@
+/*
+ * Light reset, typography and focus. Logical properties only (RTL): see libs/ui/README.md.
+ * Wrapped in the "base" cascade layer so Tailwind utilities still win over it.
+ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: start;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin-block: 0;
+    line-height: 1.2;
+  }
+
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+  }
+
+  h3,
+  h4 {
+    font-weight: 600;
+  }
+
+  p {
+    margin-block: 0;
+  }
+
+  a {
+    color: var(--color-primary);
+  }
+
+  a:hover {
+    color: var(--color-primary-hover);
+  }
+
+  img,
+  svg {
+    display: block;
+    max-inline-size: 100%;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* Visible focus for every interactive element, keyboard only. */
+  :focus-visible {
+    outline: 2px solid transparent; /* kept for forced-colors mode, where box-shadow is removed */
+    outline-offset: 2px;
+    box-shadow: var(--focus-ring);
+  }
+
+  /* Prices and numbers stay left-to-right inside right-to-left text. */
+  .ui-ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* Directional icons (arrows, chevrons) point the other way in RTL. */
+  .ui-flip-rtl:dir(rtl) {
+    transform: scaleX(-1);
+  }
+
+  .ui-visually-hidden {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

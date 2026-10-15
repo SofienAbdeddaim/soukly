@@ -1,0 +1,65 @@
+/*
+ * Soukly design tokens, ambiance A "Warm market" (Marché chaleureux).
+ *
+ * Two levels:
+ *   1. raw palette (--soukly-*): never used by a component or by Tailwind;
+ *   2. semantic tokens (roles): the only values components and the Tailwind theme read.
+ *
+ * This is the only file of the workspace that may contain colour literals. A dark mode (V2)
+ * redefines the semantic tokens under [data-theme='dark'] without touching any component.
+ * Contrast ratios of every text/background pair are listed in libs/ui/README.md.
+ */
+:root {
+  /* 1. Raw palette */
+  --soukly-indigo-900: #2a2140;
+  --soukly-indigo-600: #6a5f7e;
+  --soukly-indigo-400: #8a7f9c;
+  --soukly-cream-50: #fff8ec;
+  --soukly-cream-100: #fff3dd;
+  --soukly-cream-200: #f0e3cc;
+  --soukly-white: #ffffff;
+  --soukly-saffron-400: #f2b33d;
+  --soukly-terracotta-700: #b4441f;
+  --soukly-terracotta-800: #8e3416;
+  --soukly-terracotta-500: #e0602f;
+  --soukly-red-700: #a8201a;
+  --soukly-green-700: #1b6e45;
+  --soukly-indigo-900-alpha-8: rgb(42 33 64 / 8%);
+  --soukly-indigo-900-alpha-16: rgb(42 33 64 / 16%);
+
+  /* 2. Semantic tokens */
+  --color-bg: var(--soukly-cream-50);
+  --color-surface: var(--soukly-white);
+  --color-surface-muted: var(--soukly-cream-100);
+  --color-border: var(--soukly-cream-200);
+  --color-border-strong: var(--soukly-indigo-400);
+  --color-text: var(--soukly-indigo-900);
+  --color-text-muted: var(--soukly-indigo-600);
+  --color-brand: var(--soukly-indigo-900);
+  --color-on-brand: var(--soukly-cream-50);
+  --color-accent: var(--soukly-saffron-400);
+  --color-on-accent: var(--soukly-indigo-900);
+  --color-primary: var(--soukly-terracotta-700);
+  --color-primary-hover: var(--soukly-terracotta-800);
+  --color-on-primary: var(--soukly-white);
+  --color-decorative: var(--soukly-terracotta-500);
+  --color-danger: var(--soukly-red-700);
+  --color-success: var(--soukly-green-700);
+
+  --font-display: 'Lalezar', 'Rubik', system-ui, sans-serif;
+  --font-body: 'Rubik', system-ui, sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 8px 24px var(--soukly-indigo-900-alpha-8);
+  --shadow-overlay: 0 12px 32px var(--soukly-indigo-900-alpha-16);
+
+  /* Double ring: a background-coloured gap, then an indigo ring, visible on light and dark surfaces. */
+  --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text);
+
+  --control-height: 44px;
+  --control-height-lg: 52px;
+}

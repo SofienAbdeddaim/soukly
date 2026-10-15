@@ -1,0 +1,78 @@
+:host {
+  display: block;
+}
+
+:host(.ui-skeleton--block) {
+  block-size: 120px;
+}
+
+:host(.ui-skeleton--card) {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.bone {
+  block-size: 100%;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-surface) 50%,
+    transparent 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 50% 100%;
+  animation: ui-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.bone--line {
+  block-size: 1em;
+  border-radius: var(--radius-sm);
+}
+
+.bone--media {
+  aspect-ratio: 4 / 3;
+  block-size: auto;
+  border-radius: 0;
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.bone--short {
+  inline-size: 60%;
+}
+
+.bone--price {
+  inline-size: 40%;
+  block-size: 1.25em;
+}
+
+@keyframes ui-skeleton-shimmer {
+  from {
+    background-position: -100% 0;
+  }
+
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* The shimmer runs the other way in RTL. */
+:host(:dir(rtl)) .bone {
+  animation-direction: reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bone {
+    animation: none;
+    background-image: none;
+  }
+}
