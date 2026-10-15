@@ -1,0 +1,115 @@
+name: CI
+
+# Validates every pull request to main and every push to main: lint, tests and build.
+# No deployment, no Docker image, no secret. Never use pull_request_target or workflow_run here.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Cancel superseded runs on pull requests only; every push to main runs to completion.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read # read-only: paths-filter lists the PR files through the REST API
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v7
+      # dorny/paths-filter rather than a git diff script: one declarative filter list, PR base and
+      # push "before" commit handled for us, and widely used. Pinned on a full commit SHA.
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - '.github/**'
+            backend:
+              - 'backend/**'
+              - '.github/**'
+
+  frontend:
+    name: frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read # read-only: nx-set-shas looks up the last successful run on main
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # nx affected compares against the PR base branch
+      # pnpm version comes from "packageManager" in frontend/package.json.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: frontend/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - uses: nrwl/nx-set-shas@afb73a62d26e41464e9254689e1fd6122ee683c1 # v5.0.1
+        with:
+          main-branch-name: main
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm nx affected -t lint test build
+      - run: pnpm prettier --check .
+
+  backend:
+    name: backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/**/pom.xml
+      # Integration tests use Testcontainers with the Docker engine of the runner.
+      - run: ./mvnw -B verify
+
+  ci-ok:
+    name: ci-ok
+    # The only required check: green when every job that ran succeeded or was skipped.
+    needs: [changes, frontend, backend]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check job results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            case "$result" in
+              success|skipped) ;;
+              *) echo "::error::A CI job ended with '$result'"; exit 1 ;;
+            esac
+          done
