@@ -10,7 +10,7 @@ export const FEDERATION = new InjectionToken<NativeFederationResult | null>('FED
 /**
  * Loads an exposed module of a remote. If the first attempt fails (remote stopped when the shell
  * started, manifest unreadable, remote restarted since), the manifest is read again and the remote
- * entry registered again before a second attempt, so "Réessayer" works without reloading the page.
+ * entry registered again before a second attempt, so "Try again" works without reloading the page.
  */
 @Injectable({ providedIn: 'root' })
 export class RemoteModuleLoader {

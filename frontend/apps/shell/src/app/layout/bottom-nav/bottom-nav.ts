@@ -1,47 +1,58 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideHouse, LucidePlus, LucideSearch, LucideUser } from '@lucide/angular';
+import { LocalePathPipe } from '@soukly/i18n';
 
 /**
- * Bottom navigation bar below 768px, as on mockup A mobile. "Déposer" is highlighted.
- * "Favoris" is hidden while no V1 ticket covers favourites. i18n: SETUP-07
+ * Bottom navigation bar below 768px, as on mockup A mobile. "Post" is highlighted.
+ * "Favourites" is hidden while no V1 ticket covers favourites.
  */
 @Component({
   selector: 'app-bottom-nav',
-  imports: [RouterLink, RouterLinkActive, LucideHouse, LucidePlus, LucideSearch, LucideUser],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    TranslocoPipe,
+    LocalePathPipe,
+    LucideHouse,
+    LucidePlus,
+    LucideSearch,
+    LucideUser,
+  ],
   template: `
     <nav
-      aria-label="Navigation principale"
+      [attr.aria-label]="'bottom-nav.label' | transloco"
       class="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-surface md:hidden"
       data-testid="bottom-nav"
     >
       <ul class="m-0 grid list-none grid-cols-4 p-0">
         <li>
           <a
-            routerLink="/"
+            [routerLink]="'/' | localePath"
             routerLinkActive="text-primary font-semibold"
             ariaCurrentWhenActive="page"
             [routerLinkActiveOptions]="{ exact: true }"
             class="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-text-muted no-underline"
           >
             <svg lucideHouse [size]="22" aria-hidden="true"></svg>
-            Accueil
+            {{ 'bottom-nav.home' | transloco }}
           </a>
         </li>
         <li>
           <a
-            routerLink="/search"
+            [routerLink]="'/search' | localePath"
             routerLinkActive="text-primary font-semibold"
             ariaCurrentWhenActive="page"
             class="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-text-muted no-underline"
           >
             <svg lucideSearch [size]="22" aria-hidden="true"></svg>
-            Recherche
+            {{ 'bottom-nav.search' | transloco }}
           </a>
         </li>
         <li>
           <a
-            routerLink="/publish/new"
+            [routerLink]="'/publish/new' | localePath"
             routerLinkActive="font-semibold"
             ariaCurrentWhenActive="page"
             class="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-text no-underline"
@@ -52,18 +63,18 @@ import { LucideHouse, LucidePlus, LucideSearch, LucideUser } from '@lucide/angul
             >
               <svg lucidePlus [size]="24" [strokeWidth]="2.4" aria-hidden="true"></svg>
             </span>
-            Déposer
+            {{ 'bottom-nav.publish' | transloco }}
           </a>
         </li>
         <li>
           <a
-            routerLink="/account"
+            [routerLink]="'/account' | localePath"
             routerLinkActive="text-primary font-semibold"
             ariaCurrentWhenActive="page"
             class="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-text-muted no-underline"
           >
             <svg lucideUser [size]="22" aria-hidden="true"></svg>
-            Compte
+            {{ 'bottom-nav.account' | transloco }}
           </a>
         </li>
       </ul>

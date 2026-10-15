@@ -1,0 +1,37 @@
+{
+  "brand": "Soukly",
+  "skip-link": "Skip to content",
+  "header": {
+    "login": "Log in",
+    "post-listing": "Post an ad",
+    "language-switcher": "Change language"
+  },
+  "bottom-nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "search": "Search",
+    "publish": "Post",
+    "account": "Account"
+  },
+  "footer": {
+    "label": "Useful links",
+    "help": "Help",
+    "terms": "Terms of use",
+    "privacy": "Privacy"
+  },
+  "static-page": {
+    "coming-soon": "The content of this page will be available soon."
+  },
+  "errors": {
+    "not-found": {
+      "title": "Page not found",
+      "text": "This address does not match any Soukly page. It may have been moved.",
+      "home": "Back to the home page"
+    },
+    "remote-unavailable": {
+      "title": "This page is temporarily unavailable",
+      "text": "We cannot load it. Check your connection, then try again.",
+      "retry": "Try again"
+    }
+  }
+}

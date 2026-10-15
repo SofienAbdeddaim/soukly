@@ -1,10 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
+import { shellI18nTesting } from './testing/shell-i18n-testing';
 
 describe('App (shell)', () => {
   it('renders the layout landmarks and the bottom bar', async () => {
-    TestBed.configureTestingModule({ imports: [App], providers: [provideRouter([])] });
+    TestBed.configureTestingModule({
+      imports: [App, shellI18nTesting()],
+      providers: [provideRouter([])],
+    });
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const element = fixture.nativeElement as HTMLElement;

@@ -1,25 +1,29 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { LocalePathPipe } from '@soukly/i18n';
 
-/** Indigo footer of ambiance A. Its pages are empty in V1. i18n: SETUP-07 */
+/** Indigo footer of ambiance A. Its pages are empty in V1. */
 @Component({
   selector: 'app-footer',
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe, LocalePathPipe],
   template: `
     <footer class="bg-brand text-on-brand">
       <div
         class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-4 py-8 text-sm md:px-6"
       >
-        <span class="font-display text-2xl leading-none text-accent">Soukly</span>
-        <nav aria-label="Liens utiles">
+        <span class="font-display text-2xl leading-none text-accent">{{
+          'brand' | transloco
+        }}</span>
+        <nav [attr.aria-label]="'footer.label' | transloco">
           <ul class="m-0 flex list-none flex-wrap gap-x-8 gap-y-2 p-0">
             @for (link of links; track link.path) {
               <li>
                 <a
-                  [routerLink]="link.path"
+                  [routerLink]="link.path | localePath"
                   class="inline-flex min-h-11 items-center text-on-brand underline underline-offset-4"
                 >
-                  {{ link.label }}
+                  {{ link.labelKey | transloco }}
                 </a>
               </li>
             }
@@ -32,8 +36,8 @@ import { RouterLink } from '@angular/router';
 })
 export class Footer {
   protected readonly links = [
-    { path: '/help', label: 'Aide' },
-    { path: '/terms', label: "Conditions d'utilisation" },
-    { path: '/privacy', label: 'Confidentialité' },
+    { path: '/help', labelKey: 'footer.help' },
+    { path: '/terms', labelKey: 'footer.terms' },
+    { path: '/privacy', labelKey: 'footer.privacy' },
   ];
 }
