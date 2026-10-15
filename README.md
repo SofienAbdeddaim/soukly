@@ -72,7 +72,7 @@ pnpm nx serve mfe-publish    # 4203
 ```
 
 - A remote can also run alone (for example `pnpm nx serve mfe-catalog`, then http://localhost:4202): it mounts its routes under the language prefix with a minimal layout, without the shell.
-- `apps/shell/public/federation.manifest.json` maps each remote name to the URL of its `remoteEntry.json`. The shell reads it before Angular starts, so another environment changes the URLs by replacing that file, without rebuilding the shell. The repository only holds the local version: the dev and prod manifests are produced by the deployment workflows (DEP), never committed with real addresses.
+- `apps/shell/public/federation.manifest.json` maps each remote name to the URL of its `remoteEntry.json`. The shell reads it before Angular starts, so another environment changes the URLs by replacing that file, without rebuilding the shell. The repository only holds the local version: in the `soukly-frontend` image, the manifest is written at container startup from `PUBLIC_BASE_URL` (see [Docker images](#docker-images)), never committed with real addresses.
 - Shared dependencies (Angular, rxjs, `@angular/cdk`, `@lucide/angular`, `@soukly/*`) are declared once in `frontend/federation.shared.mjs` and used by every `federation.config.mjs`: each one is a singleton with a strict version, so the browser downloads Angular once.
 - Every page URL starts with its language: `/fr/account/login`, `/ar/publish/new`. Each remote ships its translations in `public/i18n/<scope>/`, downloaded from the remote itself when one of its pages is shown.
 - If a remote does not load, the content area shows an error with a retry button; the header and the footer stay.
@@ -228,6 +228,48 @@ To be applied by the maintainer in *Settings > Rules* (or *Branches*); the CI do
 4. Forbid deleting `main`.
 5. In *Settings > Actions > General*: `GITHUB_TOKEN` read-only by default, and approval required for workflows from outside contributors.
 
+## Docker images
+
+Five images, one per deployable part, published on GHCR as `ghcr.io/<owner>/soukly-<name>:<full commit sha>` for `linux/amd64` and `linux/arm64`. There is no `latest` tag; version tags (`v1.2.0`) come with `deploy-prod`. An image holds nothing specific to an environment: the same image runs in dev, then in prod, configured by environment variables.
+
+| Image | Built from | Port | Notes |
+| --- | --- | --- | --- |
+| `soukly-gateway` | `backend/Dockerfile`, `SERVICE=gateway` | 8080 | |
+| `soukly-user-service` | `backend/Dockerfile`, `SERVICE=user-service` | 8081 | |
+| `soukly-listing-service` | `backend/Dockerfile`, `SERVICE=listing-service` | 8082 | `libvips-tools` (photos, ANN-02) |
+| `soukly-social-publisher` | `backend/Dockerfile`, `SERVICE=social-publisher` | 8083 | `libvips-tools` (Instagram images, SOC-05) |
+| `soukly-frontend` | `frontend/Dockerfile` | 8080 | shell and the 3 remotes, served by Caddy |
+
+- **Java images**: built with JDK 21, run on the Temurin 21 JRE (Ubuntu 24.04 "noble"), base images pinned by tag and digest. The jar is split into Spring Boot layers (dependencies, loader, snapshot dependencies, application), so a new commit usually only changes the last layer. The process runs as UID `10001` with `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75`.
+- **Front-end image**: Caddy on port 8080, as UID `10001`. The shell is served at `/`, each remote at `/remotes/<mfe>/`. Every application route (`/fr/...`, `/ar/listings/123`, `/r/<ref>`, `/oauth/<network>/callback`) gets the shell's `index.html`; `/remotes/**` and a missing file with an extension get a `404`. `index.html`, `federation.manifest.json`, `remoteEntry.json` and the translations are `no-cache`; files with a content hash in their name are cached for a year (`immutable`).
+- **`PUBLIC_BASE_URL` (required by the front-end image)**: at startup the container writes `/federation.manifest.json` from it, for example `"mfe-account": "https://dev.example.test/remotes/mfe-account/remoteEntry.json"`. Without it, the container stops and names the missing variable.
+
+### Building locally
+
+```bash
+docker build -f backend/Dockerfile --build-arg SERVICE=listing-service --build-arg SERVICE_PORT=8082 \
+  --build-arg EXTRA_PACKAGES=libvips-tools -t soukly-listing-service:local backend
+docker build -t soukly-frontend:local frontend
+
+docker run --rm -p 8082:8082 --env-file .env.example soukly-listing-service:local   # GET /actuator/health
+docker run --rm -p 8080:8080 -e PUBLIC_BASE_URL=http://localhost:8080 soukly-frontend:local
+```
+
+`gateway` and `user-service` take no `EXTRA_PACKAGES`. Behind a network that blocks Maven Central, add `--build-arg MAVEN_MIRROR_URL=<mirror>` to the Java builds. Lint the Dockerfiles with `docker run --rm -v "$PWD:/repo" -w /repo hadolint/hadolint:v2.15.1 hadolint backend/Dockerfile frontend/Dockerfile`.
+
+### Publishing with `build-images`
+
+`.github/workflows/build-images.yml` only runs by hand (*Actions > build-images > Run workflow*) or when called by `deploy-dev` and `deploy-prod`; never on a push, a PR or a schedule.
+
+- Inputs: `ref` (branch, tag or SHA, default `main`) and `force` (default `false`). Output for a calling workflow: `sha`, the full commit SHA.
+- An image already published for that SHA is not rebuilt (unless `force`); when all 5 exist, the run succeeds with "Images already present".
+- Each image is built on a native runner per architecture (`ubuntu-24.04` and `ubuntu-24.04-arm`, free on public repositories, no QEMU), pushed by digest, then assembled into one multi-architecture tag whose platforms are checked. A `verify` job then runs every image on both architectures (non-root user, `vips` present only in `listing-service` and `social-publisher`), and the job summary lists each image with its status (built or reused) and size.
+- Authentication with `GITHUB_TOKEN` (`packages: write`) only; no other secret.
+
+### Making the packages public (once)
+
+GHCR creates a package as **private** the first time it is pushed. After the first `build-images` run, for each of the 5 `soukly-*` packages: *GitHub profile > Packages > soukly-<name> > Package settings > Danger zone > Change visibility > Public*. The VM then pulls the images without credentials. The `org.opencontainers.image.source` label links each package to this repository.
+
 ## Structure
 
 ```
@@ -236,7 +278,7 @@ soukly/
 ├── CLAUDE.md          # instructions for Claude Code
 ├── .editorconfig      # 2 spaces (front), 4 spaces (Java), LF, UTF-8
 ├── .env.example       # expected variables, dummy values
-├── .github/           # CI (workflows/ci.yml), Dependabot, PR template
+├── .github/           # CI (workflows/ci.yml), images (workflows/build-images.yml), Dependabot, PR template
 ├── docker-compose.yml # local infrastructure
 ├── infra/             # postgres/init (one database per service), garage (config and init)
 ├── scripts/           # infra-check.sh
@@ -251,4 +293,4 @@ soukly/
 - Branches `<type>/<ID>-<slug>`, for example `chore/SETUP-01-init-monorepo`.
 - One ticket = one PR to `main`; no direct push to `main`.
 - No secret in the (public) repository: only `.env.example` is committed.
-- No automatic deployment.
+- No automatic deployment and no automatic image build.
