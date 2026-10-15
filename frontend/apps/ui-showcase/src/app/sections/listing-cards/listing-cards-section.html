@@ -5,9 +5,10 @@
   @for (listing of t().listings; track $index) {
   <ui-listing-card
     [title]="listing.title"
-    [price]="listing.price"
+    [price]="(listing.price | price) + listing.unit"
     [city]="listing.city"
-    [dateLabel]="listing.date"
+    [dateLabel]="createdAt(listing.hoursAgo) | relativeTime"
+    [dateTime]="createdAt(listing.hoursAgo)"
     [typeLabel]="listing.type"
     [imageUrl]="$index === 0 ? imageUrl : null"
     href="#"

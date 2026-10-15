@@ -15,7 +15,10 @@ import { LucideHeart, LucideImage } from '@lucide/angular';
 })
 export class UiListingCard {
   readonly title = input.required<string>();
-  /** Formatted price, for example "1 250 DT"; always rendered left-to-right. */
+  /**
+   * Formatted price (`price` pipe of @soukly/i18n), for example "1 250 DT" or "1.250 د.ت.":
+   * isolated from the surrounding text, in the direction of its own first letter.
+   */
   readonly price = input.required<string>();
   readonly city = input.required<string>();
   /** Human date, for example "2 h ago". */
