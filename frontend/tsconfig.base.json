@@ -18,8 +18,10 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "paths": {
-      "@soukly/ui": ["./libs/ui/src/index.ts"]
-    }
+      "@soukly/ui": ["./libs/ui/src/index.ts"],
+      "@soukly/i18n": ["./libs/i18n/src/index.ts"]
+    },
+    "resolveJsonModule": true
   },
   "exclude": ["node_modules", "tmp"]
 }
