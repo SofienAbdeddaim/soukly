@@ -74,6 +74,8 @@ jobs:
       # Browser of the Playwright end-to-end tests (version from the lockfile), with its system libraries.
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm nx affected -t lint test build e2e
+      # Every translation scope has the same keys in fr, ar and en (fast, so always on every app).
+      - run: pnpm nx run-many -t i18n-check
       - run: pnpm prettier --check .
 
   backend:
