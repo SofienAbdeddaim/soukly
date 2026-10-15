@@ -71,7 +71,9 @@ jobs:
         with:
           main-branch-name: main
       - run: pnpm install --frozen-lockfile
-      - run: pnpm nx affected -t lint test build
+      # Browser of the Playwright end-to-end tests (version from the lockfile), with its system libraries.
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm nx affected -t lint test build e2e
       - run: pnpm prettier --check .
 
   backend:

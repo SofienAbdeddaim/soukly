@@ -1,0 +1,20 @@
+{
+  "name": "shell-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/shell-e2e/src",
+  "tags": ["type:e2e"],
+  "implicitDependencies": ["shell", "mfe-account", "mfe-catalog", "mfe-publish"],
+  "targets": {
+    "e2e": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/shell-e2e",
+        "command": "playwright test -c playwright.config.mts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  }
+}
