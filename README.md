@@ -94,6 +94,68 @@ curl http://localhost:8082/actuator/health        # {"status":"UP",...}
 
 Every service exposes `GET /actuator/health`.
 
+## Gateway
+
+The front end only calls the gateway (`http://localhost:8080`, Spring Cloud Gateway on WebFlux). It routes to the services, applies CORS, checks the JWT, adds `X-Request-Id`, limits the authentication endpoints and answers its own errors in `application/problem+json`.
+
+### Routes
+
+The `/api` prefix is removed before forwarding: `GET /api/listings/42` reaches `listing-service` as `GET /listings/42`.
+
+| Incoming path | Target service | Variable (local default) |
+| --- | --- | --- |
+| `/api/users/**` | `user-service` | `USER_SERVICE_URL` (`http://localhost:8081`) |
+| `/api/listings/**` | `listing-service` | `LISTING_SERVICE_URL` (`http://localhost:8082`) |
+| `/api/social/**` | `social-publisher` | `SOCIAL_SERVICE_URL` (`http://localhost:8083`) |
+
+### Access policy
+
+The whitelist lives in a single class, `gateway/.../security/PublicPaths.java`. Everything not listed needs a valid JWT.
+
+| Access | Paths |
+| --- | --- |
+| Public | `POST /api/users/register`, `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/verify-email`, `POST /api/users/password/**`, `GET /api/listings/**`, `GET /actuator/health` |
+| JWT required | everything else, for example `POST/PUT/PATCH/DELETE /api/listings/**`, `/api/users/me/**`, `/api/social/**` |
+
+- **JWT**: RS256 only (`none`, HS256 and any other algorithm are rejected); signature checked with the public keys of the `user-service` JWKS (`USER_SERVICE_JWKS_URI`), cached and fetched again when a token carries an unknown `kid` (key rotation); `exp` with a 30 s clock skew; `iss` equal to `JWT_ISSUER`. No secret is shared between services.
+- Missing or invalid token on a protected path: `401`, `WWW-Authenticate: Bearer`, and the request never reaches the service. On a public path the token is not checked and is forwarded as is.
+- The `Authorization` header is forwarded unchanged; the services validate it again themselves (AUTH and ANN tickets). The gateway adds no identity header.
+- **CORS**: exact origins from `CORS_ALLOWED_ORIGINS` (never `*`, the gateway refuses to start otherwise), credentials allowed, methods `GET, POST, PUT, PATCH, DELETE, OPTIONS`, headers `Authorization, Content-Type, Accept-Language, X-Request-Id`, `X-Request-Id` exposed, preflight cached 1 h.
+- **Correlation**: the client's `X-Request-Id` is kept when it is a safe identifier (letters, digits, `.`, `_`, `-`, 128 characters at most), otherwise the gateway generates a UUID. It is forwarded to the service, returned in the response and written in the logs and error bodies.
+- **Rate limit**: `POST /api/users/login` and `POST /api/users/register`, `RATE_LIMIT_AUTH_PER_MINUTE` requests per minute and per IP (10 by default), then `429` with `Retry-After`. In memory, for a single gateway instance. `X-Forwarded-For` is only read when the connection comes from `GATEWAY_TRUSTED_PROXIES` (the reverse proxy, set by DEP); otherwise the connection IP is used.
+- **Service down**: `503` when the service refuses the connection or does not accept it within `GATEWAY_CONNECT_TIMEOUT_MS` (2 s); `504` when it does not answer within `GATEWAY_RESPONSE_TIMEOUT` (10 s).
+- **Logs**: one line per request (`com.soukly.gateway.access`: method, path without query string, status, duration, `requestId`), never headers, cookies or bodies.
+
+### Error format
+
+Every error is `application/problem+json` (RFC 9457), built by `com.soukly.common.error.ProblemDetails` in `common` so the services return the same format:
+
+```json
+{
+  "type": "urn:soukly:problem:unauthorized",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "A valid bearer token is required.",
+  "instance": "/api/listings",
+  "requestId": "4f0b7a8e-2c1d-4e57-9a43-0c5f1e8b9d21"
+}
+```
+
+`type` is a URN (`urn:soukly:problem:<slug>`), so no domain is hard-coded. Generic errors use the HTTP reason as slug (`not-found`, `too-many-requests`, `service-unavailable`); a service defines its own slugs for business errors with `ProblemDetails.type("email-taken")`. Clients branch on `type` or `status`, never on `title` or `detail`.
+
+### Trying it locally
+
+```bash
+cd backend
+./mvnw install -DskipTests                       # once
+./mvnw -pl gateway spring-boot:run               # 8080
+./mvnw -pl listing-service spring-boot:run       # 8082, in another terminal
+curl -i http://localhost:8080/actuator/health    # 200, X-Request-Id in the response
+curl -i -X POST http://localhost:8080/api/listings   # 401 problem+json
+```
+
+The integration tests (`gateway/src/test`) play `user-service` (with its JWKS), `listing-service` and a stopped `social-publisher` with local fake servers, and sign tokens with RSA keys generated during the test run (no key is committed).
+
 ## Local infrastructure
 
 Docker (with Compose v2) is enough: PostgreSQL, Redpanda (Kafka API), Garage (S3 storage) and Mailpit (test SMTP) start with one command, with nothing else to install.
