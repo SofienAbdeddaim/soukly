@@ -96,6 +96,39 @@ Toutes les images sont épinglées sur une version exacte publiée en `linux/amd
 
 Budget mémoire hors profil `tools` : 2,1 Go au maximum (postgres 512 Mo, redpanda 1,2 Go, garage 256 Mo, mailpit 128 Mo).
 
+## CI
+
+Le workflow `.github/workflows/ci.yml` s'exécute sur chaque PR vers `main` et sur chaque push sur `main`. Il ne déploie rien, ne construit aucune image Docker et n'utilise aucun secret : le jeton est en lecture seule, y compris pour les PR ouvertes depuis un fork.
+
+| Job | Ce qu'il vérifie | Quand |
+| --- | --- | --- |
+| `changes` | quels dossiers ont changé (`dorny/paths-filter`) | toujours |
+| `frontend` | `pnpm install --frozen-lockfile`, `pnpm nx affected -t lint test build`, `pnpm prettier --check .` | si `frontend/**` ou `.github/**` a changé |
+| `backend` | `./mvnw -B verify` (tests d'intégration Testcontainers compris) | si `backend/**` ou `.github/**` a changé |
+| `ci-ok` | agrège les résultats : rouge si un job exécuté a échoué, vert si tous ont réussi ou ont été ignorés | toujours |
+
+Une PR qui ne touche que la documentation ignore `frontend` et `backend`, et `ci-ok` reste vert. Un nouveau commit sur une PR annule l'exécution en cours. `nx affected` compare la PR à sa branche cible : seuls les projets touchés sont vérifiés.
+
+Reproduire la CI en local :
+
+```bash
+cd frontend && pnpm install --frozen-lockfile && pnpm nx run-many -t lint test build && pnpm prettier --check .
+cd backend && ./mvnw -B verify                                         # Docker requis pour Testcontainers
+docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12        # vérifie les workflows
+```
+
+Dependabot (`.github/dependabot.yml`) propose chaque semaine les mises à jour npm, Maven, GitHub Actions et Docker, 5 PR ouvertes au maximum par écosystème.
+
+### Réglages manuels de la protection de `main`
+
+À appliquer par le mainteneur dans *Settings > Rules* (ou *Branches*), la CI ne les modifie pas :
+
+1. Exiger une pull request avant de merger (pas de push direct sur `main`).
+2. Exiger le check `ci-ok` (le seul obligatoire : un job ignoré ne bloque jamais une PR) et des branches à jour.
+3. Bloquer les force-push.
+4. Interdire la suppression de `main`.
+5. Dans *Settings > Actions > General* : `GITHUB_TOKEN` en lecture seule par défaut, et approbation requise pour les workflows des contributeurs externes.
+
 ## Structure
 
 ```
@@ -104,6 +137,7 @@ soukly/
 ├── CLAUDE.md          # consignes pour Claude Code
 ├── .editorconfig      # 2 espaces (front), 4 espaces (Java), LF, UTF-8
 ├── .env.example       # variables attendues, valeurs factices
+├── .github/           # CI (workflows/ci.yml), Dependabot, modèle de PR
 ├── docker-compose.yml # infrastructure locale
 ├── infra/             # postgres/init (bases par service), garage (config et init)
 ├── scripts/           # infra-check.sh
