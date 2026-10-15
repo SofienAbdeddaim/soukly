@@ -1,0 +1,54 @@
+# Caddy configuration of the front-end image (DEP-01). Plain HTTP on 8080: HTTPS is terminated by
+# the shared edge Caddy of the VM (DEP-02).
+#
+#   /                         shell (/srv/shell), index.html for every application route
+#   /remotes/<mfe>/           remotes (/srv/remotes/<mfe>), never index.html: 404 if absent
+#   /federation.manifest.json written at startup by entrypoint.sh (/srv/runtime)
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:8080 {
+	encode zstd gzip
+	header -Server
+
+	# Files with a content hash in their name never change: chunk-XXXXXXXX.js, main-XXXXXXXX.js,
+	# styles-XXXXXXXX.css, media/*-XXXXXXXX.woff2 (Angular), _angular_core.XXXXXXXXXX.js (federation).
+	@hashed path_regexp -[A-Z0-9]{8}\.(js|css|woff2)$|\.[A-Za-z0-9_-]{10}\.js$
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	# Everything else is revalidated: index.html, the manifests, remoteEntry.json and the
+	# translations keep their name from one version to the next.
+	@revalidate not path_regexp -[A-Z0-9]{8}\.(js|css|woff2)$|\.[A-Za-z0-9_-]{10}\.js$
+	header @revalidate Cache-Control "no-cache"
+
+	handle /federation.manifest.json {
+		root * /srv/runtime
+		file_server
+	}
+
+	@remotes path /remotes /remotes/*
+	handle @remotes {
+		root * /srv
+		file_server
+	}
+
+	handle {
+		root * /srv/shell
+		# Application routes (/fr/..., /ar/listings/123, /r/8F3C2K9A, /oauth/facebook/callback):
+		# no file of that name and no extension in the last segment. A missing file stays a 404.
+		@app {
+			not file
+			not path_regexp \.[^/]*$
+		}
+		rewrite @app /index.html
+		file_server
+	}
+
+	# Errors are never cached, even for a path that looks hashed.
+	handle_errors {
+		header Cache-Control "no-store"
+		respond "{err.status_code} {err.status_text}"
+	}
+}
