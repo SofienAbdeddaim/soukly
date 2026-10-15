@@ -1,65 +1,35 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DOCUMENT,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
-import { LucideArrowRight, LucideCamera } from '@lucide/angular';
-import {
-  ToastService,
-  UiButton,
-  UiField,
-  UiFieldControl,
-  UiListingCard,
-  UiSkeleton,
-  UiToastType,
-} from '@soukly/ui';
-import { LABELS, ShowcaseLang } from './labels';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ShowcaseHeader } from './layout/showcase-header/showcase-header';
+import { ButtonsSection } from './sections/buttons/buttons-section';
+import { FieldsSection } from './sections/fields/fields-section';
+import { ListingCardsSection } from './sections/listing-cards/listing-cards-section';
+import { SkeletonsSection } from './sections/skeletons/skeletons-section';
+import { ToastsSection } from './sections/toasts/toasts-section';
 
 /**
- * Single page that shows every component of libs/ui in all its states. The toggle switches
- * `dir` and `lang` on <html> (ltr/fr <-> rtl/ar). Development tool only, never deployed.
+ * Single page that shows every component of libs/ui in all its states, one section per
+ * component. Development tool only, never deployed.
  */
 @Component({
   selector: 'app-root',
   imports: [
-    LucideArrowRight,
-    LucideCamera,
-    UiButton,
-    UiField,
-    UiFieldControl,
-    UiListingCard,
-    UiSkeleton,
+    ShowcaseHeader,
+    ButtonsSection,
+    FieldsSection,
+    ListingCardsSection,
+    SkeletonsSection,
+    ToastsSection,
   ],
-  templateUrl: './app.html',
+  template: `
+    <main class="mx-auto flex max-w-6xl flex-col gap-12 px-4 py-8 md:px-8">
+      <app-showcase-header />
+      <app-buttons-section />
+      <app-fields-section />
+      <app-listing-cards-section />
+      <app-skeletons-section />
+      <app-toasts-section />
+    </main>
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class App {
-  private readonly document = inject(DOCUMENT);
-  private readonly toasts = inject(ToastService);
-
-  protected readonly lang = signal<ShowcaseLang>('fr');
-  protected readonly t = computed(() => LABELS[this.lang()]);
-  protected readonly favorites = signal<boolean[]>([false, true, false]);
-  protected readonly imageUrl = 'sample-listing.webp';
-
-  protected toggleDirection(): void {
-    const lang: ShowcaseLang = this.lang() === 'fr' ? 'ar' : 'fr';
-    this.lang.set(lang);
-    const html = this.document.documentElement;
-    html.lang = lang;
-    html.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  }
-
-  protected setFavorite(index: number, value: boolean): void {
-    this.favorites.update((favorites) => favorites.map((f, i) => (i === index ? value : f)));
-  }
-
-  protected showToast(type: UiToastType): void {
-    const t = this.t();
-    const message = { info: t.infoMessage, success: t.successMessage, error: t.errorMessage }[type];
-    this.toasts.show({ type, message, closeLabel: t.close });
-  }
-}
+export class App {}

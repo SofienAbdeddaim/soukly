@@ -18,16 +18,16 @@ export class UiListingCard {
   /** Formatted price, for example "1 250 DT"; always rendered left-to-right. */
   readonly price = input.required<string>();
   readonly city = input.required<string>();
-  /** Human date, for example "il y a 2 h". */
+  /** Human date, for example "2 h ago". */
   readonly dateLabel = input.required<string>();
   /** Machine date for the `time` element (ISO 8601). */
   readonly dateTime = input<string>();
-  /** Listing type badge, for example "Vente" or "Service". */
+  /** Listing type badge, for example "Sale" or "Service". */
   readonly typeLabel = input<string>();
   readonly href = input<string>();
   readonly imageUrl = input<string | null>();
   readonly favorite = input(false, { transform: booleanAttribute });
-  /** Accessible name of the favourite button, for example "Ajouter aux favoris". */
+  /** Accessible name of the favourite button, for example "Add to favourites". */
   readonly favoriteLabel = input.required<string>();
 
   readonly favoriteToggle = output<boolean>();

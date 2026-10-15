@@ -17,7 +17,7 @@ export type UiToastType = 'info' | 'success' | 'error';
 export interface UiToastOptions {
   type?: UiToastType;
   message: string;
-  /** Accessible name of the close button, for example "Fermer". */
+  /** Accessible name of the close button, for example "Close". */
   closeLabel: string;
   /** Milliseconds before the toast closes on its own; 0 keeps it open. Default: 5000. */
   duration?: number;

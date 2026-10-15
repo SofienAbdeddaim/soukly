@@ -16,7 +16,7 @@ let nextFieldId = 0;
  * Field wrapper for a native `input`, `textarea` or `select` marked with `uiControl`:
  *
  * ```html
- * <ui-field label="Titre" hint="10 caractères minimum" [error]="titleError()" required>
+ * <ui-field label="Title" hint="At least 10 characters" [error]="titleError()" required>
  *   <input uiControl type="text" />
  * </ui-field>
  * ```

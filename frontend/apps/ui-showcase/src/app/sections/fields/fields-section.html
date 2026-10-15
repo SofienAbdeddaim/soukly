@@ -1,0 +1,22 @@
+<app-showcase-section
+  [heading]="t().fields"
+  panelClass="grid gap-6 rounded-lg bg-surface p-6 shadow-card md:grid-cols-2"
+>
+  <ui-field [label]="t().titleLabel" [hint]="t().titleHint" required>
+    <input uiControl type="text" [placeholder]="t().titlePlaceholder" />
+  </ui-field>
+  <ui-field [label]="t().priceLabel" [error]="t().priceError" required>
+    <input uiControl type="text" inputmode="numeric" value="12,500" dir="ltr" />
+  </ui-field>
+  <ui-field [label]="t().categoryLabel">
+    <select uiControl>
+      <option value="">{{ t().categoryChoose }}</option>
+      @for (category of t().categories; track category) {
+      <option>{{ category }}</option>
+      }
+    </select>
+  </ui-field>
+  <ui-field [label]="t().descriptionLabel">
+    <textarea uiControl rows="3"></textarea>
+  </ui-field>
+</app-showcase-section>
