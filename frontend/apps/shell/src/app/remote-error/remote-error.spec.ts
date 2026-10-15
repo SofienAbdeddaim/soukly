@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { SHELL_ROUTES } from '../shell-routes';
+import { shellI18nTesting } from '../testing/shell-i18n-testing';
 import { RemoteError } from './remote-error';
 
 describe('RemoteError', () => {
@@ -8,7 +9,7 @@ describe('RemoteError', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [RemoteError],
+      imports: [RemoteError, shellI18nTesting()],
       providers: [provideRouter([]), { provide: SHELL_ROUTES, useValue: createRoutes }],
     });
   });
@@ -30,13 +31,13 @@ describe('RemoteError', () => {
     const router = TestBed.inject(Router);
     const resetConfig = vi.spyOn(router, 'resetConfig');
     const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
-    vi.spyOn(router, 'url', 'get').mockReturnValue('/publish/new');
+    vi.spyOn(router, 'url', 'get').mockReturnValue('/fr/publish/new');
     const fixture = TestBed.createComponent(RemoteError);
 
     fixture.componentInstance['retry']();
 
     expect(createRoutes).toHaveBeenCalledTimes(1);
     expect(resetConfig).toHaveBeenCalledWith([]);
-    expect(navigate).toHaveBeenCalledWith('/publish/new', { onSameUrlNavigation: 'reload' });
+    expect(navigate).toHaveBeenCalledWith('/fr/publish/new', { onSameUrlNavigation: 'reload' });
   });
 });

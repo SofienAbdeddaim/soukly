@@ -8,7 +8,7 @@ test.describe('remote loading', () => {
     const publishOrigin = 'http://localhost:4203/**';
     await page.route(publishOrigin, (route) => route.abort('connectionrefused'));
 
-    await page.goto('/publish/new');
+    await page.goto('/fr/publish/new');
 
     await expect(page.getByTestId('remote-error')).toBeVisible();
     await expect(page.getByRole('banner')).toBeVisible();
@@ -19,7 +19,7 @@ test.describe('remote loading', () => {
     await page.getByRole('button', { name: 'Réessayer' }).click();
 
     await expect(page.getByTestId('coming-soon-mfe-publish')).toBeVisible();
-    await expect(page).toHaveURL('/publish/new');
+    await expect(page).toHaveURL('/fr/publish/new');
   });
 
   test('the remote URLs come from federation.manifest.json, read at startup', async ({ page }) => {

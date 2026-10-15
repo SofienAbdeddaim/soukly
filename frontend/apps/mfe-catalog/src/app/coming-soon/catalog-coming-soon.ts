@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 /**
  * Waiting page of mfe-catalog: proves the remote is loaded, until the feature tickets replace it.
  * Component styles only (no Tailwind utility): the page is rendered inside the shell, whose
- * stylesheet only knows the classes of the shell. i18n: SETUP-07
+ * stylesheet only knows the classes of the shell.
  */
 @Component({
   selector: 'app-catalog-coming-soon',
+  imports: [TranslocoPipe],
   template: `
     <section
       class="coming-soon"
@@ -14,11 +16,9 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       data-testid="coming-soon-mfe-catalog"
     >
       <h1 id="coming-soon-title" class="coming-soon__title">
-        Catalogue Soukly, bientôt disponible
+        {{ 'catalog.coming-soon.title' | transloco }}
       </h1>
-      <p class="coming-soon__text">
-        Accueil, recherche et détail des annonces arrivent bientôt ici.
-      </p>
+      <p class="coming-soon__text">{{ 'catalog.coming-soon.text' | transloco }}</p>
     </section>
   `,
   styleUrl: '../coming-soon.css',

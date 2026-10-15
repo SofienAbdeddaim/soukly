@@ -90,13 +90,13 @@ The disabled button (reduced opacity) is exempt under WCAG (1.4.3, inactive comp
 
 ## Components
 
-No hard-coded text: every label ("Fermer", "Ajouter aux favoris"…) comes in through an input or an option. Transloco integration comes with SETUP-07.
+No hard-coded text: every label ("Fermer", "Ajouter aux favoris"…) comes in through an input or an option, translated by the app with Transloco and formatted with the pipes of [`@soukly/i18n`](../i18n/README.md).
 
 | Component                    | Usage                                                                                                                                                                 | Accessibility                                                                                                                                                 |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `UiButton`                   | `<button ui-button variant="primary\|secondary\|ghost" size="md\|lg" [loading] [disabled]>` or `<a ui-button>`; optional icon: `<svg lucidePlus uiButtonIcon></svg>`  | height ≥ 44px, visible focus, `aria-busy` and clicks ignored while loading (the button stays focusable), `aria-disabled` + `tabindex="-1"` on a disabled link |
 | `UiField` + `UiFieldControl` | `<ui-field label="…" hint="…" [error]="…" required><input uiControl /></ui-field>` (also `textarea`, `select`)                                                        | `label for`, `aria-describedby` to the hint and the error, `aria-invalid="true"` while an error is shown                                                      |
-| `UiListingCard`              | `title`, `price` (formatted), `city`, `dateLabel`, `dateTime`, `typeLabel`, `href`, `imageUrl` (or placeholder), `favorite`, `favoriteLabel`, `favoriteToggle` output | `article`, `h3` title (link stretched over the whole card), favourite button with `aria-label` and `aria-pressed`, price in `<bdi dir="ltr">`                 |
+| `UiListingCard`              | `title`, `price` (formatted), `city`, `dateLabel`, `dateTime`, `typeLabel`, `href`, `imageUrl` (or placeholder), `favorite`, `favoriteLabel`, `favoriteToggle` output | `article`, `h3` title (link stretched over the whole card), favourite button with `aria-label` and `aria-pressed`, price isolated in `<bdi>`                  |
 | `UiSkeleton`                 | `variant="line\|block\|card"`, `inlineSize`, `blockSize`                                                                                                              | `aria-hidden="true"` (the loading region carries `aria-busy`), animation stopped under `prefers-reduced-motion`                                               |
 | `ToastService`               | `show({ type: 'info'\|'success'\|'error', message, closeLabel, duration? })` returns an id; `dismiss(id)`                                                             | Angular CDK overlay, `aria-live="polite"` region (`assertive` for `error`), auto-close after 5 s (paused on hover and focus) and a close button               |
 
@@ -109,7 +109,8 @@ Icons: [Lucide](https://lucide.dev) through `@lucide/angular` (official Angular 
 - Logical properties only: `margin-inline-start`, `padding-inline`, `inset-inline-end`, `border-inline-start`, `text-align: start`… Never `left`/`right`, `margin-left`, `padding-right`, `text-align: left`.
 - In Tailwind: `ms-`/`me-`/`ps-`/`pe-`/`start-`/`end-`/`border-s`/`rounded-s`/`text-start`, never `ml-`/`mr-`/`pl-`/`pr-`/`left-`/`right-`/`border-l`/`rounded-l`/`text-left`.
 - Directional icons (arrows, chevrons): global `ui-flip-rtl` class, mirrored in RTL.
-- Prices and numbers: `<bdi dir="ltr">` or the `ui-ltr` class (`direction: ltr; unicode-bidi: isolate`).
+- Prices: isolated in a `<bdi>` without `dir` (`price` pipe of `@soukly/i18n`): "1 250 DT" stays left-to-right, the Arabic "1.250 د.ت." right-to-left, and neither mixes with the text around it.
+- Other numbers that must stay left-to-right (phone numbers): `<bdi dir="ltr">` or the `ui-ltr` class (`direction: ltr; unicode-bidi: isolate`).
 
 The lint enforces these rules in `libs/ui` and in every app that imports [`eslint.rtl.mjs`](eslint.rtl.mjs):
 

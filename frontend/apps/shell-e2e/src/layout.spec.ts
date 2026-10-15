@@ -16,7 +16,7 @@ test.describe('layout', () => {
   test('the skip link is the first focusable element and moves the focus to the content', async ({
     page,
   }) => {
-    await page.goto('/');
+    await page.goto('/fr');
     await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
 
     await page.keyboard.press('Tab');
@@ -25,7 +25,7 @@ test.describe('layout', () => {
     await page.keyboard.press('Enter');
 
     await expect(page.getByRole('main')).toBeFocused();
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL('/fr');
   });
 
   test('desktop: no bottom bar, header actions visible, mirrored in RTL', async ({ page }) => {
@@ -59,7 +59,7 @@ test.describe('layout', () => {
       await expect(bottomNav.getByRole('link', { name: 'Favoris' })).toHaveCount(0);
 
       await bottomNav.getByTestId('bottom-nav-publish').click();
-      await expect(page).toHaveURL('/publish/new');
+      await expect(page).toHaveURL('/fr/publish/new');
       await expect(page.getByTestId('coming-soon-mfe-publish')).toBeVisible();
     });
 

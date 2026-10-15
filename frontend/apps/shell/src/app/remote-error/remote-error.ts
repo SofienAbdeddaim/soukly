@@ -1,16 +1,16 @@
 import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { UiButton } from '@soukly/ui';
 import { SHELL_ROUTES } from '../shell-routes';
 
 /**
- * Shown in the content area when a remote cannot be loaded. "Réessayer" requests the remote again
+ * Shown in the content area when a remote cannot be loaded. "Try again" requests the remote again
  * on the same URL, without reloading the page.
- * i18n: SETUP-07
  */
 @Component({
   selector: 'app-remote-error',
-  imports: [UiButton],
+  imports: [UiButton, TranslocoPipe],
   template: `
     <section
       class="mx-auto flex max-w-6xl flex-col items-start gap-4 px-4 py-12 md:px-6"
@@ -19,12 +19,12 @@ import { SHELL_ROUTES } from '../shell-routes';
       [attr.data-remote]="remoteName()"
     >
       <h1 id="remote-error-title" class="text-3xl text-text">
-        Cette page est momentanément indisponible
+        {{ 'errors.remote-unavailable.title' | transloco }}
       </h1>
-      <p class="max-w-2xl text-text-muted">
-        Nous n'arrivons pas à la charger. Vérifiez votre connexion puis réessayez.
-      </p>
-      <button ui-button type="button" [loading]="retrying()" (click)="retry()">Réessayer</button>
+      <p class="max-w-2xl text-text-muted">{{ 'errors.remote-unavailable.text' | transloco }}</p>
+      <button ui-button type="button" [loading]="retrying()" (click)="retry()">
+        {{ 'errors.remote-unavailable.retry' | transloco }}
+      </button>
     </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

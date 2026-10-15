@@ -49,10 +49,11 @@ describe('UiListingCard', () => {
     expect(article?.textContent).toContain('Vente');
   });
 
-  it('renders the price left-to-right in an isolated element', async () => {
+  it('renders the price in an isolated element, in the direction of the price itself', async () => {
     const { element } = await setup();
     const price = element.querySelector('.card__price bdi');
-    expect(price?.getAttribute('dir')).toBe('ltr');
+    // <bdi> without dir: "1 250 DT" is laid out left-to-right, "1.250 د.ت." right-to-left.
+    expect(price?.hasAttribute('dir')).toBe(false);
     expect(price?.textContent).toBe('1 250 DT');
   });
 

@@ -60,6 +60,23 @@ describe('App (ui-showcase)', () => {
     expect(document.documentElement.lang).toBe('fr');
   });
 
+  it('formats the card prices and dates with the locale of the language (@soukly/i18n pipes)', async () => {
+    const { fixture, element } = await setup();
+    const prices = () =>
+      Array.from(element.querySelectorAll('.card__price')).map((price) =>
+        (price.textContent ?? '').replace(/[\u200e\u200f]/g, '').replace(/[\u00a0\u202f]/g, ' '),
+      );
+    const dates = () => Array.from(element.querySelectorAll('time')).map((t) => t.textContent);
+
+    expect(prices()).toEqual(['180 DT', '25 DT / h', '1 250 DT / mois']);
+    expect(dates()[1]).toBe('hier');
+
+    (element.querySelector('[data-testid=toggle-direction]') as HTMLButtonElement).click();
+    await fixture.whenStable();
+    expect(prices()).toEqual(['180 د.ت.', '25 د.ت. / ساعة', '1.250 د.ت. / شهر']);
+    expect(dates()[1]).toBe('أمس');
+  });
+
   it('has no serious or critical axe violation in LTR and in RTL', async () => {
     const { fixture, element } = await setup();
     expect(await seriousViolations()).toEqual([]);

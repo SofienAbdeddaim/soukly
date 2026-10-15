@@ -1,0 +1,37 @@
+{
+  "brand": "Soukly",
+  "skip-link": "Aller au contenu",
+  "header": {
+    "login": "Se connecter",
+    "post-listing": "Déposer une annonce",
+    "language-switcher": "Changer de langue"
+  },
+  "bottom-nav": {
+    "label": "Navigation principale",
+    "home": "Accueil",
+    "search": "Recherche",
+    "publish": "Déposer",
+    "account": "Compte"
+  },
+  "footer": {
+    "label": "Liens utiles",
+    "help": "Aide",
+    "terms": "Conditions d'utilisation",
+    "privacy": "Confidentialité"
+  },
+  "static-page": {
+    "coming-soon": "Le contenu de cette page sera bientôt disponible."
+  },
+  "errors": {
+    "not-found": {
+      "title": "Page introuvable",
+      "text": "Cette adresse ne correspond à aucune page de Soukly. Elle a peut-être été déplacée.",
+      "home": "Retour à l'accueil"
+    },
+    "remote-unavailable": {
+      "title": "Cette page est momentanément indisponible",
+      "text": "Nous n'arrivons pas à la charger. Vérifiez votre connexion puis réessayez.",
+      "retry": "Réessayer"
+    }
+  }
+}

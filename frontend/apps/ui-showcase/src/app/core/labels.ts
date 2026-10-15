@@ -1,7 +1,7 @@
 /**
  * Texts of the showcase only, in the two directions it demonstrates. The components of
  * libs/ui have no text of their own: every label below reaches them through an input.
- * Real translations (Transloco) arrive with SETUP-07.
+ * Prices and dates are not texts: the listing cards format them with the pipes of @soukly/i18n.
  */
 export type ShowcaseLang = 'fr' | 'ar';
 
@@ -32,7 +32,15 @@ export interface ShowcaseLabels {
   cards: string;
   favorite: string;
   removeFavorite: string;
-  listings: { title: string; price: string; city: string; date: string; type: string }[];
+  /** `price` in whole dinars, `unit` appended after the formatted price, `hoursAgo` for the date. */
+  listings: {
+    title: string;
+    price: number;
+    unit: string;
+    city: string;
+    hoursAgo: number;
+    type: string;
+  }[];
   skeletons: string;
   toasts: string;
   showInfo: string;
@@ -75,23 +83,26 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     listings: [
       {
         title: 'Vélo de ville, très bon état',
-        price: '180 DT',
+        price: 180,
+        unit: '',
         city: 'Sousse',
-        date: 'il y a 2 h',
+        hoursAgo: 2,
         type: 'Vente',
       },
       {
         title: 'Cours de maths à domicile',
-        price: '25 DT / h',
+        price: 25,
+        unit: ' / h',
         city: 'Tunis',
-        date: 'hier',
+        hoursAgo: 24,
         type: 'Service',
       },
       {
         title: 'Appartement S+2 meublé, 85 m²',
-        price: '1 250 DT / mois',
+        price: 1250,
+        unit: ' / mois',
         city: 'La Marsa',
-        date: 'il y a 3 j',
+        hoursAgo: 72,
         type: 'Location',
       },
     ],
@@ -135,23 +146,26 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     listings: [
       {
         title: 'دراجة مدينة بحالة ممتازة',
-        price: '180 DT',
+        price: 180,
+        unit: '',
         city: 'سوسة',
-        date: 'منذ ساعتين',
+        hoursAgo: 2,
         type: 'بيع',
       },
       {
         title: 'دروس رياضيات في المنزل',
-        price: '25 DT / ساعة',
+        price: 25,
+        unit: ' / ساعة',
         city: 'تونس',
-        date: 'أمس',
+        hoursAgo: 24,
         type: 'خدمة',
       },
       {
         title: 'شقة مفروشة S+2، 85 م²',
-        price: '1 250 DT / شهر',
+        price: 1250,
+        unit: ' / شهر',
         city: 'المرسى',
-        date: 'منذ 3 أيام',
+        hoursAgo: 72,
         type: 'كراء',
       },
     ],

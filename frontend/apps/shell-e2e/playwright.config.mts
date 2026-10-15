@@ -23,6 +23,8 @@ export default defineConfig({
   retries: process.env['CI'] ? 1 : 0,
   use: {
     baseURL: 'http://localhost:4200',
+    // Browser language: French unless a test sets another one (language detection, SETUP-07).
+    locale: 'fr-FR',
     trace: 'on-first-retry',
     launchOptions: {
       // Optional: a Chromium installed on the machine, when Playwright cannot download its own.

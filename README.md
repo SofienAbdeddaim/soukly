@@ -19,6 +19,7 @@ All documentation, comments, commits and PR descriptions in this repository are 
 | Angular (devkit, schematics, build, CLI) | 22.2.2 |
 | Angular (framework, CDK) | 22.2.3 |
 | Tailwind CSS | 4.3.3 |
+| Transloco (`@jsverse/transloco`) | 8.4.0 |
 | angular-eslint | 22.6.0 |
 | TypeScript | 6.0.x |
 | Java | 21 |
@@ -40,11 +41,13 @@ cp .env.example .env   # never committed
 cd frontend
 pnpm install --frozen-lockfile
 pnpm nx run-many -t lint test build
+pnpm nx run-many -t i18n-check   # same translation keys in fr, ar and en, for every scope
 pnpm prettier --check .
 ```
 
 | Project | Role | Commands |
 | --- | --- | --- |
+| `libs/i18n` (`@soukly/i18n`) | languages, URL prefix, Transloco setup, `price`/`localDate`/`relativeTime` pipes ([README](frontend/libs/i18n/README.md)) | `pnpm nx test i18n`, `pnpm nx lint i18n` |
 | `libs/ui` (`@soukly/ui`) | design system: tokens, Tailwind theme, fonts, base components, RTL lint rule ([README](frontend/libs/ui/README.md)) | `pnpm nx test ui`, `pnpm nx lint ui` |
 | `apps/ui-showcase` | visual check page of the components in LTR and RTL, never deployed | `pnpm nx serve ui-showcase` (http://localhost:4200), `pnpm nx test ui-showcase` (axe test) |
 | `apps/shell` | host: header, footer, mobile bottom bar, loading of the remotes, error and 404 pages | `pnpm nx serve shell` (http://localhost:4200) |
@@ -52,12 +55,13 @@ pnpm prettier --check .
 | `apps/mfe-catalog` | remote, home and catalogue (CATA), waiting page for now | `pnpm nx serve mfe-catalog` (http://localhost:4202) |
 | `apps/mfe-publish` | remote, publishing and management of listings (ANN, SOC), waiting page for now | `pnpm nx serve mfe-publish` (http://localhost:4203) |
 | `apps/shell-e2e` | Playwright end-to-end tests of the shell and its remotes (Chromium) | `pnpm nx e2e shell-e2e` (starts the 4 dev servers) |
+| `tools/i18n-check` | translation key check, run by the `i18n-check` target of the shell and of each remote | `pnpm nx run-many -t i18n-check`, `pnpm nx test i18n-check` |
 
 The `@soukly/<lib>` aliases point to `libs/<lib>/src/index.ts` (`tsconfig.base.json`).
 
 ### Running the shell with its remotes
 
-Native Federation loads the remotes at runtime. Start the four dev servers, each in its own terminal, then open http://localhost:4200:
+Native Federation loads the remotes at runtime. Start the four dev servers, each in its own terminal, then open http://localhost:4200 (redirected to `/fr`, `/ar` or `/en`, see [Languages](frontend/libs/i18n/README.md)):
 
 ```bash
 cd frontend
@@ -67,10 +71,11 @@ pnpm nx serve mfe-catalog    # 4202
 pnpm nx serve mfe-publish    # 4203
 ```
 
-- A remote can also run alone (for example `pnpm nx serve mfe-catalog`, then http://localhost:4202): it mounts its routes with a minimal layout, without the shell.
+- A remote can also run alone (for example `pnpm nx serve mfe-catalog`, then http://localhost:4202): it mounts its routes under the language prefix with a minimal layout, without the shell.
 - `apps/shell/public/federation.manifest.json` maps each remote name to the URL of its `remoteEntry.json`. The shell reads it before Angular starts, so another environment changes the URLs by replacing that file, without rebuilding the shell. The repository only holds the local version: the dev and prod manifests are produced by the deployment workflows (DEP), never committed with real addresses.
 - Shared dependencies (Angular, rxjs, `@angular/cdk`, `@lucide/angular`, `@soukly/*`) are declared once in `frontend/federation.shared.mjs` and used by every `federation.config.mjs`: each one is a singleton with a strict version, so the browser downloads Angular once.
-- If a remote does not load, the content area shows an error with a "Réessayer" button; the header and the footer stay.
+- Every page URL starts with its language: `/fr/account/login`, `/ar/publish/new`. Each remote ships its translations in `public/i18n/<scope>/`, downloaded from the remote itself when one of its pages is shown.
+- If a remote does not load, the content area shows an error with a retry button; the header and the footer stay.
 - Playwright end-to-end tests: `pnpm nx e2e shell-e2e` (Chromium). The first run needs `pnpm exec playwright install --with-deps chromium`. Set `CHROMIUM_EXECUTABLE_PATH` to use a Chromium already installed.
 
 ### Backend
@@ -197,7 +202,7 @@ The `.github/workflows/ci.yml` workflow runs on every PR to `main` and every pus
 | Job | What it checks | When |
 | --- | --- | --- |
 | `changes` | which folders changed (`dorny/paths-filter`) | always |
-| `frontend` | `pnpm install --frozen-lockfile`, `pnpm nx affected -t lint test build e2e`, `pnpm prettier --check .` | if `frontend/**` or `.github/**` changed |
+| `frontend` | `pnpm install --frozen-lockfile`, `pnpm nx affected -t lint test build e2e`, `pnpm nx run-many -t i18n-check`, `pnpm prettier --check .` | if `frontend/**` or `.github/**` changed |
 | `backend` | `./mvnw -B verify` (Testcontainers integration tests included) | if `backend/**` or `.github/**` changed |
 | `ci-ok` | aggregates the results: red if a job that ran failed, green if all succeeded or were skipped | always |
 
@@ -206,7 +211,7 @@ A PR that only touches documentation skips `frontend` and `backend`, and `ci-ok`
 Reproduce the CI locally:
 
 ```bash
-cd frontend && pnpm install --frozen-lockfile && pnpm nx run-many -t lint test build && pnpm prettier --check .
+cd frontend && pnpm install --frozen-lockfile && pnpm nx run-many -t lint test build i18n-check && pnpm prettier --check .
 cd backend && ./mvnw -B verify                                         # Docker required for Testcontainers
 docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12        # checks the workflows
 ```

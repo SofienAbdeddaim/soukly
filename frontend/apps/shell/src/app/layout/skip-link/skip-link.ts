@@ -1,16 +1,18 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 /**
- * "Aller au contenu" link, first focusable element of the page, visible only when focused.
+ * "Skip to content" link, first focusable element of the page, visible only when focused.
  * It moves the focus itself: a plain "#main-content" link would be resolved against <base href>
- * and leave the current route. i18n: SETUP-07
+ * and leave the current route.
  */
 @Component({
   selector: 'app-skip-link',
-  template: `<a class="skip-link" [href]="'#' + targetId()" (click)="skip($event)"
-    >Aller au contenu</a
-  >`,
+  imports: [TranslocoPipe],
+  template: `<a class="skip-link" [href]="'#' + targetId()" (click)="skip($event)">{{
+    'skip-link' | transloco
+  }}</a>`,
   styles: `
     .skip-link {
       position: absolute;

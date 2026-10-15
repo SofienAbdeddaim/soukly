@@ -111,6 +111,17 @@
           "buildTarget": "mfe-account:esbuild:development"
         }
       }
+    },
+    "i18n-check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/public/i18n/**/*",
+        "{workspaceRoot}/tools/i18n-check/i18n-check.mjs"
+      ],
+      "options": {
+        "command": "node tools/i18n-check/i18n-check.mjs apps/mfe-account/public/i18n"
+      }
     }
   }
 }
