@@ -1,135 +1,135 @@
 # @soukly/ui
 
-Design system de Soukly, ambiance A « Marché chaleureux » : design tokens en variables CSS, thème Tailwind CSS v4 qui les expose, polices auto-hébergées et 5 composants Angular standalone (`OnPush`, signal inputs, préfixe `ui-`), utilisables en LTR (fr, en) et en RTL (ar).
+Soukly design system, ambiance A "Warm market" (Marché chaleureux): design tokens as CSS variables, a Tailwind CSS v4 theme that exposes them, self-hosted fonts and 5 standalone Angular components (`OnPush`, signal inputs, `ui-` prefix), usable in LTR (fr, en) and RTL (ar).
 
-C'est une librairie, pas un micro frontend. L'app `ui-showcase` affiche chaque composant dans tous ses états :
+It is a library, not a micro frontend. The `ui-showcase` app shows every component in all its states:
 
 ```bash
 cd frontend
-pnpm nx serve ui-showcase   # http://localhost:4200, bouton « Passer en arabe (RTL) » en haut de page
-pnpm nx test ui             # tests unitaires des composants (Vitest)
-pnpm nx test ui-showcase    # test d'accessibilité axe de la page, en LTR et en RTL
-pnpm nx lint ui             # ESLint, dont la règle RTL
+pnpm nx serve ui-showcase   # http://localhost:4200, "Passer en arabe (RTL)" toggle at the top of the page
+pnpm nx test ui             # component unit tests (Vitest)
+pnpm nx test ui-showcase    # axe accessibility test of the page, in LTR and RTL
+pnpm nx lint ui             # ESLint, including the RTL rule
 ```
 
-## Utiliser la librairie dans une app
+## Using the library in an app
 
-1. Feuille de style globale de l'app, dans cet ordre :
+1. Global stylesheet of the app, in this order:
 
    ```css
    @import 'tailwindcss';
-   @import '../../../libs/ui/src/styles/tailwind.css'; /* thème Tailwind de Soukly */
-   @import '../../../libs/ui/src/styles/soukly.css'; /* polices, tokens, base */
+   @import '../../../libs/ui/src/styles/tailwind.css'; /* Soukly Tailwind theme */
+   @import '../../../libs/ui/src/styles/soukly.css'; /* fonts, tokens, base */
    ```
 
-2. `.postcssrc.json` à la racine de l'app : `{ "plugins": { "@tailwindcss/postcss": {} } }`.
-3. Dans `eslint.config.mjs` de l'app : `import rtlConfig from '../../libs/ui/eslint.rtl.mjs';` puis `...rtlConfig` après la config de base.
-4. Dans les composants : `import { UiButton, UiField, UiFieldControl, UiListingCard, UiSkeleton, ToastService } from '@soukly/ui';`.
+2. `.postcssrc.json` at the root of the app: `{ "plugins": { "@tailwindcss/postcss": {} } }`.
+3. In the app's `eslint.config.mjs`: `import rtlConfig from '../../libs/ui/eslint.rtl.mjs';` then `...rtlConfig` after the base config.
+4. In components: `import { UiButton, UiField, UiFieldControl, UiListingCard, UiSkeleton, ToastService } from '@soukly/ui';`.
 
-Les polices sont référencées par `url()` relative dans `fonts.css` : le builder Angular les copie dans `media/` avec un hash. Aucun appel réseau vers un service tiers (polices, icônes, CDN).
+Fonts are referenced with relative `url()` in `fonts.css`: the Angular builder copies them to `media/` with a hash. No network call to a third-party service (fonts, icons, CDN).
 
 ## Tokens
 
-Définis une seule fois dans [`src/styles/tokens.css`](src/styles/tokens.css), sur `:root`, en deux niveaux :
+Defined once in [`src/styles/tokens.css`](src/styles/tokens.css), on `:root`, on two levels:
 
-1. **palette brute** (`--soukly-indigo-900`, `--soukly-saffron-400`…) : jamais utilisée par un composant ni par Tailwind ;
-2. **tokens sémantiques** (rôles) : seuls utilisés par les composants et par le thème Tailwind.
+1. **raw palette** (`--soukly-indigo-900`, `--soukly-saffron-400`…): never used by a component or by Tailwind;
+2. **semantic tokens** (roles): the only ones used by components and by the Tailwind theme.
 
-`tokens.css` est le seul fichier du workspace qui contient des valeurs de couleur. Un mode sombre (V2) redéfinira les tokens sémantiques sous `[data-theme='dark']` sans toucher aux composants.
+`tokens.css` is the only file of the workspace that contains colour values. A dark mode (V2) will redefine the semantic tokens under `[data-theme='dark']` without touching the components.
 
-| Token                                    | Valeur                                 | Usage                                                               | Classe Tailwind               |
-| ---------------------------------------- | -------------------------------------- | ------------------------------------------------------------------- | ----------------------------- |
-| `--color-bg`                             | `#FFF8EC` crème                        | fond de page, badge de carte                                        | `bg-bg`                       |
-| `--color-surface`                        | `#FFFFFF`                              | cartes, champs, panneaux, toasts                                    | `bg-surface`                  |
-| `--color-surface-muted`                  | `#FFF3DD`                              | puces de catégorie, placeholder d'image, skeleton                   | `bg-surface-muted`            |
-| `--color-border`                         | `#F0E3CC`                              | bordures décoratives de carte                                       | `border-border`               |
-| `--color-border-strong`                  | `#8A7F9C`                              | bordure des champs et du bouton `ghost` (3:1)                       | `border-border-strong`        |
-| `--color-text`                           | `#2A2140` indigo                       | texte principal                                                     | `text-text`                   |
-| `--color-text-muted`                     | `#6A5F7E`                              | texte secondaire (ville, date, aide)                                | `text-text-muted`             |
-| `--color-brand` / `--color-on-brand`     | `#2A2140` / `#FFF8EC`                  | header, footer (SETUP-05)                                           | `bg-brand`, `text-on-brand`   |
-| `--color-accent` / `--color-on-accent`   | `#F2B33D` safran / `#2A2140`           | bouton secondaire, logo, bandeaux                                   | `bg-accent`, `text-on-accent` |
-| `--color-primary` / `--color-on-primary` | `#B4441F` terracotta foncé / `#FFFFFF` | bouton principal, liens, prix                                       | `bg-primary`, `text-primary`  |
-| `--color-primary-hover`                  | `#8E3416`                              | survol du bouton principal et des liens                             | `bg-primary-hover`            |
-| `--color-decorative`                     | `#E0602F` terracotta clair             | décor uniquement (pastille, icône sur indigo), jamais sous du texte | `bg-decorative`               |
-| `--color-danger`                         | `#A8201A`                              | erreurs de champ, toast d'erreur                                    | `text-danger`                 |
-| `--color-success`                        | `#1B6E45`                              | toast de succès                                                     | `text-success`                |
+| Token                                    | Value                                 | Use                                                     | Tailwind class                |
+| ---------------------------------------- | ------------------------------------- | ------------------------------------------------------- | ----------------------------- |
+| `--color-bg`                             | `#FFF8EC` cream                       | page background, card badge                             | `bg-bg`                       |
+| `--color-surface`                        | `#FFFFFF`                             | cards, fields, panels, toasts                           | `bg-surface`                  |
+| `--color-surface-muted`                  | `#FFF3DD`                             | category chips, image placeholder, skeleton             | `bg-surface-muted`            |
+| `--color-border`                         | `#F0E3CC`                             | decorative card borders                                 | `border-border`               |
+| `--color-border-strong`                  | `#8A7F9C`                             | field and `ghost` button borders (3:1)                  | `border-border-strong`        |
+| `--color-text`                           | `#2A2140` indigo                      | main text                                               | `text-text`                   |
+| `--color-text-muted`                     | `#6A5F7E`                             | secondary text (city, date, hint)                       | `text-text-muted`             |
+| `--color-brand` / `--color-on-brand`     | `#2A2140` / `#FFF8EC`                 | header, footer (SETUP-05)                               | `bg-brand`, `text-on-brand`   |
+| `--color-accent` / `--color-on-accent`   | `#F2B33D` saffron / `#2A2140`         | secondary button, logo, banners                         | `bg-accent`, `text-on-accent` |
+| `--color-primary` / `--color-on-primary` | `#B4441F` dark terracotta / `#FFFFFF` | primary button, links, prices                           | `bg-primary`, `text-primary`  |
+| `--color-primary-hover`                  | `#8E3416`                             | hover of the primary button and links                   | `bg-primary-hover`            |
+| `--color-decorative`                     | `#E0602F` light terracotta            | decoration only (dot, icon on indigo), never under text | `bg-decorative`               |
+| `--color-danger`                         | `#A8201A`                             | field errors, error toast                               | `text-danger`                 |
+| `--color-success`                        | `#1B6E45`                             | success toast                                           | `text-success`                |
 
-Autres tokens : `--font-display` (Lalezar, titres `h1`/`h2`), `--font-body` (Rubik 400, 500, 600) ; `--radius-sm` 6px, `--radius-md` 10px, `--radius-lg` 14px, `--radius-full` ; `--shadow-card`, `--shadow-overlay` ; `--focus-ring` (anneau double : espace couleur de fond puis anneau indigo, visible sur fond clair comme sur l'indigo) ; `--control-height` 44px et `--control-height-lg` 52px. Les espacements suivent l'échelle Tailwind par défaut.
+Other tokens: `--font-display` (Lalezar, `h1`/`h2` headings), `--font-body` (Rubik 400, 500, 600); `--radius-sm` 6px, `--radius-md` 10px, `--radius-lg` 14px, `--radius-full`; `--shadow-card`, `--shadow-overlay`; `--focus-ring` (double ring: a background-coloured gap then an indigo ring, visible on light backgrounds and on indigo); `--control-height` 44px and `--control-height-lg` 52px. Spacing follows the default Tailwind scale.
 
-### Thème Tailwind
+### Tailwind theme
 
-Tailwind CSS v4 n'a plus de preset JavaScript : le « preset » est le fichier CSS [`src/styles/tailwind.css`](src/styles/tailwind.css). Il vide les couleurs, polices, rayons et ombres par défaut de Tailwind et ne déclare que des références aux tokens (`--color-primary: var(--color-primary)`) dans un bloc `@theme inline reference` : les utilitaires produisent `background-color: var(--color-primary)` et Tailwind n'émet pas de seconde copie des variables. Une classe comme `bg-red-500` n'existe donc pas.
+Tailwind CSS v4 no longer has JavaScript presets: the "preset" is the CSS file [`src/styles/tailwind.css`](src/styles/tailwind.css). It clears Tailwind's default colours, fonts, radii and shadows and only declares references to the tokens (`--color-primary: var(--color-primary)`) in an `@theme inline reference` block: utilities output `background-color: var(--color-primary)` and Tailwind does not emit a second copy of the variables. A class such as `bg-red-500` therefore does not exist.
 
-## Contrastes (WCAG 2.2 AA)
+## Contrast (WCAG 2.2 AA)
 
-Ratios calculés avec la formule WCAG 2.x sur les valeurs de `tokens.css` (2026-10-15), puis vérifiés par axe (règle `color-contrast`) dans Chromium sur `ui-showcase` en LTR et en RTL : aucune violation. Seuil : 4,5:1 pour le texte, 3:1 pour le texte ≥ 24px (ou ≥ 18,66px gras) et pour les composants d'interface (bordures de champ, icônes, focus).
+Ratios computed with the WCAG 2.x formula on the `tokens.css` values (2026-10-15), then checked by axe (`color-contrast` rule) in Chromium on `ui-showcase` in LTR and RTL: no violation. Threshold: 4.5:1 for text, 3:1 for text ≥ 24px (or ≥ 18.66px bold) and for UI components (field borders, icons, focus).
 
-| Couple (premier plan sur fond)   | Utilisé par                                        | Ratio | Verdict              |
-| -------------------------------- | -------------------------------------------------- | ----- | -------------------- |
-| `text` sur `bg`                  | texte courant, badge de carte                      | 14,31 | OK                   |
-| `text` sur `surface`             | carte, champ, toast                                | 15,11 | OK                   |
-| `text` sur `surface-muted`       | bouton `ghost` au survol                           | 13,75 | OK                   |
-| `text-muted` sur `bg`            | texte secondaire                                   | 5,60  | OK                   |
-| `text-muted` sur `surface`       | ville et date de carte, aide de champ, placeholder | 5,91  | OK                   |
-| `text-muted` sur `surface-muted` | icône du placeholder d'image                       | 5,38  | OK                   |
-| `primary` sur `bg`               | liens, bouton favori                               | 5,25  | OK                   |
-| `primary` sur `surface`          | prix de carte                                      | 5,54  | OK                   |
-| `on-primary` sur `primary`       | bouton principal                                   | 5,54  | OK                   |
-| `on-primary` sur `primary-hover` | bouton principal au survol                         | 7,92  | OK                   |
-| `on-accent` sur `accent`         | bouton secondaire                                  | 8,12  | OK                   |
-| `danger` sur `surface`           | toast d'erreur, astérisque requis                  | 7,28  | OK                   |
-| `danger` sur `bg`                | message d'erreur de champ                          | 6,89  | OK                   |
-| `success` sur `surface`          | icône et bordure du toast de succès                | 6,24  | OK                   |
-| `border-strong` sur `surface`    | bordure de champ, bouton `ghost` (non textuel)     | 3,75  | OK (3:1)             |
-| `border-strong` sur `bg`         | idem sur fond crème                                | 3,55  | OK (3:1)             |
-| `on-brand` sur `brand`           | header, footer                                     | 14,31 | OK                   |
-| blanc sur `#E0602F`              | aucun texte                                        | 3,57  | refusé pour du texte |
-| safran sur crème                 | aucun texte                                        | 1,76  | refusé pour du texte |
+| Pair (foreground on background) | Used by                                     | Ratio | Verdict           |
+| ------------------------------- | ------------------------------------------- | ----- | ----------------- |
+| `text` on `bg`                  | body text, card badge                       | 14.31 | OK                |
+| `text` on `surface`             | card, field, toast                          | 15.11 | OK                |
+| `text` on `surface-muted`       | `ghost` button on hover                     | 13.75 | OK                |
+| `text-muted` on `bg`            | secondary text                              | 5.60  | OK                |
+| `text-muted` on `surface`       | card city and date, field hint, placeholder | 5.91  | OK                |
+| `text-muted` on `surface-muted` | image placeholder icon                      | 5.38  | OK                |
+| `primary` on `bg`               | links, favourite button                     | 5.25  | OK                |
+| `primary` on `surface`          | card price                                  | 5.54  | OK                |
+| `on-primary` on `primary`       | primary button                              | 5.54  | OK                |
+| `on-primary` on `primary-hover` | primary button on hover                     | 7.92  | OK                |
+| `on-accent` on `accent`         | secondary button                            | 8.12  | OK                |
+| `danger` on `surface`           | error toast, required asterisk              | 7.28  | OK                |
+| `danger` on `bg`                | field error message                         | 6.89  | OK                |
+| `success` on `surface`          | success toast icon and border               | 6.24  | OK                |
+| `border-strong` on `surface`    | field border, `ghost` button (non-text)     | 3.75  | OK (3:1)          |
+| `border-strong` on `bg`         | same on cream                               | 3.55  | OK (3:1)          |
+| `on-brand` on `brand`           | header, footer                              | 14.31 | OK                |
+| white on `#E0602F`              | no text                                     | 3.57  | rejected for text |
+| saffron on cream                | no text                                     | 1.76  | rejected for text |
 
-Le bouton désactivé (opacité réduite) est exempté par WCAG (1.4.3, composant inactif).
+The disabled button (reduced opacity) is exempt under WCAG (1.4.3, inactive component).
 
-## Composants
+## Components
 
-Aucun texte en dur : tous les libellés (« Fermer », « Ajouter aux favoris »…) arrivent par input ou par option. L'intégration Transloco est faite par SETUP-07.
+No hard-coded text: every label ("Fermer", "Ajouter aux favoris"…) comes in through an input or an option. Transloco integration comes with SETUP-07.
 
-| Composant                    | Utilisation                                                                                                                                                                | Accessibilité                                                                                                                                                    |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UiButton`                   | `<button ui-button variant="primary\|secondary\|ghost" size="md\|lg" [loading] [disabled]>` ou `<a ui-button>` ; icône optionnelle : `<svg lucidePlus uiButtonIcon></svg>` | hauteur ≥ 44px, focus visible, `aria-busy` et clics ignorés en chargement (le bouton reste focalisable), `aria-disabled` + `tabindex="-1"` sur un lien désactivé |
-| `UiField` + `UiFieldControl` | `<ui-field label="…" hint="…" [error]="…" required><input uiControl /></ui-field>` (aussi `textarea`, `select`)                                                            | `label for`, `aria-describedby` vers l'aide et l'erreur, `aria-invalid="true"` quand une erreur est affichée                                                     |
-| `UiListingCard`              | `title`, `price` (formaté), `city`, `dateLabel`, `dateTime`, `typeLabel`, `href`, `imageUrl` (ou placeholder), `favorite`, `favoriteLabel`, sortie `favoriteToggle`        | `article`, titre en `h3` (lien étiré sur toute la carte), bouton favori avec `aria-label` et `aria-pressed`, prix en `<bdi dir="ltr">`                           |
-| `UiSkeleton`                 | `variant="line\|block\|card"`, `inlineSize`, `blockSize`                                                                                                                   | `aria-hidden="true"` (la zone qui charge porte `aria-busy`), animation coupée si `prefers-reduced-motion`                                                        |
-| `ToastService`               | `show({ type: 'info'\|'success'\|'error', message, closeLabel, duration? })` renvoie un id ; `dismiss(id)`                                                                 | overlay Angular CDK, région `aria-live="polite"` (`assertive` pour `error`), fermeture auto après 5 s (en pause au survol et au focus) et bouton de fermeture    |
+| Component                    | Usage                                                                                                                                                                 | Accessibility                                                                                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UiButton`                   | `<button ui-button variant="primary\|secondary\|ghost" size="md\|lg" [loading] [disabled]>` or `<a ui-button>`; optional icon: `<svg lucidePlus uiButtonIcon></svg>`  | height ≥ 44px, visible focus, `aria-busy` and clicks ignored while loading (the button stays focusable), `aria-disabled` + `tabindex="-1"` on a disabled link |
+| `UiField` + `UiFieldControl` | `<ui-field label="…" hint="…" [error]="…" required><input uiControl /></ui-field>` (also `textarea`, `select`)                                                        | `label for`, `aria-describedby` to the hint and the error, `aria-invalid="true"` while an error is shown                                                      |
+| `UiListingCard`              | `title`, `price` (formatted), `city`, `dateLabel`, `dateTime`, `typeLabel`, `href`, `imageUrl` (or placeholder), `favorite`, `favoriteLabel`, `favoriteToggle` output | `article`, `h3` title (link stretched over the whole card), favourite button with `aria-label` and `aria-pressed`, price in `<bdi dir="ltr">`                 |
+| `UiSkeleton`                 | `variant="line\|block\|card"`, `inlineSize`, `blockSize`                                                                                                              | `aria-hidden="true"` (the loading region carries `aria-busy`), animation stopped under `prefers-reduced-motion`                                               |
+| `ToastService`               | `show({ type: 'info'\|'success'\|'error', message, closeLabel, duration? })` returns an id; `dismiss(id)`                                                             | Angular CDK overlay, `aria-live="polite"` region (`assertive` for `error`), auto-close after 5 s (paused on hover and focus) and a close button               |
 
-Le bouton favori n'a pas de logique : il reflète `favorite` et émet l'état suivant ; la gestion des favoris est hors V1.
+The favourite button has no logic: it reflects `favorite` and emits the next state; favourites management is out of V1.
 
-Icônes : [Lucide](https://lucide.dev) via `@lucide/angular` (paquet Angular officiel, standalone et signals), ex. `<svg lucideHeart aria-hidden="true"></svg>`. Icônes décoratives en `aria-hidden="true"`.
+Icons: [Lucide](https://lucide.dev) through `@lucide/angular` (official Angular package, standalone and signals), e.g. `<svg lucideHeart aria-hidden="true"></svg>`. Decorative icons get `aria-hidden="true"`.
 
-## Règles RTL
+## RTL rules
 
-- Uniquement des propriétés logiques : `margin-inline-start`, `padding-inline`, `inset-inline-end`, `border-inline-start`, `text-align: start`… Jamais `left`/`right`, `margin-left`, `padding-right`, `text-align: left`.
-- En Tailwind : `ms-`/`me-`/`ps-`/`pe-`/`start-`/`end-`/`border-s`/`rounded-s`/`text-start`, jamais `ml-`/`mr-`/`pl-`/`pr-`/`left-`/`right-`/`border-l`/`rounded-l`/`text-left`.
-- Icônes directionnelles (flèches, chevrons) : classe globale `ui-flip-rtl`, inversée en RTL.
-- Prix et nombres : `<bdi dir="ltr">` ou classe `ui-ltr` (`direction: ltr; unicode-bidi: isolate`).
+- Logical properties only: `margin-inline-start`, `padding-inline`, `inset-inline-end`, `border-inline-start`, `text-align: start`… Never `left`/`right`, `margin-left`, `padding-right`, `text-align: left`.
+- In Tailwind: `ms-`/`me-`/`ps-`/`pe-`/`start-`/`end-`/`border-s`/`rounded-s`/`text-start`, never `ml-`/`mr-`/`pl-`/`pr-`/`left-`/`right-`/`border-l`/`rounded-l`/`text-left`.
+- Directional icons (arrows, chevrons): global `ui-flip-rtl` class, mirrored in RTL.
+- Prices and numbers: `<bdi dir="ltr">` or the `ui-ltr` class (`direction: ltr; unicode-bidi: isolate`).
 
-Le lint fait respecter ces règles dans `libs/ui` et dans chaque app qui importe [`eslint.rtl.mjs`](eslint.rtl.mjs) :
+The lint enforces these rules in `libs/ui` and in every app that imports [`eslint.rtl.mjs`](eslint.rtl.mjs):
 
-- CSS : règle `css/prefer-logical-properties` de [`@eslint/css`](https://github.com/eslint/css) (les tailles `width`/`height` et les unités de viewport restent permises, elles ne dépendent pas du sens d'écriture) ;
-- classes Tailwind dans les templates (attribut `class`, `[class.x]`, chaînes de `[class]`/`[ngClass]`) et dans les chaînes TypeScript (`host: { class }`) : règle locale `soukly-rtl/no-physical-tailwind-classes`.
+- CSS: the `css/prefer-logical-properties` rule of [`@eslint/css`](https://github.com/eslint/css) (`width`/`height` sizes and viewport units stay allowed, they do not depend on the writing direction);
+- Tailwind classes in templates (`class` attribute, `[class.x]`, strings in `[class]`/`[ngClass]`) and in TypeScript strings (`host: { class }`): local rule `soukly-rtl/no-physical-tailwind-classes`.
 
-Exemple de sortie :
+Sample output:
 
 ```text
 error  Expected logical property 'margin-inline-start' instead of 'margin-left'                css/prefer-logical-properties
 error  Physical Tailwind class "ml-4" breaks RTL layouts: use the logical class "ms-4"           soukly-rtl/no-physical-tailwind-classes
 ```
 
-## Polices et licences
+## Fonts and licences
 
-Fichiers `woff2` dans [`src/assets/fonts`](src/assets/fonts), sous-ensembles latin et arabe (le navigateur ne télécharge un fichier que si la page contient un caractère de sa plage `unicode-range`), `font-display: swap`. Fichiers issus des paquets Fontsource 5.3.0 (`@fontsource-variable/rubik`, `@fontsource/lalezar`), copiés dans le dépôt : aucune dépendance npm ni appel réseau à l'exécution.
+`woff2` files in [`src/assets/fonts`](src/assets/fonts), Latin and Arabic subsets (the browser only downloads a file when the page contains a character of its `unicode-range`), `font-display: swap`. Files taken from the Fontsource 5.3.0 packages (`@fontsource-variable/rubik`, `@fontsource/lalezar`) and copied into the repository: no npm dependency and no network call at runtime.
 
-| Police                               | Fichiers                                                            | Auteurs                                                                               | Licence                                                                          |
+| Font                                 | Files                                                               | Authors                                                                               | Licence                                                                          |
 | ------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Rubik (variable, graisses 300 à 900) | `rubik-latin-wght-normal.woff2`, `rubik-arabic-wght-normal.woff2`   | The Rubik Project Authors ([googlefonts/rubik](https://github.com/googlefonts/rubik)) | SIL Open Font License 1.1, [`OFL-Rubik.txt`](src/assets/fonts/OFL-Rubik.txt)     |
+| Rubik (variable, weights 300 to 900) | `rubik-latin-wght-normal.woff2`, `rubik-arabic-wght-normal.woff2`   | The Rubik Project Authors ([googlefonts/rubik](https://github.com/googlefonts/rubik)) | SIL Open Font License 1.1, [`OFL-Rubik.txt`](src/assets/fonts/OFL-Rubik.txt)     |
 | Lalezar (400)                        | `lalezar-latin-400-normal.woff2`, `lalezar-arabic-400-normal.woff2` | The Lalezar Project Authors ([BornaIz/Lalezar](https://github.com/BornaIz/Lalezar))   | SIL Open Font License 1.1, [`OFL-Lalezar.txt`](src/assets/fonts/OFL-Lalezar.txt) |
 
-La licence OFL permet l'usage, la modification et la redistribution des polices avec un logiciel, à condition de conserver le texte de licence et de ne pas les vendre seules.
+The OFL allows using, modifying and redistributing the fonts with software, provided the licence text is kept and the fonts are not sold on their own.

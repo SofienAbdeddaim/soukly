@@ -1,6 +1,6 @@
 // RTL guard: Soukly is rendered left-to-right (fr, en) and right-to-left (ar), so styles use
 // logical properties only. Imported by the ESLint config of libs/ui and of every app that
-// renders its components; see "Règles RTL" in libs/ui/README.md.
+// renders its components; see "RTL rules" in libs/ui/README.md.
 import css from '@eslint/css';
 
 // Physical Tailwind utility (without its value) -> logical equivalent.
