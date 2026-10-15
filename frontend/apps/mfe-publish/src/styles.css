@@ -1,0 +1,5 @@
+@import 'tailwindcss';
+@import '../../../libs/ui/src/styles/tailwind.css';
+@import '../../../libs/ui/src/styles/soukly.css';
+
+@source './app';
