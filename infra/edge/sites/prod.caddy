@@ -1,0 +1,20 @@
+# Prod site (DEP-02), enabled when PROD_HOST is set. Upstreams are reached on soukly-edge-prod.
+# Photos are served by Oracle Object Storage directly (PHOTO_PUBLIC_BASE_URL), not by Caddy.
+
+{$PROD_HOST} {
+	import common
+	header Strict-Transport-Security "max-age=31536000"
+
+	# Path kept as is: the gateway removes /api itself (SETUP-06).
+	handle /api/* {
+		reverse_proxy prod-gateway:8080
+	}
+	handle {
+		reverse_proxy prod-frontend:8080
+	}
+}
+
+www.{$PROD_HOST} {
+	import common
+	redir https://{$PROD_HOST}{uri} permanent
+}

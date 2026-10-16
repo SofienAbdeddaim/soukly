@@ -1,0 +1,55 @@
+# Shared HTTPS front of the VM (DEP-02): the only container that publishes ports on the host.
+#   docker compose -p soukly-edge --env-file /opt/soukly/edge/.env -f infra/edge/compose.yml up -d --wait
+# The networks soukly-edge-dev and soukly-edge-prod are created by infra/vm/setup.sh; each stack
+# plugs only its gateway and front end into its own one (plus Garage in dev), so dev and prod never
+# share a network.
+
+name: soukly-edge
+
+services:
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/etc/caddy/start.sh"]
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL is not set, see infra/edge/.env.example}
+      # Empty = no site declared for that environment.
+      DEV_HOST: ${DEV_HOST:-}
+      PROD_HOST: ${PROD_HOST:-}
+      DEV_S3_BUCKET: ${DEV_S3_BUCKET:-soukly-listings}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./start.sh:/etc/caddy/start.sh:ro
+      - ./sites:/etc/caddy/sites-available:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - default
+      - edge-dev
+      - edge-prod
+    healthcheck:
+      # Caddy's admin endpoint, only reachable inside the container.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    mem_limit: 128m
+
+networks:
+  # Outbound access for the ACME challenges and certificate downloads.
+  default:
+  edge-dev:
+    name: soukly-edge-dev
+    external: true
+  edge-prod:
+    name: soukly-edge-prod
+    external: true
+
+volumes:
+  caddy-data:
+  caddy-config:
