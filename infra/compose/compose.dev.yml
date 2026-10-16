@@ -1,0 +1,100 @@
+# Dev-only additions to compose.yml (DEP-02): Garage for the photos, Mailpit for the emails, and
+# lower memory limits.
+#   docker compose -p soukly-dev --env-file /opt/soukly/dev/.env -f compose.yml -f compose.dev.yml up -d --wait
+
+services:
+  postgres:
+    mem_limit: 512m
+
+  redpanda:
+    mem_limit: 1280m
+
+  gateway:
+    mem_limit: 512m
+
+  user-service:
+    depends_on:
+      mailpit:
+        condition: service_healthy
+    mem_limit: 512m
+
+  listing-service:
+    depends_on:
+      garage-init:
+        condition: service_completed_successfully
+    mem_limit: 512m
+
+  social-publisher:
+    mem_limit: 512m
+
+  garage:
+    image: dxflrs/garage:v2.4.1
+    restart: unless-stopped
+    environment:
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?GARAGE_RPC_SECRET is not set}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?GARAGE_ADMIN_TOKEN is not set}
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta
+      - garage-data:/var/lib/garage/data
+    networks:
+      default:
+      # Reached by the edge Caddy for s3.<DEV_HOST> (S3 API) and photos.<DEV_HOST> (website).
+      edge:
+        aliases:
+          - dev-garage
+    healthcheck:
+      # The image has no shell: `garage status` exits 0 once the node answers RPC.
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    mem_limit: 256m
+
+  # One-shot: layout, application key, bucket, permissions, CORS for the dev site and website
+  # access. Same script as the local stack (SETUP-02). Idempotent.
+  garage-init:
+    image: amazon/aws-cli:2.38.0
+    restart: "no"
+    depends_on:
+      garage:
+        condition: service_healthy
+    entrypoint: ["bash", "/init.sh"]
+    environment:
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?GARAGE_ADMIN_TOKEN is not set}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?S3_ACCESS_KEY_ID is not set}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is not set}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is not set}
+      S3_REGION: ${S3_REGION:?S3_REGION is not set}
+      S3_CORS_ORIGIN: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is not set}
+      GARAGE_WEBSITE: "true"
+    volumes:
+      - ../garage/init.sh:/init.sh:ro
+    mem_limit: 256m
+
+  # Captures every dev email. Its web interface is only reachable through an SSH tunnel to its
+  # fixed address (see infra/vm/README.md); nothing is published on the host.
+  mailpit:
+    image: axllent/mailpit:v1.31.5
+    restart: unless-stopped
+    networks:
+      default:
+        ipv4_address: 172.30.11.25
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 64m
+
+networks:
+  # Fixed subnet so that Mailpit keeps the address used by the SSH tunnel.
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.11.0/24
+
+volumes:
+  garage-meta:
+  garage-data:
