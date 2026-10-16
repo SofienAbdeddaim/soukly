@@ -1,0 +1,39 @@
+# Dev site (DEP-02), enabled when DEV_HOST is set. Upstreams are reached on soukly-edge-dev.
+
+{$DEV_HOST} {
+	import common
+	import noindex
+
+	# Path kept as is: the gateway removes /api itself (SETUP-06).
+	handle /api/* {
+		reverse_proxy dev-gateway:8080
+	}
+	handle {
+		reverse_proxy dev-frontend:8080
+	}
+}
+
+# Garage S3 API, for uploads with presigned URLs (ANN-02). Caddy keeps the Host header, which
+# is part of the signature.
+s3.{$DEV_HOST} {
+	import common
+	import noindex
+	reverse_proxy dev-garage:3900
+}
+
+# Public read of the photos through Garage's website endpoint (port 3902), limited to listings/:
+# incoming/ is never readable publicly (ANN-02). Garage picks the bucket from the Host header.
+photos.{$DEV_HOST} {
+	import common
+	import noindex
+
+	@public path /listings/*
+	handle @public {
+		reverse_proxy dev-garage:3902 {
+			header_up Host {$DEV_S3_BUCKET}
+		}
+	}
+	handle {
+		respond 404
+	}
+}

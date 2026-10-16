@@ -1,0 +1,12 @@
+# Node configuration of the single Redpanda node on the VM (DEP-02). It replaces the image's
+# default file, which turns developer mode on (relaxed checks, write caching, data loss on an
+# unclean shutdown). Listeners and resources are set by the command line in compose.yml.
+redpanda:
+  data_directory: /var/lib/redpanda/data
+  seed_servers: []
+  developer_mode: false
+  # Cluster property applied at the first start: topics are only created by redpanda-init.
+  auto_create_topics_enabled: false
+rpk:
+  overprovisioned: true
+  coredump_dir: /var/lib/redpanda/coredump

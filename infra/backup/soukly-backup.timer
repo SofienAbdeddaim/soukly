@@ -1,0 +1,12 @@
+# Starts soukly-backup.service every night at 03:00, Africa/Tunis time (DEP-02).
+# Persistent: a run missed while the VM was off happens at the next boot.
+[Unit]
+Description=Nightly Soukly prod database backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=5m
+
+[Install]
+WantedBy=timers.target
