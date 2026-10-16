@@ -1,0 +1,16 @@
+# Keep the build context small and free of local or secret files (DEP-01).
+**/node_modules
+**/dist
+**/target
+.git
+**/.env
+**/.env.*
+.angular
+.nx
+**/coverage
+**/out-tsc
+**/test-output
+**/playwright-report
+**/screenshots
+Dockerfile
+.dockerignore

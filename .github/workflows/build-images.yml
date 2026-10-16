@@ -1,0 +1,297 @@
+name: build-images
+
+# Builds the 5 Docker images of one commit for linux/amd64 and linux/arm64 and publishes them on
+# GHCR as ghcr.io/<owner>/soukly-<name>:<full sha> (DEP-01). Manual or called by deploy-dev and
+# deploy-prod only: never on push, pull_request or schedule. Images already published for the
+# commit are reused unless "force" is set.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit SHA to build
+        type: string
+        default: main
+      force:
+        description: Rebuild the images even if they already exist for this commit
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      ref:
+        description: Branch, tag or commit SHA to build
+        type: string
+        default: main
+      force:
+        description: Rebuild the images even if they already exist for this commit
+        type: boolean
+        default: false
+    outputs:
+      sha:
+        description: Full SHA of the commit the images are tagged with
+        value: ${{ jobs.resolve.outputs.sha }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  resolve:
+    name: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+      registry: ${{ steps.sha.outputs.registry }}
+      created: ${{ steps.sha.outputs.created }}
+      builds: ${{ steps.plan.outputs.builds }}
+      images: ${{ steps.plan.outputs.images }}
+      present: ${{ steps.plan.outputs.present }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - id: sha
+        run: |
+          {
+            echo "sha=$(git rev-parse HEAD)"
+            echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+            echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # The 5 images and how to build them; an image already tagged with the SHA is skipped.
+      - id: plan
+        env:
+          SHA: ${{ steps.sha.outputs.sha }}
+          REGISTRY: ${{ steps.sha.outputs.registry }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          images='[
+            {"image":"gateway","context":"backend","file":"backend/Dockerfile","build_args":"SERVICE=gateway\nSERVICE_PORT=8080"},
+            {"image":"user-service","context":"backend","file":"backend/Dockerfile","build_args":"SERVICE=user-service\nSERVICE_PORT=8081"},
+            {"image":"listing-service","context":"backend","file":"backend/Dockerfile","build_args":"SERVICE=listing-service\nSERVICE_PORT=8082\nEXTRA_PACKAGES=libvips-tools"},
+            {"image":"social-publisher","context":"backend","file":"backend/Dockerfile","build_args":"SERVICE=social-publisher\nSERVICE_PORT=8083\nEXTRA_PACKAGES=libvips-tools"},
+            {"image":"frontend","context":"frontend","file":"frontend/Dockerfile","build_args":""}
+          ]'
+          platforms='[
+            {"platform":"linux/amd64","arch":"amd64","runner":"ubuntu-24.04"},
+            {"platform":"linux/arm64","arch":"arm64","runner":"ubuntu-24.04-arm"}
+          ]'
+          to_build='[]'
+          present='[]'
+          for name in $(jq -r '.[].image' <<< "$images"); do
+            if [ "$FORCE" != "true" ] && docker buildx imagetools inspect "$REGISTRY/soukly-$name:$SHA" > /dev/null 2>&1; then
+              present=$(jq -c --arg n "$name" '. + [$n]' <<< "$present")
+            else
+              to_build=$(jq -c --arg n "$name" '. + [$n]' <<< "$to_build")
+            fi
+          done
+          builds=$(jq -c --argjson names "$to_build" --argjson p "$platforms" \
+            '[.[] | select(.image as $i | $names | index($i)) | . as $img | $p[] | $img + .]' <<< "$images")
+          {
+            echo "images=$to_build"
+            echo "present=$present"
+            echo "builds=$builds"
+          } >> "$GITHUB_OUTPUT"
+          echo "To build: $to_build; already present: $present"
+
+  build:
+    name: build ${{ matrix.image }} (${{ matrix.arch }})
+    needs: resolve
+    if: needs.resolve.outputs.images != '[]'
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: true
+      matrix:
+        include: ${{ fromJSON(needs.resolve.outputs.builds) }}
+    # Two runs of the same commit never build the same image and platform at the same time.
+    concurrency:
+      group: build-images-${{ needs.resolve.outputs.sha }}-${{ matrix.image }}-${{ matrix.arch }}
+    env:
+      IMAGE: ${{ needs.resolve.outputs.registry }}/soukly-${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Native runner per architecture (no QEMU); pushed by digest, tagged by the merge job.
+      - id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          platforms: ${{ matrix.platform }}
+          build-args: ${{ matrix.build_args }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.resolve.outputs.sha }}
+            org.opencontainers.image.created=${{ needs.resolve.outputs.created }}
+            org.opencontainers.image.title=soukly-${{ matrix.image }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          provenance: false
+          cache-from: type=gha,scope=soukly-${{ matrix.image }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=soukly-${{ matrix.image }}-${{ matrix.arch }}
+      - name: Export digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.image }}-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: merge ${{ matrix.image }}
+    needs: [resolve, build]
+    if: needs.resolve.outputs.images != '[]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.resolve.outputs.images) }}
+    concurrency:
+      group: build-images-${{ needs.resolve.outputs.sha }}-${{ matrix.image }}-merge
+    env:
+      IMAGE: ${{ needs.resolve.outputs.registry }}/soukly-${{ matrix.image }}
+      SHA: ${{ needs.resolve.outputs.sha }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digests-${{ matrix.image }}-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create the multi-architecture image
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          refs=()
+          for digest in *; do refs+=("$IMAGE@sha256:$digest"); done
+          docker buildx imagetools create \
+            --tag "$IMAGE:$SHA" \
+            --annotation "index:org.opencontainers.image.source=$SOURCE" \
+            --annotation "index:org.opencontainers.image.revision=$SHA" \
+            --annotation "index:org.opencontainers.image.title=soukly-${{ matrix.image }}" \
+            "${refs[@]}"
+      - name: Check both platforms
+        run: |
+          platforms=$(docker buildx imagetools inspect --raw "$IMAGE:$SHA" \
+            | jq -r '[.manifests[].platform | "\(.os)/\(.architecture)"] | sort | join(",")')
+          echo "$IMAGE:$SHA -> $platforms"
+          if [ "$platforms" != "linux/amd64,linux/arm64" ]; then
+            echo "::error::$IMAGE:$SHA has platforms '$platforms', expected linux/amd64 and linux/arm64"
+            exit 1
+          fi
+
+  # Runs every image once per architecture: non-root user, libvips only where it is expected.
+  verify:
+    name: verify (${{ matrix.arch }})
+    needs: [resolve, merge]
+    if: ${{ !cancelled() && needs.resolve.result == 'success' && (needs.merge.result == 'success' || needs.merge.result == 'skipped') }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    env:
+      REGISTRY: ${{ needs.resolve.outputs.registry }}
+      SHA: ${{ needs.resolve.outputs.sha }}
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check the images
+        run: |
+          status=0
+          for name in gateway user-service listing-service social-publisher frontend; do
+            image="$REGISTRY/soukly-$name:$SHA"
+            docker pull --quiet "$image" > /dev/null
+            user=$(docker image inspect --format '{{.Config.User}}' "$image")
+            case "$user" in
+              "" | 0 | 0:* | root | root:*) echo "::error::$image runs as root"; status=1 ;;
+              *) echo "$image runs as $user" ;;
+            esac
+            vips=$(docker run --rm --entrypoint sh "$image" -c 'vips --version 2>/dev/null || echo absent')
+            case "$name" in
+              listing-service | social-publisher) expected=present ;;
+              *) expected=absent ;;
+            esac
+            if { [ "$expected" = present ] && [ "$vips" = absent ]; } || { [ "$expected" = absent ] && [ "$vips" != absent ]; }; then
+              echo "::error::$image: libvips expected $expected, got '$vips'"
+              status=1
+            else
+              echo "$image: libvips $vips"
+            fi
+          done
+          exit "$status"
+
+  summary:
+    name: summary
+    needs: [resolve, build, merge, verify]
+    if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      REGISTRY: ${{ needs.resolve.outputs.registry }}
+      SHA: ${{ needs.resolve.outputs.sha }}
+      BUILT: ${{ needs.resolve.outputs.images }}
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Write the job summary
+        run: |
+          size() { # compressed size of one platform of an image, in MB
+            digest=$(jq -r --arg a "$2" '.manifests[] | select(.platform.architecture == $a) | .digest' <<< "$1")
+            [ -n "$digest" ] || { echo "-"; return; }
+            docker buildx imagetools inspect --raw "$3@$digest" \
+              | jq -r '([.layers[].size] | add) + .config.size | . / 1048576 | floor | "\(.) MB"'
+          }
+          {
+            echo "### Images for \`$SHA\`"
+            echo
+            if [ "$BUILT" = "[]" ]; then
+              echo "Images already present: nothing was rebuilt."
+              echo
+            fi
+            echo "| Image | Status | linux/amd64 | linux/arm64 |"
+            echo "| --- | --- | --- | --- |"
+            for name in gateway user-service listing-service social-publisher frontend; do
+              image="$REGISTRY/soukly-$name"
+              if jq -e --arg n "$name" 'index($n)' <<< "$BUILT" > /dev/null; then status=built; else status=reused; fi
+              if index=$(docker buildx imagetools inspect --raw "$image:$SHA" 2> /dev/null); then
+                echo "| \`$image:$SHA\` | $status | $(size "$index" amd64 "$image") | $(size "$index" arm64 "$image") |"
+              else
+                echo "| \`$image:$SHA\` | missing | - | - |"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

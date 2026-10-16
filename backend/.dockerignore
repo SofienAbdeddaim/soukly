@@ -1,0 +1,12 @@
+# Keep the build context small and free of local or secret files (DEP-01).
+**/target
+**/node_modules
+**/dist
+.git
+**/.env
+**/.env.*
+.idea
+.vscode
+**/*.iml
+Dockerfile
+.dockerignore
