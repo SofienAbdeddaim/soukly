@@ -270,6 +270,18 @@ docker run --rm -p 8080:8080 -e PUBLIC_BASE_URL=http://localhost:8080 soukly-fro
 
 GHCR creates a package as **private** the first time it is pushed. After the first `build-images` run, for each of the 5 `soukly-*` packages: *GitHub profile > Packages > soukly-<name> > Package settings > Danger zone > Change visibility > Public*. The VM then pulls the images without credentials. The `org.opencontainers.image.source` label links each package to this repository.
 
+## Oracle VM (dev and prod)
+
+One Oracle Cloud Always Free VM (arm64) runs the `dev` and `prod` environments as two isolated Compose projects behind a shared Caddy in HTTPS. Nothing is deployed automatically.
+
+- [`infra/vm/README.md`](infra/vm/README.md): creating the VM, `infra/vm/setup.sh` (idempotent preparation), first launch, switching to the real domain, operations.
+- [`infra/backup/README.md`](infra/backup/README.md): nightly backup of the prod databases to Object Storage (7 days) and the restore procedure.
+
+```bash
+docker compose -p soukly-edge --env-file /opt/soukly/edge/.env -f infra/edge/compose.yml up -d --wait
+docker compose -p soukly-<env> --env-file /opt/soukly/<env>/.env -f infra/compose/compose.yml [-f infra/compose/compose.dev.yml] up -d --wait
+```
+
 ## Structure
 
 ```
@@ -280,7 +292,7 @@ soukly/
 ├── .env.example       # expected variables, dummy values
 ├── .github/           # CI (workflows/ci.yml), images (workflows/build-images.yml), Dependabot, PR template
 ├── docker-compose.yml # local infrastructure
-├── infra/             # postgres/init (one database per service), garage (config and init)
+├── infra/             # postgres/init, garage (local), vm (Oracle VM), edge (HTTPS Caddy), compose (dev/prod stacks), backup
 ├── scripts/           # infra-check.sh
 ├── frontend/          # Nx workspace (pnpm)
 └── backend/           # Maven: common, gateway, user-service, listing-service, social-publisher
