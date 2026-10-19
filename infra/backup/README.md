@@ -4,8 +4,8 @@ Every night at 03:00 (Africa/Tunis), `soukly-backup.timer` runs `pg-backup.sh` a
 
 1. `pg_dump -Fc` (custom format) of `soukly_user`, `soukly_listing` and `soukly_social`, from the
    `postgres` container of the `soukly-prod` project;
-2. upload to the private bucket `soukly-backups` of an S3-compatible object storage (Hetzner
-   Object Storage in the examples), under `<YYYY-MM-DD>/`;
+2. upload to the private bucket `soukly-backups` of an S3-compatible object storage (Oracle
+   Object Storage by default), under `<YYYY-MM-DD>/`;
 3. deletion of the date folders older than 7 days (the last 7 days are kept, today included).
 
 Any failure (no prod container, empty dump, upload refused) ends the run in error, visible in

@@ -272,7 +272,7 @@ GHCR creates a package as **private** the first time it is pushed. After the fir
 
 ## VM (dev and prod)
 
-One Ubuntu VM (any provider; Hetzner Cloud in the procedure) runs the `dev` and `prod` environments as two isolated Compose projects behind a shared Caddy in HTTPS. Nothing is deployed automatically.
+One Ubuntu VM (Oracle Cloud Always Free by default, or any provider) runs the `dev` and `prod` environments as two isolated Compose projects behind a shared Caddy in HTTPS. Nothing is deployed automatically.
 
 - [`infra/vm/README.md`](infra/vm/README.md): creating the VM, `infra/vm/setup.sh` (idempotent preparation), first launch, switching to the real domain, operations.
 - [`infra/backup/README.md`](infra/backup/README.md): nightly backup of the prod databases to object storage (7 days) and the restore procedure.

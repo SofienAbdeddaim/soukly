@@ -42,19 +42,37 @@ On the VM, settings and secrets live outside the repository, readable by `deploy
 
 ## 1. Create the VM
 
-Any provider works, as long as it gives one server with **Ubuntu 24.04** (amd64 or arm64: the
-DEP-01 images exist for both), a **fixed public IPv4** and a firewall in front of it. Size:
+The default is **Oracle Cloud Always Free** (Ampere A1, arm64). Any other provider works the same
+way, as long as it gives one server with **Ubuntu 24.04** (amd64 or arm64: the DEP-01 images exist
+for both), a **fixed public IPv4** and a firewall in front of it. Size: about **4.3 GB** of memory
+for dev alone, **9.5 GB** for dev and prod (section 6).
 
-| Use | Memory | Example (Hetzner Cloud, Germany or Finland) |
-|---|---|---|
-| dev only | 8 GB | **CX33**: 4 vCPU, 8 GB, 80 GB disk |
-| dev and prod | 16 GB | **CX43**: 8 vCPU, 16 GB, 160 GB disk (or resize the CX33 later) |
+### Oracle Cloud (Always Free, default)
 
-Oracle Cloud's Always Free tier (2 OCPU and 12 GB of Ampere A1 since June 2026, the only free
-offer of that size) was the first choice, but its account creation failed; the steps below use
-Hetzner Cloud. Check the current prices on hetzner.com before creating the server.
+Always Free limits checked on 2026-10-16 in the
+[Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm)
+page: Ampere A1 Flex instances share **1,500 OCPU hours and 9,000 GB hours per month**, which
+Oracle states as **2 OCPUs and 12 GB of memory** for Always Free tenancies (the ticket assumed 4
+and 24), and **200 GB** of block volume (boot volumes included). Check the page again on the day
+you create the VM, because Oracle changes these limits.
 
-### Hetzner Cloud
+1. **Compute > Instances > Create instance**:
+   - image: **Canonical Ubuntu 24.04** (the aarch64 build is selected with the shape);
+   - shape: **Ampere > VM.Standard.A1.Flex**, **2 OCPUs, 12 GB** of memory;
+   - networking: a new VCN with a public subnet, and **Assign a public IPv4 address**;
+   - SSH keys: upload **your own** public key (your admin account, not the deploy key);
+   - boot volume: **100 GB** (below the 200 GB limit).
+2. If the console answers **"Out of capacity"**, retry later, pick another availability domain
+   in the same form, or create the instance with a smaller shape and resize it later
+   (**Edit > Shape**). The home region cannot be changed afterwards.
+3. **Reserved public IP**: **Networking > IP management > Reserved public IPs > Reserve**, then
+   on the instance, **Attached VNICs > IPv4 addresses > Edit**: switch from "Ephemeral" to the
+   reserved IP. The dev address and the prod DNS records depend on it.
+4. **Security list** of the subnet (**Networking > Virtual cloud networks > subnet > Security
+   list**): keep only these ingress rules, from `0.0.0.0/0`, TCP: **22**, **80**, **443**.
+   Add **UDP 443** if you want HTTP/3 (optional). Remove any other ingress rule.
+
+### Hetzner Cloud (paid alternative)
 
 1. **Console > Projects > New project** `soukly`.
 2. **Security > SSH keys > Add SSH key**: paste **your own** public key (your admin account, not
@@ -85,12 +103,20 @@ the DEP-03 and DEP-04 secrets; only the `.pub` file goes to the VM.
 
 ```bash
 ssh-keygen -t ed25519 -C soukly-deploy -f ~/.ssh/soukly-deploy
-scp ~/.ssh/soukly-deploy.pub root@<vm-ip>:/tmp/
+scp ~/.ssh/soukly-deploy.pub ubuntu@<vm-ip>:/tmp/      # Hetzner: root@<vm-ip>
 ```
 
-On the VM. When the provider only gives `root` (Hetzner), the first run creates your admin
-account (here `sofien`): it gets root's SSH keys and `sudo` without a password, and every later
-login uses it.
+**Oracle** (and any provider that gives an admin account with `sudo`, `ubuntu` on Oracle images):
+
+```bash
+ssh ubuntu@<vm-ip>
+git clone https://github.com/SofienAbdeddaim/soukly.git ~/soukly
+sudo bash ~/soukly/infra/vm/setup.sh --deploy-key /tmp/soukly-deploy.pub
+sudo bash ~/soukly/infra/vm/setup.sh      # second run: no error, nothing duplicated
+```
+
+**Hetzner** (and any provider that only gives `root`): the first run creates your admin account
+(here `sofien`) with root's SSH keys and `sudo` without a password; every later login uses it.
 
 ```bash
 ssh root@<vm-ip>
@@ -104,9 +130,8 @@ git clone https://github.com/SofienAbdeddaim/soukly.git ~/soukly
 sudo bash ~/soukly/infra/vm/setup.sh                   # second run: no error, nothing duplicated
 ```
 
-When the provider already gives an admin account with `sudo` (`ubuntu` on Oracle or AWS), run
-`sudo bash ~/soukly/infra/vm/setup.sh --deploy-key /tmp/soukly-deploy.pub` from it instead. The
-script refuses to run as root without `--admin-user`, so that nobody is locked out.
+The script refuses to run as root without `--admin-user`, so that nobody is locked out. Until
+PR #11 is merged, run `git -C ~/soukly checkout feat/DEP-02-oracle-vm` after each clone.
 
 The script:
 
@@ -131,7 +156,7 @@ The script:
 Check the SSH rules from your computer:
 
 ```bash
-ssh -o PubkeyAuthentication=no sofien@<vm-ip>        # refused: Permission denied (publickey)
+ssh -o PubkeyAuthentication=no ubuntu@<vm-ip>        # refused: Permission denied (publickey)
 ssh root@<vm-ip>                                     # refused
 ssh -i ~/.ssh/soukly-deploy deploy@<vm-ip> docker ps # works
 ```
@@ -164,10 +189,10 @@ Fill in each file. Every secret is generated separately for dev and for prod, fo
 | `PUBLIC_BASE_URL`, `FRONT_BASE_URL`, `CORS_ALLOWED_ORIGINS` | `https://<DEV_HOST>` | `https://soukly.tn` |
 | `GATEWAY_TRUSTED_PROXIES` | `172.30.10.0/24` | `172.30.20.0/24` |
 | `JWT_SECRETS_DIR` | `/opt/soukly/dev/secrets` | `/opt/soukly/prod/secrets` |
-| `S3_ENDPOINT` | `http://garage:3900` | `https://<location>.your-objectstorage.com` (section 5) |
+| `S3_ENDPOINT` | `http://garage:3900` | object storage S3 endpoint (section 5) |
 | `S3_PUBLIC_ENDPOINT` | `https://s3.<DEV_HOST>` | same as `S3_ENDPOINT` |
-| `S3_REGION` | `garage` | the location, for example `fsn1` |
-| `PHOTO_PUBLIC_BASE_URL` | `https://photos.<DEV_HOST>` | `https://soukly-listings.<location>.your-objectstorage.com` |
+| `S3_REGION` | `garage` | storage region, for example `eu-marseille-1` (Oracle) or `fsn1` (Hetzner) |
+| `PHOTO_PUBLIC_BASE_URL` | `https://photos.<DEV_HOST>` | public URL of `listings/` (section 5) |
 | `MAIL_*` | `mailpit`, `1025`, no credentials | SMTP provider (to be chosen) |
 
 `IMAGE_TAG` is the tag of the images to run (`sha-<commit>` from the build-images workflow,
@@ -237,10 +262,43 @@ nmap -Pn -p 1-65535 <vm-ip>                                       # only 22, 80,
 The prod site sends `Strict-Transport-Security` (one year); `www.soukly.tn` redirects
 permanently to `https://soukly.tn`.
 
-## 5. Object Storage (prod)
+## 5. Object storage (prod)
 
-Prod photos and backups use an S3-compatible object storage: dev keeps Garage on the VM. With
-Hetzner, [Object Storage](https://docs.hetzner.com/storage/object-storage/overview/) (billed per
+Prod photos and backups use an S3-compatible object storage; dev keeps Garage on the VM.
+
+### Oracle Object Storage (default)
+
+Prod photos and backups use Object Storage through its
+[S3 compatibility API](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/s3compatibleapi.htm):
+endpoint `https://<namespace>.compat.objectstorage.<region>.oraclecloud.com`, path-style
+addresses and SigV4 signatures only. The namespace is shown in **Profile > Tenancy**.
+Always Free includes 20 GB of Object Storage and 50,000 API requests per month.
+
+1. Buckets (**Storage > Buckets**), both **private**, Standard tier: `soukly-listings` (photos)
+   and `soukly-backups`.
+2. A user per use, each in a group with a policy limited to its bucket, for example:
+   ```
+   Allow group soukly-photos to manage objects in compartment soukly where target.bucket.name='soukly-listings'
+   Allow group soukly-backups to manage objects in compartment soukly where target.bucket.name='soukly-backups'
+   ```
+   Then, for each user, **Customer secret keys > Generate secret key**: the access key and
+   secret go to `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` (prod `.env`) and
+   `BACKUP_S3_ACCESS_KEY_ID`/`BACKUP_S3_SECRET_ACCESS_KEY` (`backup.env`).
+3. Public read of the photos, `listings/` only: on `soukly-listings`, **Pre-authenticated
+   requests > Create**, target **Objects with prefix** `listings/`, access **Permit object
+   reads**, object listing **not** allowed, expiry far ahead (an expiry date is mandatory: note
+   it and renew the request before it). The bucket stays private, so `incoming/` is never public.
+   `PHOTO_PUBLIC_BASE_URL` is the request's URL up to `/o` (the object key is appended to it).
+   [Pre-authenticated requests](https://docs.oracle.com/en-us/iaas/Content/Object/Tasks/usingpreauthenticatedrequests.htm).
+
+**Open risk for ANN-02 (photo uploads):** the S3 compatibility API has no `PutBucketCors` and the
+browser upload of a presigned `PUT` to Object Storage from `https://soukly.tn` has not been
+confirmed in Oracle's documentation (presigned `GET` URLs are). Test it on the real bucket
+before opening prod; if it fails, uploads go through a same-origin route or the service.
+
+### Hetzner Object Storage (with a Hetzner server)
+
+[Object Storage](https://docs.hetzner.com/storage/object-storage/overview/) (billed per
 account: a monthly base price that includes 1 TB of storage and 1 TB of traffic; check the price
 on hetzner.com), in the same location as the server. Endpoint
 `https://<location>.your-objectstorage.com` (`fsn1`, `nbg1` or `hel1`), region = the location.
@@ -294,12 +352,12 @@ S3 one and is to be confirmed on the first try).
   | `garage`, `mailpit` | 256 MB, 64 MB | n/a |
   | **total** | **about 4.2 GB** | **about 5.1 GB** |
 
-  Dev alone with the edge Caddy is about 4.3 GB, which fits an 8 GB server; dev and prod together
-  are about 9.5 GB, which needs 16 GB. These are starting values, below the ticket's (sized for
+  Dev alone with the edge Caddy is about 4.3 GB; dev and prod together are about 9.5 GB, which
+  fits Oracle's 12 GB (or a 16 GB server elsewhere). These are starting values, below the ticket's (sized for
   24 GB): adjust after measuring with `docker stats`.
 - **Dev emails** (Mailpit): open a tunnel to its fixed address and browse `http://localhost:8025`:
   ```bash
-  ssh -L 8025:172.30.11.25:8025 sofien@<vm-ip>
+  ssh -L 8025:172.30.11.25:8025 ubuntu@<vm-ip>
   ```
 - **Database or Redpanda by tunnel**: nothing is published on the host. Use `docker exec`, for
   example `docker exec -it soukly-dev-postgres-1 psql -U postgres`, or a tunnel to the
