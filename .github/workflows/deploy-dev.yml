@@ -1,0 +1,179 @@
+name: deploy-dev
+
+# Deploys any branch, tag or commit to the dev environment of the VM (DEP-03), with an automatic
+# return to the previous version when the new one does not start. Manual only: never on push,
+# pull_request, schedule or workflow_run. The SSH key of the "dev" environment can only run
+# "/opt/soukly/bin/deploy.sh dev" on the VM (infra/vm/setup.sh); the VM does the rest.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit SHA to deploy (empty = the branch of "Use workflow from")
+        type: string
+        default: ''
+      force_build:
+        description: Rebuild the images even if they already exist for this commit
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write # build-images publishes the images on GHCR
+
+# A second deployment waits for the end of the first one.
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: resolve
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      ref: ${{ steps.resolve.outputs.ref }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      started: ${{ steps.resolve.outputs.started }}
+    steps:
+      - id: resolve
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+          BRANCH: ${{ github.ref_name }}
+          BRANCH_SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          started=$(date +%s)
+          ref="$INPUT_REF"
+          sha=""
+          if [ -z "$ref" ]; then
+            ref="$BRANCH"
+            sha="$BRANCH_SHA"
+          elif [[ "$ref" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            # A commit SHA, full or abbreviated.
+            if [[ "$ref" =~ ^[0-9a-f]{7,40}$ ]]; then
+              sha=$(gh api "repos/$REPOSITORY/commits/$ref" --jq .sha 2> /dev/null || true)
+            fi
+            # Otherwise a branch, then a tag (annotated tags point to their commit with ^{}).
+            if [ -z "$sha" ]; then
+              sha=$(git ls-remote "https://github.com/$REPOSITORY" | awk -v r="$ref" '
+                $2 == "refs/heads/" r { head = $1 }
+                $2 == "refs/tags/" r "^{}" { peeled = $1 }
+                $2 == "refs/tags/" r { tag = $1 }
+                END { print (head != "" ? head : (peeled != "" ? peeled : tag)) }')
+            fi
+          fi
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Reference not found: $INPUT_REF"
+            {
+              echo "### deploy-dev"
+              echo
+              echo "Reference not found: \`$INPUT_REF\`. Nothing was deployed."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "Deploying $ref ($sha)"
+          {
+            echo "ref=$ref"
+            echo "sha=$sha"
+            echo "started=$started"
+          } >> "$GITHUB_OUTPUT"
+
+  images:
+    name: images
+    needs: resolve
+    uses: ./.github/workflows/build-images.yml
+    with:
+      ref: ${{ needs.resolve.outputs.sha }}
+      force: ${{ inputs.force_build }}
+    permissions:
+      contents: read
+      packages: write
+
+  deploy:
+    name: deploy
+    needs: [resolve, images]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: dev
+      url: https://${{ vars.DEV_HOST }}
+    outputs:
+      status: ${{ steps.deploy.outputs.status }}
+      result: ${{ steps.deploy.outputs.result }}
+      host: ${{ vars.DEV_HOST }}
+    steps:
+      - id: deploy
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+          SSH_KEY: ${{ secrets.DEV_SSH_KEY }}
+          VM_HOST: ${{ secrets.VM_HOST }}
+          KNOWN_HOSTS: ${{ secrets.VM_SSH_KNOWN_HOSTS }}
+        run: |
+          # Key and pinned host key in files readable by the runner user only, deleted at the end.
+          dir="$RUNNER_TEMP/ssh"
+          install -d -m 700 "$dir"
+          trap 'rm -rf "$dir"' EXIT
+          (
+            umask 077
+            printf '%s\n' "$SSH_KEY" > "$dir/key"
+            printf '%s\n' "$KNOWN_HOSTS" > "$dir/known_hosts"
+          )
+          set +e
+          ssh -i "$dir/key" -o IdentitiesOnly=yes -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$dir/known_hosts" \
+            -o ConnectTimeout=20 -o ServerAliveInterval=30 \
+            "deploy@$VM_HOST" "$SHA" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          {
+            echo "status=$status"
+            echo "result=$(sed -n 's/^RESULT: //p' "$RUNNER_TEMP/deploy.log" | tail -n 1)"
+          } >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+  summary:
+    name: summary
+    needs: [resolve, images, deploy]
+    if: ${{ always() && needs.resolve.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - env:
+          REF: ${{ needs.resolve.outputs.ref }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+          STARTED: ${{ needs.resolve.outputs.started }}
+          ACTOR: ${{ github.triggering_actor }}
+          IMAGES: ${{ needs.images.result }}
+          DEPLOY: ${{ needs.deploy.result }}
+          STATUS: ${{ needs.deploy.outputs.status }}
+          RESULT: ${{ needs.deploy.outputs.result }}
+          HOST: ${{ needs.deploy.outputs.host }}
+        run: |
+          elapsed=$(($(date +%s) - STARTED))
+          case "$DEPLOY:$STATUS" in
+            success:0) outcome="deployed" ;;
+            failure:2)
+              previous="${RESULT#rolled-back }"
+              outcome="failed, rolled back to ${previous:0:7}"
+              ;;
+            *)
+              if [ "$IMAGES" != success ]; then
+                outcome="failed, images not built (nothing deployed)"
+              else
+                outcome="failed, rollback impossible"
+              fi
+              ;;
+          esac
+          {
+            echo "### deploy-dev: $outcome"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Reference | \`$REF\` |"
+            echo "| Commit | \`${SHA:0:7}\` |"
+            echo "| Launched by | $ACTOR |"
+            echo "| Site | ${HOST:+https://$HOST} |"
+            echo "| Duration | $((elapsed / 60)) min $((elapsed % 60)) s |"
+            echo "| Result | $outcome |"
+          } >> "$GITHUB_STEP_SUMMARY"

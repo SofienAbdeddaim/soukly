@@ -22,6 +22,7 @@ public final class PublicPaths {
                     "/api/users/password/**"),
             ServerWebExchangeMatchers.pathMatchers(HttpMethod.GET,
                     "/api/listings/**",
+                    "/api/actuator/info",
                     "/actuator/health"));
 
     private PublicPaths() {

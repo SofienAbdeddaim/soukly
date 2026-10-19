@@ -51,5 +51,19 @@ soukly:
 management:
   endpoints:
     web:
+      # /actuator/health for the container health checks; /api/actuator/info under /api, the only
+      # prefix the edge Caddy sends to the gateway, to show the deployed version (DEP-03).
+      base-path: /
+      path-mapping:
+        health: actuator/health
+        info: api/actuator/info
       exposure:
-        include: health
+        include: health,info
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    # Commit SHA of the running images, set by infra/compose/compose.yml.
+    version: ${APP_VERSION:unknown}

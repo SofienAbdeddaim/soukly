@@ -119,7 +119,7 @@ The whitelist lives in a single class, `gateway/.../security/PublicPaths.java`. 
 
 | Access | Paths |
 | --- | --- |
-| Public | `POST /api/users/register`, `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/verify-email`, `POST /api/users/password/**`, `GET /api/listings/**`, `GET /actuator/health` |
+| Public | `POST /api/users/register`, `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/verify-email`, `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
 | JWT required | everything else, for example `POST/PUT/PATCH/DELETE /api/listings/**`, `/api/users/me/**`, `/api/social/**` |
 
 - **JWT**: RS256 only (`none`, HS256 and any other algorithm are rejected); signature checked with the public keys of the `user-service` JWKS (`USER_SERVICE_JWKS_URI`), cached and fetched again when a token carries an unknown `kid` (key rotation); `exp` with a 30 s clock skew; `iss` equal to `JWT_ISSUER`. No secret is shared between services.
@@ -276,6 +276,7 @@ One Ubuntu VM (Oracle Cloud Always Free by default, or any provider) runs the `d
 
 - [`infra/vm/README.md`](infra/vm/README.md): creating the VM, `infra/vm/setup.sh` (idempotent preparation), first launch, switching to the real domain, operations.
 - [`infra/backup/README.md`](infra/backup/README.md): nightly backup of the prod databases to object storage (7 days) and the restore procedure.
+- **Deploying to dev**: *Actions > deploy-dev > Run workflow*, with any branch, tag or commit; if the new version does not start, the VM returns to the previous one ([`infra/vm/README.md`](infra/vm/README.md#7-deploy-to-dev)). Tests of the VM script: `bash infra/vm/tests/deploy.test.sh`.
 
 ```bash
 docker compose -p soukly-edge --env-file /opt/soukly/edge/.env -f infra/edge/compose.yml up -d --wait

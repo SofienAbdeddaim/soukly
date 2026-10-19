@@ -2,8 +2,8 @@
 
 One Ubuntu VM runs two isolated Soukly environments, `dev` and `prod`, behind one Caddy that serves both in HTTPS. This page covers creating the VM,
 preparing it, the first launch, switching to the real domain and day-to-day operations. Backups
-and restores are covered in [`infra/backup/README.md`](../backup/README.md). Deployments of new
-versions are done by the DEP-03 (dev) and DEP-04 (prod) workflows.
+and restores are covered in [`infra/backup/README.md`](../backup/README.md). New versions are
+deployed by the `deploy-dev` workflow (section 7) and, later, `deploy-prod` (DEP-04).
 
 ```
                       Internet (22, 80, 443 only)
@@ -25,6 +25,7 @@ versions are done by the DEP-03 (dev) and DEP-04 (prod) workflows.
 |---|---|
 | `infra/vm/setup.sh` | Idempotent preparation of the VM (run with `sudo`) |
 | `infra/vm/gen-jwt-keys.sh` | RSA key pair of `user-service` for one environment |
+| `infra/vm/deploy.sh` | Deployment of one commit to one environment, with automatic return (section 7) |
 | `infra/edge/` | Shared Caddy: `compose.yml`, `Caddyfile`, one site file per environment, `.env.example` |
 | `infra/compose/` | One environment: `compose.yml` (dev and prod), `compose.dev.yml` (Garage, Mailpit, lower limits), `.env.example` |
 | `infra/backup/` | Nightly backup of the prod databases and the restore procedure |
@@ -34,8 +35,10 @@ On the VM, settings and secrets live outside the repository, readable by `deploy
 ```
 /opt/soukly/
 ├── src/       # checkout of the repository (owner deploy)
+├── bin/deploy.sh               # installed by setup.sh (owner root)
 ├── edge/.env
 ├── dev/.env, dev/secrets/      # JWT keys of dev
+├── dev/releases/<sha>/, dev/current, dev/active/, dev/deployments.log   # deploy-dev (section 7)
 ├── prod/.env, prod/secrets/    # JWT keys of prod
 └── backups/backup.env
 ```
@@ -365,3 +368,112 @@ S3 one and is to be confirmed on the first try).
 - **JWT key rotation**: move the current `jwt-public.pem` aside for `JWT_PREVIOUS_PUBLIC_KEY_PATH`
   (AUTH-02), delete `jwt-private.pem`, run `gen-jwt-keys.sh <env>` again, change `JWT_KEY_ID`
   and restart the stack.
+
+## 7. Deploy to dev
+
+The `deploy-dev` workflow deploys **any branch, tag or commit** to dev, only by hand. The VM
+returns to the previous version by itself when the new one does not start.
+
+### Settings (once)
+
+1. **Key reserved for deploy-dev**, generated on your computer (never reuse the prod key or
+   your own key):
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C soukly-deploy-dev -f ~/.ssh/soukly-deploy-dev
+   scp ~/.ssh/soukly-deploy-dev.pub ubuntu@<vm-ip>:/tmp/
+   ```
+2. **On the VM** (admin account), update the checkout and run the setup again with that key:
+   ```bash
+   sudo -iu deploy git -C /opt/soukly/src pull
+   sudo bash /opt/soukly/src/infra/vm/setup.sh --dev-key /tmp/soukly-deploy-dev.pub
+   ```
+   `setup.sh` installs `/opt/soukly/bin/deploy.sh` (owned by root) and adds the key to
+   `~deploy/.ssh/authorized_keys` as
+   `restrict,command="/opt/soukly/bin/deploy.sh dev" ssh-ed25519 ...`: this key opens no
+   terminal, forwards nothing and runs nothing but `deploy.sh dev`, whatever command is sent.
+   The commit SHA is the command sent by GitHub (`SSH_ORIGINAL_COMMAND`); anything that is not
+   a full SHA is refused.
+3. **Pinned host key** of the VM, from your computer (check the fingerprint against
+   `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the VM):
+   ```bash
+   ssh-keyscan -t ed25519 <vm-ip>
+   ```
+4. **GitHub > Settings > Environments > New environment** `dev` (no reviewer):
+   - secrets: `DEV_SSH_KEY` (content of `~/.ssh/soukly-deploy-dev`, the private key),
+     `VM_HOST` (the VM's IPv4), `VM_SSH_KNOWN_HOSTS` (the line printed at step 3);
+   - variable: `DEV_HOST` (as in `/opt/soukly/edge/.env`, for example
+     `dev.203-0-113-10.sslip.io`).
+
+   Then delete the private key from your computer if you do not need it elsewhere.
+
+Check from your computer that the key is restricted:
+
+```bash
+K="-i $HOME/.ssh/soukly-deploy-dev deploy@<vm-ip>"
+ssh $K 'cat /etc/passwd'        # refused: not a full commit SHA
+ssh $K 'prod 0123456789abcdef0123456789abcdef01234567'   # refused: same
+ssh -t $K                       # no terminal: PTY allocation request failed, then refused
+```
+
+### Deploying
+
+*Actions > deploy-dev > Run workflow*:
+
+- **Use workflow from**: the branch whose last commit is deployed when `ref` is empty;
+- **ref** (optional): a branch (`feat/ANN-04-wizard`), a tag or a commit SHA (full or short);
+  an unknown reference stops the run with `Reference not found: <ref>` before anything else;
+- **force_build**: rebuild the images even if they already exist for that commit.
+
+The run resolves the commit, calls `build-images` (images already published are reused), then
+sends the SHA to the VM. `deploy.sh dev <sha>` on the VM:
+
+1. refuses anything but `dev`/`prod` and a full SHA, and takes a lock per environment (a second
+   deployment waits; the workflow also queues runs with `concurrency: deploy-dev`);
+2. checks that the 5 images `ghcr.io/<owner>/soukly-*:<sha>` exist, otherwise stops without
+   touching anything;
+3. downloads the Compose files of that commit from the public repository
+   (`codeload.github.com`, archive of `<sha>`, only `infra/compose`, `infra/postgres` and
+   `infra/garage`) into `/opt/soukly/dev/releases/<sha>/`, and copies them into
+   `/opt/soukly/dev/active/`, the fixed path the stack runs from;
+4. runs `docker compose pull` and `up -d --wait` with `IMAGE_TAG=<sha>`, at most 5 minutes
+   (`DEPLOY_TIMEOUT`, in seconds);
+5. checks the site from the VM, through the edge Caddy and its certificate
+   (`curl --resolve <host>:443:127.0.0.1`, host of `PUBLIC_BASE_URL`): `GET /` answers 200,
+   `/federation.manifest.json` points to `PUBLIC_BASE_URL`, and `GET /api/listings?size=1`
+   is answered through the gateway without a 5xx;
+6. on success, makes the release `current`, writes `IMAGE_TAG` in `/opt/soukly/dev/.env`, keeps
+   the last 5 releases and deletes the local images no release uses;
+7. on failure, prints the last 200 log lines of each failing service, then starts the `current`
+   release again with its own Compose files and checks it the same way.
+
+Every deployment is written to `/opt/soukly/dev/deployments.log` (date, SHA, result). The run's
+summary shows the reference, the short SHA, who launched it, the site link, the duration and
+the result:
+
+| Result | Meaning | What to do |
+|---|---|---|
+| `deployed` | the commit runs in dev | nothing |
+| `failed, rolled back to <sha>` | the commit did not start; dev runs the previous version again | read the logs in the `deploy` job, fix, deploy again |
+| `failed, rollback impossible` | first deployment, or the previous version did not start again either | read the logs, then on the VM `cat /opt/soukly/dev/deployments.log` and `docker compose -p soukly-dev ps -a`; deploy a commit known to work |
+| `failed, images not built` | `build-images` failed: nothing was sent to the VM | read the `images` jobs |
+
+The version that runs is shown by `GET https://<DEV_HOST>/api/actuator/info` (`app.version`).
+
+Notes:
+
+- The first deployment has no previous version to return to: deploy a commit known to work,
+  for example the last commit of `main`. Commits older than DEP-02 cannot be deployed (they have
+  no `infra/compose`).
+- `deploy.sh` can be run by hand as `deploy`: `/opt/soukly/bin/deploy.sh dev <full sha>`.
+- Once deploy-dev has run, the dev stack runs from `/opt/soukly/dev/active/infra/compose`: run
+  any manual `docker compose -p soukly-dev ...` command from there, not from `/opt/soukly/src`
+  (other paths would recreate the containers with other files).
+- GitHub keeps at most one run waiting per concurrency group: if a third run is started while
+  one runs and one waits, the waiting one is cancelled.
+
+### Database migrations and rollbacks
+
+Flyway migrations run when the services start and are **not** undone by a return to the
+previous version. So every migration must stay compatible with the previous version of the
+code: add a column or a table first, and remove or rename it only in a later version, once no
+running version uses it (rule also in `CLAUDE.md` and the PR template).
