@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
-# Prepares the Oracle VM (Ubuntu 24.04, arm64) for Soukly (DEP-02). Idempotent: running it again
-# changes nothing that is already in place and duplicates nothing.
+# Prepares the VM (Ubuntu 24.04, amd64 or arm64, any provider) for Soukly (DEP-02). Idempotent:
+# running it again changes nothing that is already in place and duplicates nothing.
 #
-#   sudo bash infra/vm/setup.sh --deploy-key /path/to/deploy.pub   # first run
+#   sudo bash infra/vm/setup.sh --deploy-key /path/to/deploy.pub   # first run, from an admin account
 #   sudo bash infra/vm/setup.sh                                    # later runs keep the existing key
+#   bash infra/vm/setup.sh --admin-user sofien --deploy-key ...    # first run as root (e.g. Hetzner)
+#
+# Root logins are turned off, so when the provider only gives a root account, --admin-user creates
+# an admin account (sudo without password, root's SSH keys) to log in with from then on.
 #
 # What it does: system updates and unattended security upgrades, Docker Engine and Compose from
 # Docker's apt repository, Docker log rotation, host firewall (22, 80, 443), SSH keys only,
@@ -16,6 +20,7 @@ REPO_INFRA="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEPLOY_USER=deploy
 SOUKLY_ROOT=/opt/soukly
 DEPLOY_KEY_FILE=""
+ADMIN_USER=""
 
 log() { printf '\n[setup] %s\n' "$*"; }
 die() { printf '[setup] ERROR: %s\n' "$*" >&2; exit 1; }
@@ -23,16 +28,25 @@ die() { printf '[setup] ERROR: %s\n' "$*" >&2; exit 1; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --deploy-key) DEPLOY_KEY_FILE="${2:-}"; shift 2 ;;
-    -h | --help) sed -n '2,12p' "$0"; exit 0 ;;
+    --admin-user) ADMIN_USER="${2:-}"; shift 2 ;;
+    -h | --help) sed -n '2,16p' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
 done
 
 [[ $EUID -eq 0 ]] || die "run with sudo"
+# Root logins are turned off below: someone must still be able to log in afterwards.
+if [[ -z "${ADMIN_USER}" && ( -z "${SUDO_USER:-}" || "${SUDO_USER:-}" == root ) ]]; then
+  die "run from an admin account with sudo, or as root with --admin-user <name>"
+fi
 # shellcheck source=/dev/null
 . /etc/os-release
 [[ "${ID}" == ubuntu ]] || die "Ubuntu expected, found ${ID}"
 [[ "${VERSION_ID}" == 24.04 ]] || log "warning: written for Ubuntu 24.04, found ${VERSION_ID}"
+if [[ -n "${ADMIN_USER}" ]]; then
+  [[ "${ADMIN_USER}" =~ ^[a-z][a-z0-9_-]{0,31}$ && "${ADMIN_USER}" != deploy ]] \
+    || die "invalid admin user name: ${ADMIN_USER}"
+fi
 if [[ -n "${DEPLOY_KEY_FILE}" ]]; then
   [[ -r "${DEPLOY_KEY_FILE}" ]] || die "cannot read ${DEPLOY_KEY_FILE}"
   grep -Eq '^(ssh-ed25519|ecdsa-sha2-nistp256|ssh-rsa) ' "${DEPLOY_KEY_FILE}" \
@@ -106,9 +120,10 @@ fi
 systemctl enable --now docker > /dev/null
 
 # ---- Host firewall: 22, 80 and 443 ----
-# Oracle's Ubuntu images end the INPUT chain of /etc/iptables/rules.v4 with a REJECT rule: the
-# ACCEPT rules go before it, in the file (kept at boot) and live. The live rules are changed rule
-# by rule, never with iptables-restore, which would also wipe Docker's chains.
+# Some images (Oracle's Ubuntu images) end the INPUT chain of /etc/iptables/rules.v4 with a REJECT
+# rule: the ACCEPT rules go before it, in the file (kept at boot) and live. The live rules are
+# changed rule by rule, never with iptables-restore, which would also wipe Docker's chains. Images
+# without such a rule are left as they are: the provider's firewall limits the ports there.
 log "Host firewall"
 RULES_V4=/etc/iptables/rules.v4
 for port in 80 443; do
@@ -127,14 +142,43 @@ for port in 80 443; do
   fi
 done
 
+# ---- Admin account, when the provider only gives root ----
+if [[ -n "${ADMIN_USER}" ]]; then
+  log "Admin user ${ADMIN_USER}"
+  [[ -s /root/.ssh/authorized_keys ]] || die "root has no ~/.ssh/authorized_keys to copy"
+  if ! id "${ADMIN_USER}" > /dev/null 2>&1; then
+    useradd --create-home --shell /bin/bash --groups sudo "${ADMIN_USER}"
+  fi
+  passwd -l "${ADMIN_USER}" > /dev/null
+  usermod -aG sudo "${ADMIN_USER}"
+  admin_home="$(getent passwd "${ADMIN_USER}" | cut -d: -f6)"
+  install -d -m 0700 -o "${ADMIN_USER}" -g "${ADMIN_USER}" "${admin_home}/.ssh"
+  touch "${admin_home}/.ssh/authorized_keys"
+  while read -r key; do
+    [[ -z "${key}" || "${key}" == \#* ]] && continue
+    grep -qxF -- "${key}" "${admin_home}/.ssh/authorized_keys" \
+      || printf '%s\n' "${key}" >> "${admin_home}/.ssh/authorized_keys"
+  done < /root/.ssh/authorized_keys
+  chown "${ADMIN_USER}:${ADMIN_USER}" "${admin_home}/.ssh/authorized_keys"
+  chmod 0600 "${admin_home}/.ssh/authorized_keys"
+  # The account has no password, so sudo must not ask for one (as on the providers' own images).
+  sudoers_tmp="$(mktemp)"
+  printf '%s ALL=(ALL) NOPASSWD:ALL\n' "${ADMIN_USER}" > "${sudoers_tmp}"
+  visudo -cqf "${sudoers_tmp}" || die "invalid sudoers entry"
+  install -m 0440 "${sudoers_tmp}" /etc/sudoers.d/90-soukly-admin
+  rm -f "${sudoers_tmp}"
+fi
+
 # ---- SSH: keys only, no root login ----
 log "SSH hardening"
-admin_user="${SUDO_USER:-}"
-if [[ -n "${admin_user}" && "${admin_user}" != root ]]; then
-  admin_home="$(getent passwd "${admin_user}" | cut -d: -f6)"
-  [[ -s "${admin_home}/.ssh/authorized_keys" ]] \
-    || die "${admin_user} has no ~/.ssh/authorized_keys: refusing to disable password logins"
+admin_user="${ADMIN_USER:-${SUDO_USER:-}}"
+if [[ -z "${admin_user}" || "${admin_user}" == root ]]; then
+  # Logged in as root: turning root logins off would lock everyone out.
+  die "run from an admin account with sudo, or as root with --admin-user <name>"
 fi
+admin_home="$(getent passwd "${admin_user}" | cut -d: -f6)"
+[[ -s "${admin_home}/.ssh/authorized_keys" ]] \
+  || die "${admin_user} has no ~/.ssh/authorized_keys: refusing to disable password logins"
 # 10- sorts before Ubuntu's and cloud-init's drop-ins: sshd keeps the first value it reads.
 if write_if_changed /etc/ssh/sshd_config.d/10-soukly.conf <<'EOF'; then
 # Managed by infra/vm/setup.sh (DEP-02)
