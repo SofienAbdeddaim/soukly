@@ -1,5 +1,5 @@
 # Prod site (DEP-02), enabled when PROD_HOST is set. Upstreams are reached on soukly-edge-prod.
-# Photos are served by Oracle Object Storage directly (PHOTO_PUBLIC_BASE_URL), not by Caddy.
+# Photos are served by the object storage directly (PHOTO_PUBLIC_BASE_URL), not by Caddy.
 
 {$PROD_HOST} {
 	import common

@@ -4,8 +4,8 @@ Every night at 03:00 (Africa/Tunis), `soukly-backup.timer` runs `pg-backup.sh` a
 
 1. `pg_dump -Fc` (custom format) of `soukly_user`, `soukly_listing` and `soukly_social`, from the
    `postgres` container of the `soukly-prod` project;
-2. upload to the private Oracle Object Storage bucket `soukly-backups`, under `<YYYY-MM-DD>/`,
-   through the S3 compatibility API;
+2. upload to the private bucket `soukly-backups` of an S3-compatible object storage (Hetzner
+   Object Storage in the examples), under `<YYYY-MM-DD>/`;
 3. deletion of the date folders older than 7 days (the last 7 days are kept, today included).
 
 Any failure (no prod container, empty dump, upload refused) ends the run in error, visible in
@@ -13,8 +13,8 @@ Any failure (no prod container, empty dump, upload refused) ends the run in erro
 secret.
 
 **Upload tool:** the AWS CLI (`amazon/aws-cli:2.38.0`, the version already pinned by SETUP-02),
-run in a throwaway container: nothing extra to install on the VM, and it speaks the S3
-compatibility API of Object Storage (path-style, SigV4). The checksum options are set to
+run in a throwaway container: nothing extra to install on the VM, and it works with any
+S3-compatible storage. The checksum options are set to
 `when_required` because recent AWS CLI versions send new integrity checksums by default, which
 S3-compatible services may not accept. Retention is done by the script rather than by a bucket
 lifecycle rule, so that it is visible in the repository and works the same on any S3 service.
@@ -75,6 +75,6 @@ The same steps restore prod, or copy prod into dev to test a backup (done once f
    prod's personal data: restore into dev only to test, then reset it.
 
 Tested locally on 2026-10-16 with the dev and prod stacks of this ticket (a local Garage bucket
-standing in for Object Storage): backup of the 3 databases, deletion of a folder older than
+standing in for the object storage): backup of the 3 databases, deletion of a folder older than
 7 days, failure on a missing bucket (exit status 1), and restore into dev in about 20 seconds,
 with the rows readable by `listing_svc`.

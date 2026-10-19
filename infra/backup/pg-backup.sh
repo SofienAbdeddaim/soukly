@@ -2,8 +2,8 @@
 # Nightly backup of the prod databases (DEP-02), run by soukly-backup.timer as the deploy user.
 #   1. pg_dump (custom format) of soukly_user, soukly_listing and soukly_social, from the postgres
 #      container of the soukly-prod project;
-#   2. upload to the private Oracle Object Storage bucket soukly-backups, through its S3
-#      compatibility API, under <YYYY-MM-DD>/;
+#   2. upload to the private bucket soukly-backups of an S3-compatible object storage (Hetzner
+#      Object Storage, Oracle Object Storage...), under <YYYY-MM-DD>/;
 #   3. deletion of the date prefixes older than BACKUP_RETENTION_DAYS (7 by default).
 # Any failure ends the script with a non-zero status, shown by `systemctl status soukly-backup`.
 #
