@@ -195,8 +195,8 @@ Fill in each file. Every secret is generated separately for dev and for prod, fo
 | `PHOTO_PUBLIC_BASE_URL` | `https://photos.<DEV_HOST>` | public URL of `listings/` (section 5) |
 | `MAIL_*` | `mailpit`, `1025`, no credentials | SMTP provider (to be chosen) |
 
-`IMAGE_TAG` is the tag of the images to run (`sha-<commit>` from the build-images workflow,
-DEP-01); DEP-03 and DEP-04 rewrite it at each deployment.
+`IMAGE_TAG` is the tag of the images to run: the full 40-character commit SHA built by the
+build-images workflow (DEP-01). DEP-03 and DEP-04 rewrite it at each deployment.
 
 The JWT keys are generated on the VM, never copied from elsewhere (admin account):
 
