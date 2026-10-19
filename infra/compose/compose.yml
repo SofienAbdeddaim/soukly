@@ -1,0 +1,224 @@
+# One Soukly environment on the VM (DEP-02): the same file runs dev and prod, as separate Compose
+# projects with their own network, volumes and settings file.
+#   docker compose -p soukly-prod --env-file /opt/soukly/prod/.env -f compose.yml up -d --wait
+#   docker compose -p soukly-dev --env-file /opt/soukly/dev/.env -f compose.yml -f compose.dev.yml up -d --wait
+# No port is published on the host: only the edge Caddy reaches the gateway and the front end,
+# through the soukly-edge-<env> network. Memory limits below are the prod ones (compose.dev.yml
+# lowers them for dev).
+
+x-java-service: &java-service
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redpanda-init:
+      condition: service_completed_successfully
+
+services:
+  postgres:
+    image: postgres:18.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set}
+      USER_SVC_DB_PASSWORD: ${USER_SVC_DB_PASSWORD:?USER_SVC_DB_PASSWORD is not set}
+      LISTING_SVC_DB_PASSWORD: ${LISTING_SVC_DB_PASSWORD:?LISTING_SVC_DB_PASSWORD is not set}
+      SOCIAL_SVC_DB_PASSWORD: ${SOCIAL_SVC_DB_PASSWORD:?SOCIAL_SVC_DB_PASSWORD is not set}
+    volumes:
+      # Postgres 18 images keep their data under /var/lib/postgresql/<major>/docker.
+      - postgres-data:/var/lib/postgresql
+      # Same initialisation as the local stack (SETUP-02): one database and one role per service.
+      - ../postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    mem_limit: 1g
+
+  # Single Redpanda node in production mode, without topic auto-creation: topics are created by
+  # redpanda-init. redpanda/redpanda.yaml replaces the image's default node configuration, which
+  # turns developer mode on; rpk then adds the listeners below to the copy.
+  redpanda:
+    image: redpandadata/redpanda:v26.2.4
+    restart: unless-stopped
+    entrypoint:
+      - bash
+      - -c
+      - cp /etc/soukly/redpanda.yaml /etc/redpanda/redpanda.yaml && exec rpk redpanda start "$$@"
+      - --
+    command:
+      - --overprovisioned
+      - --smp=1
+      - --memory=1G
+      - --reserve-memory=0M
+      - --kafka-addr=internal://0.0.0.0:9092
+      - --advertise-kafka-addr=internal://redpanda:9092
+      - --rpc-addr=0.0.0.0:33145
+      - --advertise-rpc-addr=redpanda:33145
+    volumes:
+      - ./redpanda/redpanda.yaml:/etc/soukly/redpanda.yaml:ro
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -Eq 'Healthy:.+true'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    mem_limit: 1536m
+
+  # One-shot: creates the event topics and their dead-letter topics. Idempotent.
+  redpanda-init:
+    image: redpandadata/redpanda:v26.2.4
+    restart: "no"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    entrypoint: ["bash", "/init-topics.sh"]
+    environment:
+      RPK_BROKERS: redpanda:9092
+    volumes:
+      - ./redpanda/init-topics.sh:/init-topics.sh:ro
+
+  gateway:
+    <<: *java-service
+    image: ghcr.io/${IMAGE_OWNER:-sofienabdeddaim}/soukly-gateway:${IMAGE_TAG:?IMAGE_TAG is not set}
+    depends_on:
+      user-service:
+        condition: service_healthy
+    environment:
+      USER_SERVICE_URL: http://user-service:8081
+      LISTING_SERVICE_URL: http://listing-service:8082
+      SOCIAL_SERVICE_URL: http://social-publisher:8083
+      USER_SERVICE_JWKS_URI: http://user-service:8081/.well-known/jwks.json
+      JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is not set}
+      GATEWAY_TRUSTED_PROXIES: ${GATEWAY_TRUSTED_PROXIES:?GATEWAY_TRUSTED_PROXIES is not set}
+      RATE_LIMIT_AUTH_PER_MINUTE: ${RATE_LIMIT_AUTH_PER_MINUTE:-10}
+    networks:
+      default:
+      edge:
+        aliases:
+          - ${ENV_NAME:?ENV_NAME is not set}-gateway
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    mem_limit: 640m
+
+  user-service:
+    <<: *java-service
+    image: ghcr.io/${IMAGE_OWNER:-sofienabdeddaim}/soukly-user-service:${IMAGE_TAG:?IMAGE_TAG is not set}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/soukly_user
+      SPRING_DATASOURCE_USERNAME: user_svc
+      SPRING_DATASOURCE_PASSWORD: ${USER_SVC_DB_PASSWORD:?USER_SVC_DB_PASSWORD is not set}
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is not set}
+      FRONT_BASE_URL: ${FRONT_BASE_URL:?FRONT_BASE_URL is not set}
+      ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is not set}
+      MAIL_HOST: ${MAIL_HOST:?MAIL_HOST is not set}
+      MAIL_PORT: ${MAIL_PORT:?MAIL_PORT is not set}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:?MAIL_FROM is not set}
+      JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
+      JWT_KEY_ID: ${JWT_KEY_ID:?JWT_KEY_ID is not set}
+      JWT_PRIVATE_KEY_PATH: /run/secrets/jwt/jwt-private.pem
+      REFRESH_COOKIE_SECURE: "true"
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is not set}
+    volumes:
+      # Keys generated on the VM by infra/vm/gen-jwt-keys.sh <env>.
+      - ${JWT_SECRETS_DIR:?JWT_SECRETS_DIR is not set}:/run/secrets/jwt:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    mem_limit: 640m
+
+  listing-service:
+    <<: *java-service
+    image: ghcr.io/${IMAGE_OWNER:-sofienabdeddaim}/soukly-listing-service:${IMAGE_TAG:?IMAGE_TAG is not set}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/soukly_listing
+      SPRING_DATASOURCE_USERNAME: listing_svc
+      SPRING_DATASOURCE_PASSWORD: ${LISTING_SVC_DB_PASSWORD:?LISTING_SVC_DB_PASSWORD is not set}
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is not set}
+      S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT is not set}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:?S3_PUBLIC_ENDPOINT is not set}
+      S3_REGION: ${S3_REGION:?S3_REGION is not set}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is not set}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY_ID:?S3_ACCESS_KEY_ID is not set}
+      S3_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is not set}
+      PHOTO_PUBLIC_BASE_URL: ${PHOTO_PUBLIC_BASE_URL:?PHOTO_PUBLIC_BASE_URL is not set}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is not set}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    mem_limit: 640m
+
+  social-publisher:
+    <<: *java-service
+    image: ghcr.io/${IMAGE_OWNER:-sofienabdeddaim}/soukly-social-publisher:${IMAGE_TAG:?IMAGE_TAG is not set}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/soukly_social
+      SPRING_DATASOURCE_USERNAME: social_svc
+      SPRING_DATASOURCE_PASSWORD: ${SOCIAL_SVC_DB_PASSWORD:?SOCIAL_SVC_DB_PASSWORD is not set}
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is not set}
+      FRONT_BASE_URL: ${FRONT_BASE_URL:?FRONT_BASE_URL is not set}
+      PHOTO_PUBLIC_BASE_URL: ${PHOTO_PUBLIC_BASE_URL:?PHOTO_PUBLIC_BASE_URL is not set}
+      LISTING_SERVICE_URL: http://listing-service:8082
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is not set}
+      SOCIAL_TOKEN_ENC_KEY: ${SOCIAL_TOKEN_ENC_KEY:?SOCIAL_TOKEN_ENC_KEY is not set}
+      META_APP_ID: ${META_APP_ID:-}
+      META_APP_SECRET: ${META_APP_SECRET:-}
+      META_GRAPH_VERSION: ${META_GRAPH_VERSION:-}
+      INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID:-}
+      INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET:-}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    mem_limit: 640m
+
+  frontend:
+    image: ghcr.io/${IMAGE_OWNER:-sofienabdeddaim}/soukly-frontend:${IMAGE_TAG:?IMAGE_TAG is not set}
+    restart: unless-stopped
+    environment:
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is not set}
+    networks:
+      default:
+      edge:
+        aliases:
+          - ${ENV_NAME:?ENV_NAME is not set}-frontend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    mem_limit: 64m
+
+networks:
+  # Internal network of the stack (outbound access kept for SMTP and the Meta APIs).
+  default:
+  # Network shared with the edge Caddy, created by infra/vm/setup.sh.
+  edge:
+    name: soukly-edge-${ENV_NAME:?ENV_NAME is not set}
+    external: true
+
+volumes:
+  postgres-data:
+  redpanda-data:

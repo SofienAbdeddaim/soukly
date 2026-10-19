@@ -1,0 +1,37 @@
+# Edge Caddy of the VM (DEP-02). Certificates are obtained automatically (Let's Encrypt, then
+# ZeroSSL as fallback). Site files are enabled by start.sh from sites/ according to DEV_HOST and
+# PROD_HOST.
+{
+	email {$ACME_EMAIL}
+}
+
+# Security headers, compression and access logs shared by every site.
+(common) {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	log {
+		output stdout
+		format filter {
+			# No credentials, cookies, query strings (verification tokens, OAuth codes) or full IP addresses.
+			request>headers>Authorization delete
+			request>headers>Cookie delete
+			request>headers>X-Internal-Token delete
+			resp_headers>Set-Cookie delete
+			request>uri regexp \?.*$ ?redacted
+			request>remote_ip ip_mask 16 32
+			request>client_ip ip_mask 16 32
+			request>headers>X-Forwarded-For delete
+		}
+	}
+}
+
+# Development environments are never indexed.
+(noindex) {
+	header X-Robots-Tag "noindex, nofollow"
+}
+
+import /etc/caddy/sites/*.caddy

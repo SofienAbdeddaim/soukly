@@ -3,6 +3,7 @@
 # Runs in the amazon/aws-cli image (bash, curl, jq, aws) and talks to:
 #   - the Garage admin API v2 (layout, key import, bucket, permissions);
 #   - the S3 API (PutBucketCors).
+# GARAGE_WEBSITE=true also enables website access on the bucket (dev stack on the VM, DEP-02).
 # Every step checks the current state first, so running it twice changes nothing.
 set -euo pipefail
 
@@ -95,5 +96,13 @@ AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_K
     '{CORSRules: [{AllowedOrigins: [$origin], AllowedMethods: ["GET", "PUT", "HEAD"], AllowedHeaders: ["*"], MaxAgeSeconds: 3600}]}')"
 set_owner DenyBucketKey
 trap - EXIT
+
+# 6. Optional website access, for public reads of the photos (dev stack on the VM, DEP-02).
+# The edge Caddy only forwards listings/ to the website endpoint.
+if [[ "${GARAGE_WEBSITE:-false}" == "true" ]]; then
+  log "Enabling website access on ${S3_BUCKET}"
+  admin POST "UpdateBucket?id=${bucket_id}" \
+    '{"websiteAccess": {"enabled": true, "indexDocument": "index.html", "errorDocument": null}}' >/dev/null
+fi
 
 log "Done"
