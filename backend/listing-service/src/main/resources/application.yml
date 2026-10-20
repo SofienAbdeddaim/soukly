@@ -1,9 +1,17 @@
 server:
-  port: 8082
+  port: ${LISTING_SERVICE_PORT:8082}
 
 spring:
   application:
     name: listing-service
+  datasource:
+    # Local defaults match docker-compose.yml (SETUP-02); the password comes from SPRING_DATASOURCE_PASSWORD
+    # or, when the root .env is sourced, from LISTING_SVC_DB_PASSWORD.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/soukly_listing}
+    username: ${SPRING_DATASOURCE_USERNAME:listing_svc}
+    password: ${SPRING_DATASOURCE_PASSWORD:${LISTING_SVC_DB_PASSWORD:}}
+  flyway:
+    locations: classpath:db/migration
 
 management:
   endpoints:
