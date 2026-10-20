@@ -99,6 +99,29 @@ curl http://localhost:8082/actuator/health        # {"status":"UP",...}
 
 Every service exposes `GET /actuator/health`.
 
+## user-service
+
+Accounts of Soukly (package `com.soukly.user`, database `soukly_user`, schema managed by Flyway in `user-service/src/main/resources/db/migration`). Details, rules and error codes: [`backend/user-service/README.md`](backend/user-service/README.md).
+
+| Endpoint (through the gateway) | Body | Answers |
+| --- | --- | --- |
+| `POST /api/users/register` | `{ email, password, displayName, phone, acceptTerms }`, header `Accept-Language` | `202` (always the same, new or known email), `400` |
+| `POST /api/users/verify-email` | `{ token }` | `204`, `400` `verification-token-invalid` |
+| `POST /api/users/verify-email/resend` | `{ email }` | `202` (always), `400` malformed email |
+
+Running it locally against the Docker infrastructure (PostgreSQL and Mailpit):
+
+```bash
+docker compose up -d --wait                                       # from the repository root
+cd backend && ./mvnw install -DskipTests                          # once
+(set -a; . ../.env; set +a; ./mvnw -pl user-service spring-boot:run)   # 8081, reads USER_SVC_DB_PASSWORD from .env
+./mvnw -pl gateway spring-boot:run                                # 8080, in another terminal
+curl -i -X POST http://localhost:8080/api/users/register -H 'Content-Type: application/json' -H 'Accept-Language: ar' \
+  -d '{"email":"amira@example.tn","password":"Jasmin-de-Carthage-2026","displayName":"Amira","phone":"20 123 456","acceptTerms":true}'
+```
+
+The verification email appears in Mailpit (http://localhost:8025); its link targets `FRONT_BASE_URL/{lang}/account/verify-email?token=…` (the page arrives with AUTH-03). The tests use Testcontainers (Docker required) and an in-memory SMTP server.
+
 ## Gateway
 
 The front end only calls the gateway (`http://localhost:8080`, Spring Cloud Gateway on WebFlux). It routes to the services, applies CORS, checks the JWT, adds `X-Request-Id`, limits the authentication endpoints and answers its own errors in `application/problem+json`.
@@ -119,7 +142,7 @@ The whitelist lives in a single class, `gateway/.../security/PublicPaths.java`. 
 
 | Access | Paths |
 | --- | --- |
-| Public | `POST /api/users/register`, `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/verify-email`, `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
+| Public | `POST /api/users/register`, `POST /api/users/verify-email`, `POST /api/users/verify-email/resend` (AUTH-01), `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
 | JWT required | everything else, for example `POST/PUT/PATCH/DELETE /api/listings/**`, `/api/users/me/**`, `/api/social/**` |
 
 - **JWT**: RS256 only (`none`, HS256 and any other algorithm are rejected); signature checked with the public keys of the `user-service` JWKS (`USER_SERVICE_JWKS_URI`), cached and fetched again when a token carries an unknown `kid` (key rotation); `exp` with a 30 s clock skew; `iss` equal to `JWT_ISSUER`. No secret is shared between services.
@@ -127,7 +150,7 @@ The whitelist lives in a single class, `gateway/.../security/PublicPaths.java`. 
 - The `Authorization` header is forwarded unchanged; the services validate it again themselves (AUTH and ANN tickets). The gateway adds no identity header.
 - **CORS**: exact origins from `CORS_ALLOWED_ORIGINS` (never `*`, the gateway refuses to start otherwise), credentials allowed, methods `GET, POST, PUT, PATCH, DELETE, OPTIONS`, headers `Authorization, Content-Type, Accept-Language, X-Request-Id`, `X-Request-Id` exposed, preflight cached 1 h.
 - **Correlation**: the client's `X-Request-Id` is kept when it is a safe identifier (letters, digits, `.`, `_`, `-`, 128 characters at most), otherwise the gateway generates a UUID. It is forwarded to the service, returned in the response and written in the logs and error bodies.
-- **Rate limit**: `POST /api/users/login` and `POST /api/users/register`, `RATE_LIMIT_AUTH_PER_MINUTE` requests per minute and per IP (10 by default), then `429` with `Retry-After`. In memory, for a single gateway instance. `X-Forwarded-For` is only read when the connection comes from `GATEWAY_TRUSTED_PROXIES` (the reverse proxy, set by DEP); otherwise the connection IP is used.
+- **Rate limit**: `POST /api/users/login`, `POST /api/users/register` and `POST /api/users/verify-email/resend`, each with its own budget of `RATE_LIMIT_AUTH_PER_MINUTE` requests per minute and per IP (10 by default), then `429` with `Retry-After`. In memory, for a single gateway instance. `X-Forwarded-For` is only read when the connection comes from `GATEWAY_TRUSTED_PROXIES` (the reverse proxy, set by DEP); otherwise the connection IP is used.
 - **Service down**: `503` when the service refuses the connection or does not accept it within `GATEWAY_CONNECT_TIMEOUT_MS` (2 s); `504` when it does not answer within `GATEWAY_RESPONSE_TIMEOUT` (10 s).
 - **Logs**: one line per request (`com.soukly.gateway.access`: method, path without query string, status, duration, `requestId`), never headers, cookies or bodies.
 

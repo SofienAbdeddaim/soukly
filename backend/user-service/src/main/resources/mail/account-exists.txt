@@ -1,0 +1,11 @@
+[(#{common.greeting(${displayName})})]
+
+[(#{account-exists.intro})]
+
+[(#{account-exists.button})]: [(${loginUrl})]
+
+[(#{account-exists.forgot-password})] [(${forgotPasswordUrl})]
+
+[(#{account-exists.ignore})]
+
+[(#{common.signature})]
