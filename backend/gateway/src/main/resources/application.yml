@@ -12,7 +12,8 @@ spring:
             # Target service unreachable: 503 after the connect timeout; too slow: 504 after the response timeout
             connect-timeout: ${GATEWAY_CONNECT_TIMEOUT_MS:2000}
             response-timeout: ${GATEWAY_RESPONSE_TIMEOUT:10s}
-          # The /api prefix is removed before forwarding: /api/listings/42 -> /listings/42 on listing-service
+          # The /api prefix is removed before forwarding: /api/listings/42 -> /listings/42 on listing-service.
+          # listing-service also serves the referentials (CAT-01): /api/categories/**, /api/locations/**.
           routes:
             - id: user-service
               uri: ${USER_SERVICE_URL:http://localhost:8081}
@@ -23,7 +24,7 @@ spring:
             - id: listing-service
               uri: ${LISTING_SERVICE_URL:http://localhost:8082}
               predicates:
-                - Path=/api/listings/**
+                - Path=/api/listings/**,/api/categories/**,/api/locations/**
               filters:
                 - StripPrefix=1
             - id: social-publisher

@@ -62,6 +62,29 @@ class RoutingTests extends GatewayIntegrationTest {
     }
 
     @Test
+    void referentialsArePublicAndRoutedToListingService() {
+        for (String path : new String[] { "/api/categories", "/api/categories/vehicles.cars/attributes",
+                "/api/locations/governorates", "/api/locations/governorates/sfax/delegations" }) {
+            client.get().uri(path)
+                    .exchange()
+                    .expectStatus().isOk()
+                    .expectBody().jsonPath("$.service").isEqualTo("listing-service");
+        }
+
+        assertThat(LISTING_SERVICE.received()).extracting(Received::uri).containsExactly("/categories",
+                "/categories/vehicles.cars/attributes", "/locations/governorates",
+                "/locations/governorates/sfax/delegations");
+    }
+
+    @Test
+    void referentialWritesRequireAToken() {
+        client.post().uri("/api/categories").exchange().expectStatus().isUnauthorized();
+        client.delete().uri("/api/locations/governorates/sfax").exchange().expectStatus().isUnauthorized();
+
+        assertThat(LISTING_SERVICE.received()).isEmpty();
+    }
+
+    @Test
     void invalidTokenOnPublicPathIsForwardedUnchanged() {
         client.get().uri("/api/listings/42")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt")

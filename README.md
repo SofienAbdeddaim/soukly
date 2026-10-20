@@ -133,7 +133,7 @@ The `/api` prefix is removed before forwarding: `GET /api/listings/42` reaches `
 | Incoming path | Target service | Variable (local default) |
 | --- | --- | --- |
 | `/api/users/**` | `user-service` | `USER_SERVICE_URL` (`http://localhost:8081`) |
-| `/api/listings/**` | `listing-service` | `LISTING_SERVICE_URL` (`http://localhost:8082`) |
+| `/api/listings/**`, `/api/categories/**`, `/api/locations/**` (CAT-01) | `listing-service` | `LISTING_SERVICE_URL` (`http://localhost:8082`) |
 | `/api/social/**` | `social-publisher` | `SOCIAL_SERVICE_URL` (`http://localhost:8083`) |
 
 ### Access policy
@@ -142,7 +142,7 @@ The whitelist lives in a single class, `gateway/.../security/PublicPaths.java`. 
 
 | Access | Paths |
 | --- | --- |
-| Public | `POST /api/users/register`, `POST /api/users/verify-email`, `POST /api/users/verify-email/resend` (AUTH-01), `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
+| Public | `POST /api/users/register`, `POST /api/users/verify-email`, `POST /api/users/verify-email/resend` (AUTH-01), `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/categories/**` and `GET /api/locations/**` (referentials, CAT-01), `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
 | JWT required | everything else, for example `POST/PUT/PATCH/DELETE /api/listings/**`, `/api/users/me/**`, `/api/social/**` |
 
 - **JWT**: RS256 only (`none`, HS256 and any other algorithm are rejected); signature checked with the public keys of the `user-service` JWKS (`USER_SERVICE_JWKS_URI`), cached and fetched again when a token carries an unknown `kid` (key rotation); `exp` with a 30 s clock skew; `iss` equal to `JWT_ISSUER`. No secret is shared between services.
