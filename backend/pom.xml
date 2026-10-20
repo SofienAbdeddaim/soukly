@@ -24,6 +24,7 @@
         <module>user-service</module>
         <module>listing-service</module>
         <module>social-publisher</module>
+        <module>e2e-tests</module>
     </modules>
 
     <properties>

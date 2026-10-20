@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.soukly</groupId>
+        <artifactId>soukly-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <!--
+        End-to-end tests: the packaged gateway and user-service run as separate processes, in front of PostgreSQL
+        (Testcontainers). No production code and no image: only tests.
+    -->
+    <artifactId>e2e-tests</artifactId>
+    <packaging>jar</packaging>
+    <name>Soukly end-to-end tests</name>
+
+    <properties>
+        <bouncycastle.version>1.86</bouncycastle.version>
+    </properties>
+
+    <dependencies>
+        <!--
+            Build order only: these modules are packaged before the tests start their executable jars. Type pom and
+            exclusions keep their classes and dependencies off the test classpath.
+        -->
+        <dependency>
+            <groupId>com.soukly</groupId>
+            <artifactId>gateway</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.soukly</groupId>
+            <artifactId>user-service</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Hash of the test account, with the encoder of user-service -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>${bouncycastle.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <soukly.e2e.gateway-jar>${project.basedir}/../gateway/target/gateway-${project.version}.jar</soukly.e2e.gateway-jar>
+                        <soukly.e2e.user-service-jar>${project.basedir}/../user-service/target/user-service-${project.version}.jar</soukly.e2e.user-service-jar>
+                        <soukly.e2e.logs>${project.build.directory}/e2e-logs</soukly.e2e.logs>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

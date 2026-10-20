@@ -60,10 +60,14 @@
             <groupId>org.thymeleaf</groupId>
             <artifactId>thymeleaf-spring6</artifactId>
         </dependency>
-        <!-- Password encoder only; HTTP security arrives with AUTH-02 -->
+        <!-- HTTP security, and JWT signing and validation (Nimbus JOSE + JWT through spring-security-oauth2-jose) -->
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-crypto</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
         </dependency>
         <!-- Argon2 implementation used by Argon2PasswordEncoder -->
         <dependency>

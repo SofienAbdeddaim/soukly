@@ -254,6 +254,8 @@ class RegistrationTests extends IntegrationTest {
         SMTP.awaitEmails(1);
         for (int i = 0; i < 3; i++) {
             resend(EMAIL).andExpect(status().isAccepted());
+            // Emails are sent asynchronously: wait for each one so that they arrive in order.
+            SMTP.awaitEmails(2 + i);
         }
         String lastToken = TestSmtpServer.token(SMTP.awaitEmails(4).get(3));
 

@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /** Normalization and syntax check of the email addresses. */
-final class EmailAddresses {
+public final class EmailAddresses {
 
     static final int MAX_LENGTH = 254;
 
@@ -15,7 +15,7 @@ final class EmailAddresses {
     }
 
     /** Trims and lower-cases an address; {@code null} stays {@code null}. */
-    static String normalize(String email) {
+    public static String normalize(String email) {
         return email == null ? null : email.strip().toLowerCase(Locale.ROOT);
     }
 
