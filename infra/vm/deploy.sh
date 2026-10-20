@@ -168,14 +168,16 @@ start_release() {
 # Prints the last 200 lines of the services that are not running, not healthy or that failed.
 show_failures() {
   local service state health code shown=false
-  while IFS=$'\t' read -r service state health code; do
+  # "|" rather than a tab: read would merge consecutive tabs, and Health is empty for services
+  # without a health check.
+  while IFS='|' read -r service state health code; do
     if [[ "${state}" == exited && "${code}" == 0 ]]; then continue; fi
     if [[ "${state}" == running && ( -z "${health}" || "${health}" == healthy ) ]]; then continue; fi
     shown=true
     echo "::group::${service} (${state}${health:+, ${health}}${code:+, exit ${code}}): last 200 log lines"
     compose logs --no-color --tail 200 "${service}" 2>&1 || true
     echo "::endgroup::"
-  done < <(compose ps -a --format '{{.Service}}{{"\t"}}{{.State}}{{"\t"}}{{.Health}}{{"\t"}}{{.ExitCode}}' 2> /dev/null)
+  done < <(compose ps -a --format '{{.Service}}|{{.State}}|{{.Health}}|{{.ExitCode}}' 2> /dev/null)
   if [[ "${shown}" == false ]]; then
     for service in gateway frontend; do
       echo "::group::${service}: last 200 log lines"
