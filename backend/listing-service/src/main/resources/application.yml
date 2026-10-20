@@ -1,5 +1,5 @@
 server:
-  port: 8082
+  port: not-a-port # deliberately broken: DEP-03 rollback test, never merge
 
 spring:
   application:
