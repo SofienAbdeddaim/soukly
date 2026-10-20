@@ -6,11 +6,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 
 import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec;
 
 import com.soukly.gateway.support.GatewayIntegrationTest;
 
+// These tests use up the login and register budgets of the shared gateway context: a fresh context
+// afterwards keeps later test classes (RoutingTests registers once) from getting a 429.
+@DirtiesContext
 class RateLimitTests extends GatewayIntegrationTest {
 
     @Test
