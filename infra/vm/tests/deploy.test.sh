@@ -32,9 +32,9 @@ case "$1 $2" in
       case "${arg}" in
         up) [[ " ${FAKE_BAD:-} " != *" ${IMAGE_TAG} "* ]]; exit ;;
         ps)
-          printf 'gateway\trunning\thealthy\t0\nredpanda-init\texited\t\t0\n'
+          printf 'gateway|running|healthy|0\nredpanda-init|exited||0\n'
           if [[ " ${FAKE_BAD:-} " == *" ${IMAGE_TAG} "* ]]; then
-            printf 'listing-service\texited\t\t1\n'
+            printf 'listing-service|exited||1\n'
           fi
           exit 0 ;;
         logs) echo "fake log lines of ${!#}"; exit 0 ;;
@@ -95,6 +95,7 @@ check() { # check <name> <test...>
   if "$@"; then echo "ok   ${name}"; else echo "FAIL ${name}"; failures=$((failures + 1)); fi
 }
 out_has() { grep -qF -- "$1" "${WORK}/out"; }
+not_out_has() { ! out_has "$1"; }
 current() { basename "$(readlink "${SOUKLY_ROOT}/dev/current" 2> /dev/null)"; }
 no_compose_call() { ! grep -q 'docker compose' "${FAKE_CALLS}"; }
 
@@ -111,6 +112,7 @@ check "  nothing called" no_compose_call
 FAKE_BAD="${A}" run 1 "first deployment in failure: no previous version" bash "${DEPLOY}" dev "${A}"
 check "  result says failed" out_has "RESULT: failed"
 check "  logs of the failing service shown" out_has "fake log lines of listing-service"
+check "  no logs of the one-shot services that succeeded" not_out_has "fake log lines of redpanda-init"
 check "  no current version" test -z "$(current)"
 
 # ---- Images missing ----
