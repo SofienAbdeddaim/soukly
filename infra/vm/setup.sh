@@ -4,6 +4,7 @@
 #
 #   sudo bash infra/vm/setup.sh --deploy-key /path/to/deploy.pub   # first run, from an admin account
 #   sudo bash infra/vm/setup.sh                                    # later runs keep the existing key
+#   sudo bash infra/vm/setup.sh --dev-key /path/to/dev.pub          # restricted key of deploy-dev (DEP-03)
 #   bash infra/vm/setup.sh --admin-user sofien --deploy-key ...    # first run as root (e.g. Hetzner)
 #
 # Root logins are turned off, so when the provider only gives a root account, --admin-user creates
@@ -11,8 +12,9 @@
 #
 # What it does: system updates and unattended security upgrades, Docker Engine and Compose from
 # Docker's apt repository, Docker log rotation, host firewall (22, 80, 443), SSH keys only,
-# fail2ban, the "deploy" user for GitHub Actions, /opt/soukly, the Docker networks shared with the
-# edge Caddy, the nightly prod backup timer, and the Africa/Tunis time zone.
+# fail2ban, the "deploy" user, /opt/soukly, the deployment script and the restricted SSH key of the
+# deploy-dev workflow, the Docker networks shared with the edge Caddy, the nightly prod backup
+# timer, and the Africa/Tunis time zone.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,6 +22,7 @@ REPO_INFRA="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEPLOY_USER=deploy
 SOUKLY_ROOT=/opt/soukly
 DEPLOY_KEY_FILE=""
+DEV_KEY_FILE=""
 ADMIN_USER=""
 
 log() { printf '\n[setup] %s\n' "$*"; }
@@ -29,7 +32,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --deploy-key) DEPLOY_KEY_FILE="${2:-}"; shift 2 ;;
     --admin-user) ADMIN_USER="${2:-}"; shift 2 ;;
-    -h | --help) sed -n '2,16p' "$0"; exit 0 ;;
+    --dev-key) DEV_KEY_FILE="${2:-}"; shift 2 ;;
+    -h | --help) sed -n '2,18p' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
 done
@@ -47,11 +51,12 @@ if [[ -n "${ADMIN_USER}" ]]; then
   [[ "${ADMIN_USER}" =~ ^[a-z][a-z0-9_-]{0,31}$ && "${ADMIN_USER}" != deploy ]] \
     || die "invalid admin user name: ${ADMIN_USER}"
 fi
-if [[ -n "${DEPLOY_KEY_FILE}" ]]; then
-  [[ -r "${DEPLOY_KEY_FILE}" ]] || die "cannot read ${DEPLOY_KEY_FILE}"
-  grep -Eq '^(ssh-ed25519|ecdsa-sha2-nistp256|ssh-rsa) ' "${DEPLOY_KEY_FILE}" \
-    || die "${DEPLOY_KEY_FILE} is not an SSH public key"
-fi
+for key_file in "${DEPLOY_KEY_FILE}" "${DEV_KEY_FILE}"; do
+  [[ -n "${key_file}" ]] || continue
+  [[ -r "${key_file}" ]] || die "cannot read ${key_file}"
+  grep -Eq '^(ssh-ed25519|ecdsa-sha2-nistp256|ssh-rsa) ' "${key_file}" \
+    || die "${key_file} is not an SSH public key"
+done
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -231,6 +236,29 @@ for dir in src edge dev prod backups; do
 done
 # Every settings file (.env, backup.env) is readable by its owner only.
 find "${SOUKLY_ROOT}" -maxdepth 2 -type f -name '*.env' -exec chmod 0600 {} +
+
+# ---- Deployment script and restricted keys of the deploy workflows (DEP-03) ----
+# Owned by root: the deploy user runs the script but cannot change it.
+log "Deployment script"
+install -d -m 0755 "${SOUKLY_ROOT}/bin"
+install -m 0755 "${SCRIPT_DIR}/deploy.sh" "${SOUKLY_ROOT}/bin/deploy.sh"
+# A workflow key can only run "deploy.sh <env>" (the SHA arrives in SSH_ORIGINAL_COMMAND): no
+# terminal, no forwarding, no other command, no other environment. Any earlier line of the same key
+# is replaced.
+restrict_key() {
+  local env_name="$1" key_file="$2" key blob tmp
+  key="$(grep -E '^(ssh-ed25519|ecdsa-sha2-nistp256|ssh-rsa) ' "${key_file}" | head -n 1)"
+  blob="$(awk '{ print $2 }' <<< "${key}")"
+  tmp="$(mktemp)"
+  grep -vF -- "${blob}" "${deploy_home}/.ssh/authorized_keys" > "${tmp}" || true
+  printf 'restrict,command="%s/bin/deploy.sh %s" %s\n' "${SOUKLY_ROOT}" "${env_name}" "${key}" >> "${tmp}"
+  if ! cmp -s "${tmp}" "${deploy_home}/.ssh/authorized_keys"; then
+    install -m 0600 -o "${DEPLOY_USER}" -g "${DEPLOY_USER}" "${tmp}" "${deploy_home}/.ssh/authorized_keys"
+    log "${env_name} deployment key installed (restricted to deploy.sh ${env_name})"
+  fi
+  rm -f "${tmp}"
+}
+if [[ -n "${DEV_KEY_FILE}" ]]; then restrict_key dev "${DEV_KEY_FILE}"; fi
 
 # ---- Docker networks shared by the edge Caddy and each stack (fixed subnets, see GATEWAY_TRUSTED_PROXIES) ----
 log "Docker networks"
