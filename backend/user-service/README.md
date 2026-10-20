@@ -70,11 +70,6 @@ Each invalid field gets one code, the first rule it breaks. The codes are stable
   the shared `layout.html`. Texts in `mail/messages_{fr,ar,en}.properties`; Arabic emails have `dir="rtl"`.
 - The SMTP health check is disabled: an SMTP outage must not mark the service down.
 
-| fr | ar | en |
-| --- | --- | --- |
-| ![verification fr](screenshots/verification-fr.png) | ![verification ar](screenshots/verification-ar.png) | ![verification en](screenshots/verification-en.png) |
-| ![account exists fr](screenshots/account-exists-fr.png) | ![account exists ar](screenshots/account-exists-ar.png) | ![account exists en](screenshots/account-exists-en.png) |
-
 ## Configuration
 
 | Variable | Local default | Use |
