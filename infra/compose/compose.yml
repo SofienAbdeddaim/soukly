@@ -131,6 +131,9 @@ services:
       JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
       JWT_KEY_ID: ${JWT_KEY_ID:?JWT_KEY_ID is not set}
       JWT_PRIVATE_KEY_PATH: /run/secrets/jwt/jwt-private.pem
+      # Key rotation only (AUTH-02): the previous public key stays in the JWKS while its tokens can still be valid.
+      JWT_PREVIOUS_KEY_ID: ${JWT_PREVIOUS_KEY_ID:-}
+      JWT_PREVIOUS_PUBLIC_KEY_PATH: ${JWT_PREVIOUS_KEY_ID:+/run/secrets/jwt/jwt-previous-public.pem}
       REFRESH_COOKIE_SECURE: "true"
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is not set}
     volumes:

@@ -82,7 +82,7 @@ pnpm nx serve mfe-publish    # 4203
 
 ```bash
 cd backend
-./mvnw -B verify                                  # compiles and tests common and the 4 services
+./mvnw -B verify                                  # compiles and tests common, the 4 services and e2e-tests
 ./mvnw -pl listing-service spring-boot:run        # runs one service
 curl http://localhost:8082/actuator/health        # {"status":"UP",...}
 ```
@@ -99,6 +99,8 @@ curl http://localhost:8082/actuator/health        # {"status":"UP",...}
 
 Every service exposes `GET /actuator/health`.
 
+`backend/e2e-tests` holds end-to-end tests only: they start the packaged `gateway` and `user-service` jars as two processes in front of PostgreSQL (Testcontainers) and go through the gateway like the browser (AUTH-02: login, protected route, refresh, logout, forged token). `./mvnw verify` packages the services before running them; alone, run `./mvnw -pl e2e-tests -am verify`.
+
 ## user-service
 
 Accounts of Soukly (package `com.soukly.user`, database `soukly_user`, schema managed by Flyway in `user-service/src/main/resources/db/migration`). Details, rules and error codes: [`backend/user-service/README.md`](backend/user-service/README.md).
@@ -108,17 +110,35 @@ Accounts of Soukly (package `com.soukly.user`, database `soukly_user`, schema ma
 | `POST /api/users/register` | `{ email, password, displayName, phone, acceptTerms }`, header `Accept-Language` | `202` (always the same, new or known email), `400` |
 | `POST /api/users/verify-email` | `{ token }` | `204`, `400` `verification-token-invalid` |
 | `POST /api/users/verify-email/resend` | `{ email }` | `202` (always), `400` malformed email |
+| `POST /api/users/login` | `{ email, password }` | `200` access token + `soukly_rt` cookie, `401` `invalid-credentials`, `403` `email-not-verified`, `429` |
+| `POST /api/users/refresh` | cookie `soukly_rt`, header `Origin` | `200` new access token + new cookie, `401` `session-expired` / `session-revoked`, `403` |
+| `POST /api/users/logout` | cookie `soukly_rt`, header `Origin` | `204`, `403` |
+
+Sessions last **30 days, renewed at every refresh**: the access token (JWT RS256) lives 15 minutes, the refresh token rotates at each use and a reused one revokes its session. Rules, keys and rotation: [`backend/user-service/README.md`](backend/user-service/README.md#sessions).
 
 Running it locally against the Docker infrastructure (PostgreSQL and Mailpit):
 
 ```bash
 docker compose up -d --wait                                       # from the repository root
+scripts/gen-jwt-key.sh                                            # once: local JWT key in .secrets/jwt/ (ignored by git)
 cd backend && ./mvnw install -DskipTests                          # once
 (set -a; . ../.env; set +a; ./mvnw -pl user-service spring-boot:run)   # 8081, reads USER_SVC_DB_PASSWORD from .env
 ./mvnw -pl gateway spring-boot:run                                # 8080, in another terminal
 curl -i -X POST http://localhost:8080/api/users/register -H 'Content-Type: application/json' -H 'Accept-Language: ar' \
   -d '{"email":"amira@example.tn","password":"Jasmin-de-Carthage-2026","displayName":"Amira","phone":"20 123 456","acceptTerms":true}'
 ```
+
+Then sign in, call a protected path, renew and sign out with a cookie jar (the `Origin` header is required on `refresh` and `logout`):
+
+```bash
+curl -i -c jar -X POST http://localhost:8080/api/users/login -H 'Content-Type: application/json' \
+  -d '{"email":"amira@example.tn","password":"Jasmin-de-Carthage-2026"}'          # 200, Set-Cookie soukly_rt
+curl -i http://localhost:8080/api/users/me -H "Authorization: Bearer <accessToken>"  # passes the gateway (404 until AUTH-05)
+curl -i -b jar -c jar -X POST http://localhost:8080/api/users/refresh -H 'Origin: http://localhost:4200'   # 200
+curl -i -b jar -c jar -X POST http://localhost:8080/api/users/logout -H 'Origin: http://localhost:4200'    # 204
+```
+
+curl keeps the `Secure` cookie on `http://localhost` like Chrome and Firefox do.
 
 The verification email appears in Mailpit (http://localhost:8025); its link targets `FRONT_BASE_URL/{lang}/account/verify-email?token=…` (the page arrives with AUTH-03). The tests use Testcontainers (Docker required) and an in-memory SMTP server.
 
@@ -142,9 +162,10 @@ The whitelist lives in a single class, `gateway/.../security/PublicPaths.java`. 
 
 | Access | Paths |
 | --- | --- |
-| Public | `POST /api/users/register`, `POST /api/users/verify-email`, `POST /api/users/verify-email/resend` (AUTH-01), `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/categories/**` and `GET /api/locations/**` (referentials, CAT-01), `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
+| Public | `POST /api/users/register`, `POST /api/users/verify-email`, `POST /api/users/verify-email/resend` (AUTH-01), `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/logout` (AUTH-02, the refresh cookie authenticates them), `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/categories/**` and `GET /api/locations/**` (referentials, CAT-01), `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
 | JWT required | everything else, for example `POST/PUT/PATCH/DELETE /api/listings/**`, `/api/users/me/**`, `/api/social/**` |
 
+- **JWKS**: the gateway reads the public keys from `USER_SERVICE_JWKS_URI` (internal address of `user-service`); `/.well-known/jwks.json` is never routed to the outside.
 - **JWT**: RS256 only (`none`, HS256 and any other algorithm are rejected); signature checked with the public keys of the `user-service` JWKS (`USER_SERVICE_JWKS_URI`), cached and fetched again when a token carries an unknown `kid` (key rotation); `exp` with a 30 s clock skew; `iss` equal to `JWT_ISSUER`. No secret is shared between services.
 - Missing or invalid token on a protected path: `401`, `WWW-Authenticate: Bearer`, and the request never reaches the service. On a public path the token is not checked and is forwarded as is.
 - The `Authorization` header is forwarded unchanged; the services validate it again themselves (AUTH and ANN tickets). The gateway adds no identity header.
@@ -318,9 +339,9 @@ soukly/
 ├── .github/           # CI (workflows/ci.yml), images (workflows/build-images.yml), Dependabot, PR template
 ├── docker-compose.yml # local infrastructure
 ├── infra/             # postgres/init, garage (local), vm (server setup), edge (HTTPS Caddy), compose (dev/prod stacks), backup
-├── scripts/           # infra-check.sh
+├── scripts/           # infra-check.sh, gen-jwt-key.sh (local JWT key)
 ├── frontend/          # Nx workspace (pnpm)
-└── backend/           # Maven: common, gateway, user-service, listing-service, social-publisher
+└── backend/           # Maven: common, gateway, user-service, listing-service, social-publisher, e2e-tests
 ```
 
 ## Conventions
