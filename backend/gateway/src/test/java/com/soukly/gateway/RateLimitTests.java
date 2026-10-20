@@ -12,7 +12,7 @@ import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec;
 
 import com.soukly.gateway.support.GatewayIntegrationTest;
 
-// These tests use up the login and register budgets of the shared gateway context: a fresh context
+// These tests use up the login, register and resend budgets of the shared gateway context: a fresh context
 // afterwards keeps later test classes (RoutingTests registers once) from getting a 429.
 @DirtiesContext
 class RateLimitTests extends GatewayIntegrationTest {
@@ -35,6 +35,17 @@ class RateLimitTests extends GatewayIntegrationTest {
     }
 
     @Test
+    void verificationResendIsPublicAndLimitedWithItsOwnBudget() {
+        for (int i = 0; i < 10; i++) {
+            resend().expectStatus().isOk();
+        }
+
+        resend().expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
+                .expectHeader().exists(HttpHeaders.RETRY_AFTER);
+        assertThat(USER_SERVICE.received()).hasSize(10);
+    }
+
+    @Test
     void spoofedForwardedForFromAnUntrustedClientIsIgnored() {
         // No trusted proxy is configured: every request counts for the connection IP, whatever X-Forwarded-For says.
         for (int i = 0; i < 10; i++) {
@@ -47,6 +58,13 @@ class RateLimitTests extends GatewayIntegrationTest {
 
     private ResponseSpec login() {
         return client.post().uri("/api/users/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{}")
+                .exchange();
+    }
+
+    private ResponseSpec resend() {
+        return client.post().uri("/api/users/verify-email/resend")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{}")
                 .exchange();

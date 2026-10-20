@@ -36,7 +36,7 @@ public record GatewayProperties(Jwt jwt, Cors cors, RateLimit rateLimit,
     }
 
     /**
-     * @param authPerMinute requests per minute and per client IP on login and register
+     * @param authPerMinute requests per minute and per client IP on login, register and verification resend
      */
     public record RateLimit(@DefaultValue("10") int authPerMinute) {
     }

@@ -20,8 +20,8 @@ import com.soukly.gateway.error.ProblemResponseWriter;
 import reactor.core.publisher.Mono;
 
 /**
- * Limits {@code POST /api/users/login} and {@code POST /api/users/register} per client IP (each path has its own
- * budget). Beyond the limit the gateway answers {@code 429} with {@code Retry-After} and the request never
+ * Limits {@code POST /api/users/login}, {@code POST /api/users/register} and
+ * {@code POST /api/users/verify-email/resend} per client IP (each path has its own budget). Beyond the limit the gateway answers {@code 429} with {@code Retry-After} and the request never
  * reaches user-service. Runs after {@code RequestIdFilter}, before security.
  */
 @Component
@@ -29,7 +29,7 @@ import reactor.core.publisher.Mono;
 class AuthRateLimitFilter implements WebFilter {
 
     private static final ServerWebExchangeMatcher LIMITED = ServerWebExchangeMatchers.pathMatchers(HttpMethod.POST,
-            "/api/users/login", "/api/users/register");
+            "/api/users/login", "/api/users/register", "/api/users/verify-email/resend");
 
     private final RateLimiter limiter;
     private final ClientIpResolver clientIps;

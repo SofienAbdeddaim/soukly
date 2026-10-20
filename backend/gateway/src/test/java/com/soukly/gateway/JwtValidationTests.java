@@ -55,6 +55,21 @@ class JwtValidationTests extends GatewayIntegrationTest {
         assertThat(LISTING_SERVICE.received()).isEmpty();
     }
 
+    // verify-email/resend is public too: RateLimitTests calls it without a token (not here, to keep its budget).
+    @Test
+    void registrationPathsArePublic() {
+        for (String path : new String[] { "/api/users/register", "/api/users/verify-email" }) {
+            client.post().uri(path)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue("{}")
+                    .exchange()
+                    .expectStatus().isOk();
+        }
+
+        assertThat(USER_SERVICE.received()).extracting(received -> received.uri())
+                .containsExactly("/users/register", "/users/verify-email");
+    }
+
     @Test
     void protectedPathsRequireAToken() {
         client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
