@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!-- Shared layout of the HTML emails: inline styles only (email clients ignore style sheets). Colours of
+     ambiance A (libs/ui tokens): indigo 900 text and button, cream 50 background, saffron 400 accent. -->
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="email(title, body)" th:lang="${lang}" th:dir="${dir}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title}">Soukly</title>
+</head>
+<body style="margin:0;padding:0;background:#fff8ec;color:#2a2140;font-family:Rubik,Arial,Tahoma,sans-serif;" th:dir="${dir}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff8ec;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+               style="max-width:560px;background:#ffffff;border:1px solid #f0e3cc;border-radius:12px;" th:dir="${dir}">
+          <tr>
+            <td style="padding:20px 28px;border-bottom:4px solid #f2b33d;font-size:24px;font-weight:bold;color:#2a2140;"
+                th:text="#{common.brand}">Soukly</td>
+          </tr>
+          <tr>
+            <td style="padding:28px;font-size:16px;line-height:1.6;">
+              <th:block th:replace="${body}"/>
+              <p style="margin:24px 0 0;color:#6a5f7e;" th:text="#{common.signature}">The Soukly team</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

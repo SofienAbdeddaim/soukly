@@ -1,10 +1,10 @@
 package com.soukly.user;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class UserApplicationTests {
+import com.soukly.user.support.IntegrationTest;
+
+class UserApplicationTests extends IntegrationTest {
 
     @Test
     void contextLoads() {

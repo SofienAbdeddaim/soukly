@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{account-exists.subject}, ~{:: #content})}">
+<body>
+<div id="content">
+  <p style="margin:0 0 16px;" th:text="#{common.greeting(${displayName})}">Hello Amira,</p>
+  <p style="margin:0 0 24px;" th:text="#{account-exists.intro}">An account already exists.</p>
+  <p style="margin:0 0 24px;">
+    <a th:href="${loginUrl}" href="#"
+       style="display:inline-block;padding:12px 24px;background:#2a2140;color:#fff8ec;text-decoration:none;border-radius:8px;font-weight:bold;"
+       th:text="#{account-exists.button}">Sign in</a>
+  </p>
+  <p style="margin:0 0 16px;">
+    <span th:text="#{account-exists.forgot-password}">Forgot your password?</span>
+    <a th:href="${forgotPasswordUrl}" href="#" style="color:#b4441f;" th:text="#{account-exists.forgot-password-link}">Reset my password</a>
+  </p>
+  <p style="margin:0;color:#6a5f7e;font-size:14px;" th:text="#{account-exists.ignore}">Ignore this email.</p>
+</div>
+</body>
+</html>

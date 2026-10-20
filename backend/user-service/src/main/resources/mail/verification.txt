@@ -1,0 +1,11 @@
+[(#{common.greeting(${displayName})})]
+
+[(#{verification.intro})]
+
+[(#{verification.button})]: [(${verifyUrl})]
+
+[(#{verification.validity(${validityHours})})]
+
+[(#{verification.ignore})]
+
+[(#{common.signature})]
