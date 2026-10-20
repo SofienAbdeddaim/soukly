@@ -74,9 +74,13 @@ Flyway migrations in `src/main/resources/db/migration`:
 | `V1__create_referentials.sql` | tables `categories`, `attribute_definitions`, `attribute_enum_values`, `category_attributes`, `governorates`, `delegations` |
 | `V2__insert_categories.sql` | 10 families, 44 subcategories |
 | `V3__insert_attributes.sql` | 10 attributes of vehicles and real estate, their enum values and categories |
-| `V4__insert_governorates.sql` | 24 governorates |
+| `V4__insert_governorates.sql` | 24 governorates, with their INS code |
+| `V5__insert_delegations.sql` | 264 delegations, with their INS code |
 
-The `delegations` table is still empty: see the CAT-01 pull request (no official source could be fetched).
+Places come from the official INS "Code géographique tunisien" (December 2012, division at 31 December 2012); the
+source, its checksum and the few display fixes are in the header of `V5`. Never invent a place: a delegation created
+since 2012 is added by a new migration from a newer official source (Ministry of the Interior or INS). The source has
+no English names: `label_en` of a delegation is its French name without diacritics.
 
 ### Codes
 

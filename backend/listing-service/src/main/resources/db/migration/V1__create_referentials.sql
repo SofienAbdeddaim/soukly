@@ -70,6 +70,8 @@ CREATE TABLE category_attributes (
 
 CREATE TABLE governorates (
     code       varchar(64)  PRIMARY KEY,
+    -- Code of the Institut National de la Statistique (INS), "Code géographique tunisien": 11 Tunis ... 63 Kébili
+    ins_code   varchar(2)   NOT NULL UNIQUE,
     label_fr   varchar(100) NOT NULL,
     label_ar   varchar(100) NOT NULL,
     label_en   varchar(100) NOT NULL,
@@ -82,6 +84,8 @@ CREATE TABLE delegations (
     -- "<governorate>.<delegation>", for example "sfax.sakiet-ezzit": some names exist in several governorates
     code             varchar(128) PRIMARY KEY,
     governorate_code varchar(64)  NOT NULL REFERENCES governorates (code),
+    -- INS code: governorate code + 2 digits, for example 3453 Sakiet Ezzit
+    ins_code         varchar(4)   NOT NULL UNIQUE,
     label_fr         varchar(100) NOT NULL,
     label_ar         varchar(100) NOT NULL,
     label_en         varchar(100) NOT NULL,

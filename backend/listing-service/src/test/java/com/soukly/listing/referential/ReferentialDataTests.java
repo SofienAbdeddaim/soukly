@@ -41,7 +41,8 @@ class ReferentialDataTests extends IntegrationTest {
                 .containsEntry("subcategories", 44L)
                 .containsEntry("attributes", 10L)
                 .containsEntry("enum_values", 9L)
-                .containsEntry("governorates", 24L);
+                .containsEntry("governorates", 24L)
+                .containsEntry("delegations", 264L);
     }
 
     @ParameterizedTest
@@ -71,7 +72,7 @@ class ReferentialDataTests extends IntegrationTest {
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         // Running the data scripts again (ON CONFLICT DO NOTHING) changes nothing either.
         for (String script : List.of("V2__insert_categories.sql", "V3__insert_attributes.sql",
-                "V4__insert_governorates.sql")) {
+                "V4__insert_governorates.sql", "V5__insert_delegations.sql")) {
             jdbc.execute(new ClassPathResource("db/migration/" + script).getContentAsString(StandardCharsets.UTF_8));
         }
 
@@ -90,6 +91,8 @@ class ReferentialDataTests extends IntegrationTest {
                 .containsExactly("brand", "model", "year", "mileage-km", "fuel", "gearbox");
         assertThat(referentials.findGovernorate("sfax")).isPresent();
         assertThat(referentials.findGovernorate("atlantis")).isEmpty();
+        assertThat(referentials.findDelegation("sfax.sakiet-ezzit")).hasValueSatisfying(
+                delegation -> assertThat(delegation.governorateCode()).isEqualTo("sfax"));
         assertThat(referentials.findDelegation("sfax.unknown")).isEmpty();
     }
 }

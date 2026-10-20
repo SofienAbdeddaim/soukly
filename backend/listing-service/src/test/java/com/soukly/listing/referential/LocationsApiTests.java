@@ -12,7 +12,6 @@ import java.text.Collator;
 import java.util.List;
 import java.util.Locale;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
@@ -46,7 +45,6 @@ class LocationsApiTests extends IntegrationTest {
                 .andExpect(jsonPath("$.instance").value("/locations/governorates/atlantis/delegations"));
     }
 
-    @Disabled("CAT-01: delegations not loaded, no official source was reachable; see the pull request")
     @Test
     void sfaxDelegationsAreSortedByLabel() throws Exception {
         String body = mockMvc.perform(get("/locations/governorates/sfax/delegations"))
@@ -55,11 +53,15 @@ class LocationsApiTests extends IntegrationTest {
 
         List<String> codes = JsonPath.read(body, "$[*].code");
         List<String> labels = JsonPath.read(body, "$[*].label.fr");
-        assertThat(codes).isNotEmpty().allSatisfy(code -> assertThat(code).startsWith("sfax."));
+        assertThat(codes).hasSize(16).allSatisfy(code -> assertThat(code).startsWith("sfax."))
+                .contains("sfax.sfax-ville", "sfax.sakiet-ezzit", "sfax.kerkenah");
         assertThat(labels).isSortedAccordingTo(Collator.getInstance(Locale.FRENCH));
+        assertThat(labels.getFirst()).isEqualTo("Agareb");
+        mockMvc.perform(get("/locations/governorates/sfax/delegations"))
+                .andExpect(jsonPath("$[0].label.ar").value("عقارب"))
+                .andExpect(jsonPath("$[0].label.en").value("Agareb"));
     }
 
-    @Disabled("CAT-01: delegations not loaded, no official source was reachable; see the pull request")
     @Test
     void everyGovernorateHasAtLeastOneDelegation() {
         Integer withoutDelegation = jdbc.queryForObject("""
@@ -69,9 +71,10 @@ class LocationsApiTests extends IntegrationTest {
     }
 
     @Test
-    void governorateWithoutLoadedDelegationsAnswersAnEmptyList() throws Exception {
-        mockMvc.perform(get("/locations/governorates/sfax/delegations"))
-                .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+    void delegationCodesFollowTheirGovernorateAndTheInsCodes() {
+        Integer mismatched = jdbc.queryForObject("""
+                SELECT count(*) FROM delegations d JOIN governorates g ON g.code = d.governorate_code
+                WHERE d.ins_code NOT LIKE g.ins_code || '__'""", Integer.class);
+        assertThat(mismatched).isZero();
     }
 }
