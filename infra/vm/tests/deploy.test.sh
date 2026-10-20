@@ -3,7 +3,8 @@
 # stubs, the Compose files come from this checkout. Run from anywhere:
 #   bash infra/vm/tests/deploy.test.sh
 # Cases: success, failure with return to the previous version, failed site check, first deployment
-# in failure, invalid SHA or environment, restricted key, missing images, lock, release pruning.
+# in failure, invalid SHA or environment, restricted key, missing images, lock, release pruning;
+# prod (DEP-04): domain not configured, dev check, untested and redeploy, backup before deployment.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -59,7 +60,13 @@ if [[ " $* " == *" --resolve "* ]]; then
 fi
 exec /usr/bin/curl "$@"
 STUB
-chmod +x "${WORK}/bin/docker" "${WORK}/bin/curl"
+# Backup script: records its label, fails when FAKE_BACKUP_FAILS is set.
+cat > "${WORK}/bin/backup" <<'STUB'
+#!/usr/bin/env bash
+echo "backup $*" >> "${FAKE_CALLS}"
+[[ -z "${FAKE_BACKUP_FAILS:-}" ]]
+STUB
+chmod +x "${WORK}/bin/docker" "${WORK}/bin/curl" "${WORK}/bin/backup"
 
 # Archives of the 3 commits: this checkout's infra directory.
 for sha in "${A}" "${B}" "${C}" dddddddddddddddddddddddddddddddddddddddd eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee ffffffffffffffffffffffffffffffffffffffff 1111111111111111111111111111111111111111; do
@@ -70,6 +77,7 @@ done
 
 export SOUKLY_ROOT="${WORK}/opt" FAKE_CALLS="${WORK}/calls" FAKE_PUBLIC_URL=https://dev.example.test
 export SOUKLY_SOURCE_URL="file://${WORK}/archives/%s.tar.gz" CHECK_TIMEOUT=1 PATH="${WORK}/bin:${PATH}"
+export SOUKLY_BACKUP_CMD="${WORK}/bin/backup"
 mkdir -p "${SOUKLY_ROOT}/dev"
 cp "${REPO}/infra/compose/.env.example" "${SOUKLY_ROOT}/dev/.env"
 sed -i "s|^PUBLIC_BASE_URL=.*|PUBLIC_BASE_URL=${FAKE_PUBLIC_URL}|" "${SOUKLY_ROOT}/dev/.env"
@@ -106,6 +114,8 @@ run 1 "short SHA refused" bash "${DEPLOY}" dev "${A:0:7}"
 run 1 "unknown environment refused" bash "${DEPLOY}" staging "${A}"
 run 1 "restricted key: another command is refused" env SSH_ORIGINAL_COMMAND="bash -i" bash "${DEPLOY}" dev
 run 1 "restricted key: no command (interactive login) is refused" env -u SSH_ORIGINAL_COMMAND bash "${DEPLOY}" dev
+run 1 "restricted key: extra words after the SHA are refused" env SSH_ORIGINAL_COMMAND="${A} untested now" bash "${DEPLOY}" prod
+run 1 "dev takes no option" env SSH_ORIGINAL_COMMAND="${A} untested" bash "${DEPLOY}" dev
 check "  nothing called" no_compose_call
 
 # ---- First deployment in failure ----
@@ -161,6 +171,45 @@ for sha in dddddddddddddddddddddddddddddddddddddddd eeeeeeeeeeeeeeeeeeeeeeeeeeee
 done
 check "5 releases kept" test "$(find "${SOUKLY_ROOT}/dev/releases" -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq 5
 check "  the oldest one deleted" test ! -d "${SOUKLY_ROOT}/dev/releases/${B}"
+
+# ---- Prod (DEP-04) ----
+# dev has run A, then the pruning loop: A, C and the last 4 SHAs are in dev/deployments.log.
+mkdir -p "${SOUKLY_ROOT}/prod" "${SOUKLY_ROOT}/edge"
+cp "${REPO}/infra/compose/.env.example" "${SOUKLY_ROOT}/prod/.env"
+sed -i -e 's|^ENV_NAME=.*|ENV_NAME=prod|' -e 's|^PUBLIC_BASE_URL=.*|PUBLIC_BASE_URL=https://soukly.example.test|' \
+  "${SOUKLY_ROOT}/prod/.env"
+echo "PROD_HOST=" > "${SOUKLY_ROOT}/edge/.env"
+export FAKE_PUBLIC_URL=https://soukly.example.test
+run 1 "prod refused while PROD_HOST is empty" env SSH_ORIGINAL_COMMAND="${A}" bash "${DEPLOY}" prod
+check "  message names the domain" out_has "prod domain not configured"
+check "  nothing called" test ! -s "${FAKE_CALLS}"
+echo "PROD_HOST=other.example.test" > "${SOUKLY_ROOT}/edge/.env"
+run 1 "prod refused when PUBLIC_BASE_URL is not PROD_HOST" bash "${DEPLOY}" prod "${A}"
+echo "PROD_HOST=soukly.example.test" > "${SOUKLY_ROOT}/edge/.env"
+
+run 1 "prod refuses a SHA never deployed in dev" env SSH_ORIGINAL_COMMAND="${B}" bash "${DEPLOY}" prod
+check "  message" out_has "version never deployed successfully in dev"
+check "  nothing called (no backup)" test ! -s "${FAKE_CALLS}"
+
+FAKE_BACKUP_FAILS=1 run 1 "prod stops when the backup fails" env SSH_ORIGINAL_COMMAND="${A}" bash "${DEPLOY}" prod
+check "  message" out_has "backup before deployment failed"
+check "  backup labelled predeploy-<sha>" grep -qx "backup predeploy-${A}" "${FAKE_CALLS}"
+check "  stack not touched" no_compose_call
+
+run 0 "prod deploys a SHA deployed in dev" env SSH_ORIGINAL_COMMAND="${A}" bash "${DEPLOY}" prod
+check "  backup before the stack" test "$(grep -m1 'backup\|docker compose' "${FAKE_CALLS}")" = "backup predeploy-${A}"
+check "  prod uses compose.yml only" bash -c "! grep -q 'compose.dev.yml' '${FAKE_CALLS}'"
+check "  prod journal" grep -q "${A} deployed$" "${SOUKLY_ROOT}/prod/deployments.log"
+
+run 0 "prod deploys an untested SHA with the untested option" env SSH_ORIGINAL_COMMAND="${B} untested" bash "${DEPLOY}" prod
+check "  warning shown" out_has "never deployed successfully in dev (untested)"
+check "  journal says untested" grep -q "${B} deployed (untested)$" "${SOUKLY_ROOT}/prod/deployments.log"
+check "  the dev check still refuses B for a normal deployment" \
+  bash -c "! grep -q ' ${B} deployed$' '${SOUKLY_ROOT}/dev/deployments.log'"
+
+run 0 "prod redeploys a version without the dev check" env SSH_ORIGINAL_COMMAND="${B} redeploy" bash "${DEPLOY}" prod
+FAKE_BAD="${C}" run 2 "prod version that does not start: back to the previous one" bash "${DEPLOY}" prod "${C}"
+check "  result says rolled back" out_has "RESULT: rolled-back ${B}"
 
 echo
 if ((failures > 0)); then

@@ -2,11 +2,16 @@
 # Deploys one commit to one Soukly environment of the VM (DEP-03 for dev, DEP-04 for prod), with an
 # automatic return to the previous version when the new one does not start correctly.
 #
-#   /opt/soukly/bin/deploy.sh <dev|prod> <full commit sha>   # by hand, as deploy
+#   /opt/soukly/bin/deploy.sh <dev|prod> <full commit sha> [untested|redeploy]   # by hand, as deploy
 #
 # GitHub Actions calls it through a restricted SSH key of the deploy user (infra/vm/setup.sh):
-# authorized_keys forces "deploy.sh <env>" and the SHA arrives in SSH_ORIGINAL_COMMAND, so the key
-# can run nothing else and deploy no other environment.
+# authorized_keys forces "deploy.sh <env>" and "<sha> [flag]" arrives in SSH_ORIGINAL_COMMAND, so
+# the key can run nothing else and deploy no other environment.
+#
+# Prod only (DEP-04), before anything is changed: PROD_HOST must be set in the edge settings; the
+# SHA must have been deployed successfully in dev (/opt/soukly/dev/deployments.log), unless the
+# flag is "untested" (urgent fix) or "redeploy" (a version tag that already ran in prod); the prod
+# databases are backed up (pg-backup.sh, label predeploy-<sha>), and a failed backup stops here.
 #
 # Steps: check the arguments, lock the environment, check that the 5 images of the commit exist on
 # GHCR, download the Compose files of that commit from the public repository, pull and start the
@@ -21,6 +26,8 @@
 set -euo pipefail
 
 SOUKLY_ROOT="${SOUKLY_ROOT:-/opt/soukly}"
+# Backup script of DEP-02 (installed by setup.sh); it takes a label as argument.
+SOUKLY_BACKUP_CMD="${SOUKLY_BACKUP_CMD:-/usr/local/sbin/soukly-pg-backup}"
 # Archive of one commit of the public repository (no credentials needed); %s is the SHA.
 SOUKLY_SOURCE_URL="${SOUKLY_SOURCE_URL:-https://codeload.github.com/SofienAbdeddaim/soukly/tar.gz/%s}"
 # Maximum time for the stack to become healthy (docker compose up --wait), in seconds.
@@ -43,13 +50,19 @@ case "${env_name}" in
   dev | prod) ;;
   *) fail "unknown environment '${env_name}' (dev or prod)" ;;
 esac
-# Through the restricted key, the SHA is the whole command sent by the client.
+# Through the restricted key, "<sha> [flag]" is the whole command sent by the client.
 if [[ -n "${SSH_ORIGINAL_COMMAND+x}" ]]; then
-  sha="${SSH_ORIGINAL_COMMAND}"
+  request="${SSH_ORIGINAL_COMMAND}"
 else
-  sha="${2:-}"
+  request="${2:-} ${3:-}"
 fi
-[[ "${sha}" =~ ^[0-9a-f]{40}$ ]] || fail "not a full commit SHA (40 lower-case hex characters)"
+read -r sha flag extra <<< "${request}" || true
+[[ "${sha:-}" =~ ^[0-9a-f]{40}$ && -z "${extra:-}" ]] \
+  || fail "not a full commit SHA (40 lower-case hex characters)"
+case "${env_name}:${flag:-}" in
+  dev: | prod: | prod:untested | prod:redeploy) ;;
+  *) fail "unknown option '${flag}' for ${env_name}" ;;
+esac
 
 env_dir="${SOUKLY_ROOT}/${env_name}"
 env_file="${env_dir}/.env"
@@ -66,6 +79,22 @@ host="${public_url#https://}"
 host="${host%%/*}"
 [[ "${public_url}" == https://* && "${host}" =~ ^[A-Za-z0-9.-]+$ ]] \
   || fail "PUBLIC_BASE_URL of ${env_file} is not an https address"
+
+# ---- Prod: domain and dev check, before anything is changed ----
+if [[ "${env_name}" == prod ]]; then
+  prod_host="$(sed -n 's/^PROD_HOST=//p' "${SOUKLY_ROOT}/edge/.env" 2> /dev/null | tail -n 1)"
+  [[ -n "${prod_host}" ]] || fail "prod domain not configured (PROD_HOST is empty in ${SOUKLY_ROOT}/edge/.env)"
+  [[ "${prod_host}" == "${host}" ]] \
+    || fail "PUBLIC_BASE_URL of ${env_file} (${host}) does not match PROD_HOST (${prod_host})"
+  case "${flag:-}" in
+    untested) log "WARNING: ${sha} was never deployed successfully in dev (untested)" ;;
+    redeploy) log "redeploying a version that already ran in prod: no dev check" ;;
+    *)
+      grep -qE "^[^ ]+ ${sha} deployed$" "${SOUKLY_ROOT}/dev/deployments.log" 2> /dev/null \
+        || fail "version never deployed successfully in dev: ${sha} (nothing changed)"
+      ;;
+  esac
+fi
 
 # ---- One deployment at a time per environment ----
 exec 9> "${env_dir}/.deploy.lock"
@@ -85,6 +114,12 @@ for image in "${IMAGES[@]}"; do
   fi
 done
 ((${#missing[@]} == 0)) || fail "images missing on GHCR for ${sha}: ${missing[*]} (nothing changed)"
+
+# ---- Prod: database backup just before the deployment ----
+if [[ "${env_name}" == prod ]]; then
+  log "backing up the prod databases (predeploy-${sha})"
+  "${SOUKLY_BACKUP_CMD}" "predeploy-${sha}" || fail "backup before deployment failed (nothing changed)"
+fi
 
 # ---- Compose files of the commit ----
 install -d -m 0750 "${releases}" "${active}"
@@ -208,7 +243,7 @@ prune() {
 if start_release "${sha}"; then
   ln -sfn "releases/${sha}" "${env_dir}/current"
   sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${sha}/" "${env_file}"
-  record deployed
+  record "deployed${flag:+ (${flag})}"
   prune
   log "deployed ${sha} in $(($(date +%s) - started))s"
   echo "RESULT: deployed ${sha}"

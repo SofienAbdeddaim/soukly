@@ -8,6 +8,11 @@ Every night at 03:00 (Africa/Tunis), `soukly-backup.timer` runs `pg-backup.sh` a
    Object Storage by default), under `<YYYY-MM-DD>/`;
 3. deletion of the date folders older than 7 days (the last 7 days are kept, today included).
 
+Before every prod deployment, `deploy.sh prod` runs the same script with a label
+(`pg-backup.sh predeploy-<sha>`): those dumps go under `<YYYY-MM-DD>/predeploy-<sha>/` and are
+deleted with their date folder after 7 days. If that backup fails, the deployment stops before
+touching prod.
+
 Any failure (no prod container, empty dump, upload refused) ends the run in error, visible in
 `systemctl status soukly-backup` and `journalctl -u soukly-backup`. The script never prints a
 secret.
@@ -40,7 +45,8 @@ lifecycle rule, so that it is visible in the repository and works the same on an
 ## Restore
 
 The same steps restore prod, or copy prod into dev to test a backup (done once for DEP-02).
-`<env>` is the target stack, `<date>` the backup folder.
+`<env>` is the target stack, `<date>` the backup folder (`<YYYY-MM-DD>` for a nightly backup,
+`<YYYY-MM-DD>/predeploy-<sha>` for a backup taken before a prod deployment).
 
 1. Download the backup (as `deploy`, with the settings of `backup.env`):
    ```bash

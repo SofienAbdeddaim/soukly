@@ -3,7 +3,7 @@
 One Ubuntu VM runs two isolated Soukly environments, `dev` and `prod`, behind one Caddy that serves both in HTTPS. This page covers creating the VM,
 preparing it, the first launch, switching to the real domain and day-to-day operations. Backups
 and restores are covered in [`infra/backup/README.md`](../backup/README.md). New versions are
-deployed by the `deploy-dev` workflow (section 7) and, later, `deploy-prod` (DEP-04).
+deployed by the `deploy-dev` workflow (section 7) and `deploy-prod` (section 8).
 
 ```
                       Internet (22, 80, 443 only)
@@ -477,3 +477,104 @@ Flyway migrations run when the services start and are **not** undone by a return
 previous version. So every migration must stay compatible with the previous version of the
 code: add a column or a table first, and remove or rename it only in a later version, once no
 running version uses it (rule also in `CLAUDE.md` and the PR template).
+
+## 8. Put in prod
+
+The `deploy-prod` workflow puts the last commit of `main` in prod, only by hand and only after
+your approval, then tags it `vX.Y.Z` with a GitHub release. The VM backs up the prod databases
+before touching anything and returns to the previous version by itself when the new one does
+not start; in that case no tag and no release are created.
+
+### Settings (once)
+
+1. **Prod domain**: prod is only deployed once `PROD_HOST` is set in `/opt/soukly/edge/.env` and
+   equals the host of `PUBLIC_BASE_URL` in `/opt/soukly/prod/.env` (section 4). Until then every
+   run stops with `prod domain not configured`, before any change.
+2. **Key reserved for deploy-prod**, generated on your computer (never the dev key, never your
+   own key):
+   ```bash
+   ssh-keygen -t ed25519 -N '' -C soukly-deploy-prod -f ~/.ssh/soukly-deploy-prod
+   scp ~/.ssh/soukly-deploy-prod.pub ubuntu@<vm-ip>:/tmp/
+   ```
+   On Windows PowerShell, use `$env:USERPROFILE\.ssh\soukly-deploy-prod` as the path.
+3. **On the VM** (admin account), update the checkout and run the setup with both keys:
+   ```bash
+   sudo -iu deploy git -C /opt/soukly/src pull
+   sudo bash /opt/soukly/src/infra/vm/setup.sh --dev-key /tmp/soukly-deploy-dev.pub --prod-key /tmp/soukly-deploy-prod.pub
+   ```
+   (`--dev-key` can be left out when the dev key is already installed.) The prod key is added as
+   `restrict,command="/opt/soukly/bin/deploy.sh prod" ssh-ed25519 ...`; `setup.sh` refuses a prod
+   key identical to the dev key.
+4. **GitHub > Settings > Environments > New environment** `production`:
+   - **Required reviewers**: you; leave **Prevent self-review** off (you approve your own runs);
+   - **Deployment branches and tags**: *Selected branches and tags*, rule `main`;
+   - secrets: `PROD_SSH_KEY` (content of `~/.ssh/soukly-deploy-prod`), `VM_HOST` and
+     `VM_SSH_KNOWN_HOSTS` (same values as in `dev`);
+   - variable: `PROD_HOST` (for example `soukly.tn`).
+
+   Then delete the private key from your computer.
+5. **Version tags** (*Settings > Rules > Rulesets > New ruleset > New tag ruleset*): name
+   `version tags`, enforcement *Active*, target *Include by pattern* `v*`, rules **Restrict
+   updates**, **Restrict deletions** and **Block force pushes**. No bypass actor: nobody, the
+   workflow included, can move or delete a published version. Leave **Restrict creations** off
+   unless *GitHub Actions* is offered in the bypass list: the `GITHUB_TOKEN` of the workflow is
+   not a bypass actor in GitHub's documentation, so restricting creation would block
+   `deploy-prod` itself. Do not create `v*` tags by hand.
+
+### Putting a version in prod
+
+1. Deploy the last commit of `main` to dev with `deploy-dev` and check it.
+2. *Actions > deploy-prod > Run workflow*, **Use workflow from** `main`, with:
+   - **bump**: `patch` (default), `minor` or `major`. The first version is `v0.1.0` (`v1.0.0`
+     with `major`);
+   - **redeploy_tag** and **allow_untested** left empty (see below).
+3. The `prepare` job computes the next version and writes in the run's summary the version, the
+   previous one, the commit, the number of commits and the **draft release notes** (`feat` under
+   *New features*, `fix` under *Fixes*, the rest under *Other*, without `chore` and `docs`,
+   each line with its ticket and PR link). Read it.
+4. The `images` job reuses the images built for dev (same commit).
+5. The `deploy` job waits for your approval (*Review deployments > production > Approve*).
+   Reject it to stop: nothing changes. On approval, `deploy.sh prod <sha>` on the VM:
+   1. checks the prod domain, then that this commit was deployed successfully in dev
+      (`/opt/soukly/dev/deployments.log`); otherwise stops with
+      `version never deployed successfully in dev`;
+   2. checks the 5 images, then **backs up the 3 prod databases** to the backup bucket under
+      `<date>/predeploy-<sha>/`; if the backup fails, stops without touching prod;
+   3. deploys and checks the site as for dev (section 7), and returns to the previous version
+      when the new one does not start.
+6. The `release` job runs only after a successful deployment: annotated tag `vX.Y.Z` on the
+   commit, GitHub release with the notes, and the `vX.Y.Z` tag added to the 5 images (no
+   rebuild).
+
+The `summary` job ends every run with its result, the version, who launched it and the
+duration:
+
+| Result | Meaning |
+|---|---|
+| `released vX.Y.Z` | prod runs the new version; tag and release created |
+| `failed, rolled back: prod still runs vA.B.C` | the version did not start; no tag, no release |
+| `failed: see the deploy job` | refused before any change (domain, never deployed in dev, images, backup), or the previous version did not start either |
+| `not deployed (approval refused or cancelled)` | nothing changed |
+| `failed, images not built` | nothing was sent to the VM |
+
+The version that runs is shown by `GET https://<PROD_HOST>/api/actuator/info` (`app.version`),
+and every run is written to `/opt/soukly/prod/deployments.log`.
+
+### Manual rollback
+
+To put back an earlier version: *Run workflow* from `main` with **redeploy_tag** `vA.B.C`. The
+commit of that tag is deployed (backup first, no dev check), with no new tag and no release.
+Remember the migration rule below: the database is not rolled back.
+
+### Urgent fix
+
+When a fix cannot wait for dev: *Run workflow* with **allow_untested** checked. The dev check
+is skipped (the VM logs a warning), the summary and the release notes say **Not tested in
+dev**, and everything else is the same (approval, backup, rollback, tag). Deploy the same commit
+to dev afterwards.
+
+### Restoring a pre-deployment backup
+
+Pre-deployment backups are kept 7 days with the nightly ones; restore them with the procedure
+of [`infra/backup/README.md`](../backup/README.md#restore), using `<date>/predeploy-<sha>` as the
+backup folder.

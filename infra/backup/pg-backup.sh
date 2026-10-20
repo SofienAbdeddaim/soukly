@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Nightly backup of the prod databases (DEP-02), run by soukly-backup.timer as the deploy user.
+# Nightly backup of the prod databases (DEP-02), run by soukly-backup.timer as the deploy user,
+# and before each prod deployment by deploy.sh (DEP-04) with a label:
+#   pg-backup.sh                       # <YYYY-MM-DD>/<db>.dump
+#   pg-backup.sh predeploy-<sha>       # <YYYY-MM-DD>/predeploy-<sha>/<db>.dump
 #   1. pg_dump (custom format) of soukly_user, soukly_listing and soukly_social, from the postgres
 #      container of the soukly-prod project;
 #   2. upload to the private bucket soukly-backups of an S3-compatible object storage (Hetzner
@@ -9,6 +12,12 @@
 #
 # Settings: /opt/soukly/backups/backup.env (mode 600), see backup.env.example. Never logs a secret.
 set -euo pipefail
+
+LABEL="${1:-}"
+if [[ -n "${LABEL}" && ! "${LABEL}" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]]; then
+  echo "[backup] ERROR: invalid label (lower-case letters, digits and -)" >&2
+  exit 1
+fi
 
 ENV_FILE="${BACKUP_ENV_FILE:-/opt/soukly/backups/backup.env}"
 [[ -r "${ENV_FILE}" ]] || { echo "[backup] ERROR: cannot read ${ENV_FILE}" >&2; exit 1; }
@@ -48,6 +57,7 @@ container="$(docker ps -q \
 [[ -n "${container}" ]] || { echo "[backup] ERROR: no running postgres container in ${PROJECT}" >&2; exit 1; }
 
 day="$(date +%F)"
+prefix="${day}${LABEL:+/${LABEL}}"
 install -d -m 0700 "${WORK_DIR}"
 trap 'rm -f "${WORK_DIR}"/*.dump' EXIT
 
@@ -56,11 +66,12 @@ for db in "${DATABASES[@]}"; do
   log "pg_dump ${db}"
   docker exec "${container}" pg_dump -U postgres -Fc "${db}" > "${dump}"
   [[ -s "${dump}" ]] || { echo "[backup] ERROR: empty dump for ${db}" >&2; exit 1; }
-  log "upload ${db} ($(du -h "${dump}" | cut -f1)) to ${BACKUP_S3_BUCKET}/${day}/"
-  aws s3 cp --only-show-errors "/work/${db}.dump" "s3://${BACKUP_S3_BUCKET}/${day}/${db}.dump"
+  log "upload ${db} ($(du -h "${dump}" | cut -f1)) to ${BACKUP_S3_BUCKET}/${prefix}/"
+  aws s3 cp --only-show-errors "/work/${db}.dump" "s3://${BACKUP_S3_BUCKET}/${prefix}/${db}.dump"
 done
 
-# Retention: the last RETENTION_DAYS days are kept (today included), older date prefixes are removed.
+# Retention: the last RETENTION_DAYS days are kept (today included), older date prefixes are removed
+# with the labelled backups they hold.
 cutoff="$(date -d "-$((RETENTION_DAYS - 1)) days" +%F)"
 aws s3 ls "s3://${BACKUP_S3_BUCKET}/" | awk '$1 == "PRE" { sub("/$", "", $2); print $2 }' |
   while read -r prefix; do
@@ -70,4 +81,4 @@ aws s3 ls "s3://${BACKUP_S3_BUCKET}/" | awk '$1 == "PRE" { sub("/$", "", $2); pr
     fi
   done
 
-log "Done: ${#DATABASES[@]} databases saved under ${BACKUP_S3_BUCKET}/${day}/"
+log "Done: ${#DATABASES[@]} databases saved under ${BACKUP_S3_BUCKET}/${prefix}/"

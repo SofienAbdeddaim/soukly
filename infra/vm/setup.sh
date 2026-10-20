@@ -5,6 +5,7 @@
 #   sudo bash infra/vm/setup.sh --deploy-key /path/to/deploy.pub   # first run, from an admin account
 #   sudo bash infra/vm/setup.sh                                    # later runs keep the existing key
 #   sudo bash infra/vm/setup.sh --dev-key /path/to/dev.pub          # restricted key of deploy-dev (DEP-03)
+#   sudo bash infra/vm/setup.sh --prod-key /path/to/prod.pub        # restricted key of deploy-prod (DEP-04)
 #   bash infra/vm/setup.sh --admin-user sofien --deploy-key ...    # first run as root (e.g. Hetzner)
 #
 # Root logins are turned off, so when the provider only gives a root account, --admin-user creates
@@ -12,9 +13,9 @@
 #
 # What it does: system updates and unattended security upgrades, Docker Engine and Compose from
 # Docker's apt repository, Docker log rotation, host firewall (22, 80, 443), SSH keys only,
-# fail2ban, the "deploy" user, /opt/soukly, the deployment script and the restricted SSH key of the
-# deploy-dev workflow, the Docker networks shared with the edge Caddy, the nightly prod backup
-# timer, and the Africa/Tunis time zone.
+# fail2ban, the "deploy" user, /opt/soukly, the deployment script and the restricted SSH keys of
+# the deploy-dev and deploy-prod workflows, the Docker networks shared with the edge Caddy, the
+# nightly prod backup timer, and the Africa/Tunis time zone.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,6 +24,7 @@ DEPLOY_USER=deploy
 SOUKLY_ROOT=/opt/soukly
 DEPLOY_KEY_FILE=""
 DEV_KEY_FILE=""
+PROD_KEY_FILE=""
 ADMIN_USER=""
 
 log() { printf '\n[setup] %s\n' "$*"; }
@@ -33,7 +35,8 @@ while [[ $# -gt 0 ]]; do
     --deploy-key) DEPLOY_KEY_FILE="${2:-}"; shift 2 ;;
     --admin-user) ADMIN_USER="${2:-}"; shift 2 ;;
     --dev-key) DEV_KEY_FILE="${2:-}"; shift 2 ;;
-    -h | --help) sed -n '2,18p' "$0"; exit 0 ;;
+    --prod-key) PROD_KEY_FILE="${2:-}"; shift 2 ;;
+    -h | --help) sed -n '2,19p' "$0"; exit 0 ;;
     *) die "unknown argument: $1" ;;
   esac
 done
@@ -51,12 +54,17 @@ if [[ -n "${ADMIN_USER}" ]]; then
   [[ "${ADMIN_USER}" =~ ^[a-z][a-z0-9_-]{0,31}$ && "${ADMIN_USER}" != deploy ]] \
     || die "invalid admin user name: ${ADMIN_USER}"
 fi
-for key_file in "${DEPLOY_KEY_FILE}" "${DEV_KEY_FILE}"; do
+for key_file in "${DEPLOY_KEY_FILE}" "${DEV_KEY_FILE}" "${PROD_KEY_FILE}"; do
   [[ -n "${key_file}" ]] || continue
   [[ -r "${key_file}" ]] || die "cannot read ${key_file}"
   grep -Eq '^(ssh-ed25519|ecdsa-sha2-nistp256|ssh-rsa) ' "${key_file}" \
     || die "${key_file} is not an SSH public key"
 done
+# One key per environment: the dev key must never deploy prod.
+if [[ -n "${DEV_KEY_FILE}" && -n "${PROD_KEY_FILE}" ]] \
+  && [[ "$(awk '{ print $2; exit }' "${DEV_KEY_FILE}")" == "$(awk '{ print $2; exit }' "${PROD_KEY_FILE}")" ]]; then
+  die "the dev and prod keys must be different"
+fi
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -259,6 +267,7 @@ restrict_key() {
   rm -f "${tmp}"
 }
 if [[ -n "${DEV_KEY_FILE}" ]]; then restrict_key dev "${DEV_KEY_FILE}"; fi
+if [[ -n "${PROD_KEY_FILE}" ]]; then restrict_key prod "${PROD_KEY_FILE}"; fi
 
 # ---- Docker networks shared by the edge Caddy and each stack (fixed subnets, see GATEWAY_TRUSTED_PROXIES) ----
 log "Docker networks"

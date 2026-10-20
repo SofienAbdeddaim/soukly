@@ -277,6 +277,7 @@ One Ubuntu VM (Oracle Cloud Always Free by default, or any provider) runs the `d
 - [`infra/vm/README.md`](infra/vm/README.md): creating the VM, `infra/vm/setup.sh` (idempotent preparation), first launch, switching to the real domain, operations.
 - [`infra/backup/README.md`](infra/backup/README.md): nightly backup of the prod databases to object storage (7 days) and the restore procedure.
 - **Deploying to dev**: *Actions > deploy-dev > Run workflow*, with any branch, tag or commit; if the new version does not start, the VM returns to the previous one ([`infra/vm/README.md`](infra/vm/README.md#7-deploy-to-dev)). Tests of the VM script: `bash infra/vm/tests/deploy.test.sh`.
+- **Putting in prod**: *Actions > deploy-prod > Run workflow* from `main`, after your approval; prod databases are backed up first, the commit must have been deployed in dev, and a successful deployment is tagged `vX.Y.Z` with a GitHub release ([`infra/vm/README.md`](infra/vm/README.md#8-put-in-prod)). Tests of the version and release-notes scripts: `bash scripts/release/release.test.sh`.
 
 ```bash
 docker compose -p soukly-edge --env-file /opt/soukly/edge/.env -f infra/edge/compose.yml up -d --wait
