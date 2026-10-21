@@ -1,7 +1,7 @@
 # user-service
 
-Accounts of Soukly: registration and email verification (AUTH-01), sign-in, sessions and the JWKS (AUTH-02). The
-screens are in `frontend/apps/mfe-account` (AUTH-03). Port 8081, package `com.soukly.user`, database `soukly_user` (user `user_svc`).
+Accounts of Soukly: registration and email verification (AUTH-01), sign-in, sessions and the JWKS (AUTH-02), and the
+reminder email of the listings that expire soon (ANN-03). The screens are in `frontend/apps/mfe-account` (AUTH-03). Port 8081, package `com.soukly.user`, database `soukly_user` (user `user_svc`).
 
 ## Endpoints
 
@@ -138,6 +138,27 @@ with `Cache-Control: no-store` and the cookie
 - Templates (Thymeleaf, HTML and plain text) in `src/main/resources/mail/`: `verification`, `account-exists` and
   the shared `layout.html`. Texts in `mail/messages_{fr,ar,en}.properties`; Arabic emails have `dir="rtl"`.
 - The SMTP health check is disabled: an SMTP outage must not mark the service down.
+- Exception: the expiry reminder (below) is sent synchronously by the event consumer, so that a failure is retried.
+
+## Listing events (ANN-03)
+
+user-service consumes `soukly.listing-events` (contract: [`docs/events/listing-events.md`](../../docs/events/listing-events.md))
+in the consumer group `user-service`, from the earliest offset the first time. It handles **`listing.expiring-soon`
+only** and ignores every other type, known or not.
+
+- **Reminder email** `listing-expiring` (templates `mail/listing-expiring.{html,txt}`, texts in the three languages):
+  sent to the seller (`ownerId`) in their preferred language, with the title of the listing, its expiry date (long
+  date of the language in the time zone of Tunisia, Western digits in Arabic) and a "Put back online" button to
+  `{FRONT_BASE_URL}/{lang}/account/listings` (page "My listings", ANN-05). Nothing is sent to an unknown or
+  non-`ACTIVE` account.
+- **Deduplication**: the `eventId` is inserted in `processed_events` in the transaction of the email. An event
+  delivered again finds it and sends nothing; an email that fails rolls the row back, so the retry sends it.
+- **Errors**: a failed message is retried 3 times, 2 s apart (`soukly.user.listing-events.*`), then published to
+  `soukly.listing-events.dlq` with the cause in the `kafka_dlt-*` headers, and the consumer moves on. A message that
+  does not follow the contract (malformed JSON, missing member, unknown `schemaVersion`) goes to the DLQ at once. The
+  error messages and logs name the account by id, never by address. A message of the DLQ is replayed by producing its
+  value again to `soukly.listing-events` (for example from Redpanda Console).
+- `processed_events` keeps every id; at V1 volumes (a few rows per listing) no purge is needed yet.
 
 ## Configuration
 
@@ -160,6 +181,7 @@ with `Cache-Control: no-store` and the cookie
 | `REFRESH_COOKIE_PATH`                                 | `/api/users`                                         | cookie path seen by the browser (the gateway removes `/api`) |
 | `REFRESH_COOKIE_SECURE`                               | `true`                                               | `Secure` attribute of the cookie, see below                  |
 | `ALLOWED_ORIGINS`                                     | `CORS_ALLOWED_ORIGINS`, else `http://localhost:4200` | origins allowed on `refresh` and `logout`                    |
+| `KAFKA_BOOTSTRAP_SERVERS`                             | `localhost:19092`                                    | Kafka API of Redpanda (listing events)                       |
 
 `REFRESH_COOKIE_SECURE` stays `true` everywhere, including locally: Chrome (89+) and Firefox (75+) accept a
 `Secure` cookie on `http://localhost`. Safari does not, so a developer testing in Safari over plain HTTP sets it to
@@ -191,5 +213,7 @@ cd backend && ./mvnw -pl user-service -am verify    # Docker required (Testconta
 `RegistrationTests` covers every Gherkin scenario of AUTH-01 against PostgreSQL 18.6 (Testcontainers, same image as
 `docker-compose.yml`) and GreenMail, an in-memory SMTP server: no real email service is ever used. `LoginTests`,
 `SessionTests` and `JwksTests` cover the scenarios of AUTH-02 with RSA keys generated for the run and a clock the
-tests move (`MutableClock`) for expirations and delays. The nominal scenario through the real gateway is in
+tests move (`MutableClock`) for expirations and delays. `ListingReminderTests` covers the consumer of ANN-03 against
+Redpanda (Testcontainers, same image as `docker-compose.yml`): reminder in the three languages, the same event
+delivered twice, other types and accounts ignored, DLQ after the retries and at once for a malformed message. The nominal scenario through the real gateway is in
 `backend/e2e-tests`.
