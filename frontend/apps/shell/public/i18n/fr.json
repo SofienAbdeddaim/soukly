@@ -4,7 +4,10 @@
   "header": {
     "login": "Se connecter",
     "post-listing": "Déposer une annonce",
-    "language-switcher": "Changer de langue"
+    "language-switcher": "Changer de langue",
+    "account-menu": "Menu du compte",
+    "my-account": "Mon compte",
+    "logout": "Se déconnecter"
   },
   "bottom-nav": {
     "label": "Navigation principale",

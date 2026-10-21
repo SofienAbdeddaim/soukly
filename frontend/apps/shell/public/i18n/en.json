@@ -4,7 +4,10 @@
   "header": {
     "login": "Log in",
     "post-listing": "Post an ad",
-    "language-switcher": "Change language"
+    "language-switcher": "Change language",
+    "account-menu": "Account menu",
+    "my-account": "My account",
+    "logout": "Log out"
   },
   "bottom-nav": {
     "label": "Main navigation",

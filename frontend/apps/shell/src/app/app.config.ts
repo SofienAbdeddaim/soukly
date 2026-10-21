@@ -7,6 +7,7 @@ import {
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import type { NativeFederationResult } from '@angular-architects/native-federation';
+import { authInterceptor, provideAuth } from '@soukly/auth';
 import { acceptLanguageInterceptor, AlternateLinks, provideI18n } from '@soukly/i18n';
 import { createShellRoutes } from './app.routes';
 import { SHELL_ROUTES } from './shell-routes';
@@ -17,8 +18,12 @@ export function createAppConfig(federation: NativeFederationResult | null): Appl
     providers: [
       provideBrowserGlobalErrorListeners(),
       provideRouter(createShellRoutes(), withComponentInputBinding()),
-      provideHttpClient(withFetch(), withInterceptors([acceptLanguageInterceptor])),
+      provideHttpClient(
+        withFetch(),
+        withInterceptors([acceptLanguageInterceptor, authInterceptor]),
+      ),
       provideI18n(),
+      provideAuth(),
       provideAppInitializer(() => inject(AlternateLinks).start()),
       { provide: SHELL_ROUTES, useValue: createShellRoutes },
       { provide: FEDERATION, useValue: federation },
