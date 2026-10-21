@@ -26,6 +26,9 @@ import com.soukly.listing.listing.IfMatchRequiredException;
 import com.soukly.listing.listing.InvalidListingException;
 import com.soukly.listing.listing.ListingNotFoundException;
 import com.soukly.listing.listing.VersionConflictException;
+import com.soukly.listing.photo.PhotoLimitReachedException;
+import com.soukly.listing.photo.PhotoNotFoundException;
+import com.soukly.listing.photo.PhotoRejectedException;
 import com.soukly.listing.referential.CategoryNotFoundException;
 import com.soukly.listing.referential.GovernorateNotFoundException;
 
@@ -42,6 +45,9 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     /** Member of a validation problem that lists the invalid fields: {@code [{"field", "code"}]}. */
     static final String ERRORS = "errors";
+
+    /** Member of a {@code photo-rejected} problem: the stable reason ({@code photo.too-large}...). */
+    static final String CODE = "code";
 
     @ExceptionHandler
     ResponseEntity<Object> invalidListing(InvalidListingException e, NativeWebRequest request) {
@@ -64,6 +70,29 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(ProblemDetails.create(ProblemDetails.type("draft-limit-reached"), HttpStatus.CONFLICT,
                 "Draft limit reached", "An account can keep at most " + e.limit() + " drafts.", instance(request),
                 requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> photoNotFound(PhotoNotFoundException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("photo-not-found"), HttpStatus.NOT_FOUND,
+                "Photo not found", "This listing has no photo with this id.", instance(request),
+                requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> photoLimitReached(PhotoLimitReachedException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("photo-limit-reached"), HttpStatus.CONFLICT,
+                "Photo limit reached", "A listing can have at most " + e.limit() + " photos.", instance(request),
+                requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> photoRejected(PhotoRejectedException e, NativeWebRequest request) {
+        ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("photo-rejected"),
+                HttpStatus.BAD_REQUEST, "Photo rejected", "The uploaded file cannot be used as a photo.",
+                instance(request), requestId(request));
+        problem.setProperty(CODE, e.rejection().code());
+        return problem(problem);
     }
 
     @ExceptionHandler

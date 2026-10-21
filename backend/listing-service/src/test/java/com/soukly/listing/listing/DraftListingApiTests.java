@@ -59,7 +59,7 @@ class DraftListingApiTests extends IntegrationTest {
                 .andExpect(jsonPath("$.title").value(nullValue()))
                 .andExpect(jsonPath("$.negotiable").value(false))
                 .andExpect(jsonPath("$.attributes").isEmpty())
-                .andExpect(jsonPath("$.missingFields").value(contains("title", "description", "priceMode",
+                .andExpect(jsonPath("$.missingFields").value(contains("photos", "title", "description", "priceMode",
                         "governorateCode", "attributes.brand", "attributes.year", "attributes.mileage-km",
                         "attributes.fuel", "attributes.gearbox")))
                 .andExpect(jsonPath("$.warnings", empty()));
@@ -77,15 +77,16 @@ class DraftListingApiTests extends IntegrationTest {
                 .andExpect(jsonPath("$.governorateCode").value("sfax"))
                 .andExpect(jsonPath("$.delegationCode").value(nullValue()))
                 .andExpect(jsonPath("$.attributes.year").value(2019))
-                // Photos join the missing fields with ANN-02.
-                .andExpect(jsonPath("$.missingFields", empty()));
+                // Only the photos are missing (ANN-02)
+                .andExpect(jsonPath("$.missingFields").value(contains("photos")))
+                .andExpect(jsonPath("$.photos", empty()));
 
         // The owner finds it as left, with the attributes in display order.
         String body = mockMvc.perform(get("/listings/" + id).header(HttpHeaders.AUTHORIZATION, bearer(owner)))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ETAG, "\"2\""))
                 .andExpect(jsonPath("$.title").value("Peugeot 208 Allure"))
-                .andExpect(jsonPath("$.missingFields", empty()))
+                .andExpect(jsonPath("$.missingFields").value(contains("photos")))
                 .andReturn().getResponse().getContentAsString();
         assertThat(body).containsSubsequence("\"brand\"", "\"year\"", "\"mileage-km\"", "\"fuel\"", "\"gearbox\"");
         assertThat(jdbc.queryForObject("SELECT price_tnd FROM listings WHERE id = ?::uuid", Long.class, id))
@@ -109,7 +110,7 @@ class DraftListingApiTests extends IntegrationTest {
                 { "categoryCode": "home.furniture", "title": "Canapé d'angle", "governorateCode": "tunis" }""")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("Canapé d'angle"))
-                .andExpect(jsonPath("$.missingFields").value(contains("description", "priceMode")));
+                .andExpect(jsonPath("$.missingFields").value(contains("photos", "description", "priceMode")));
     }
 
     @Test
@@ -140,7 +141,8 @@ class DraftListingApiTests extends IntegrationTest {
         update(owner, id, "\"1\"", "{ \"priceMode\": \"ON_QUOTE\" }")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.priceMode").value("ON_QUOTE"))
-                .andExpect(jsonPath("$.missingFields").value(contains("title", "description", "governorateCode")));
+                .andExpect(jsonPath("$.missingFields").value(contains("photos", "title", "description",
+                        "governorateCode")));
     }
 
     @Test
@@ -164,11 +166,12 @@ class DraftListingApiTests extends IntegrationTest {
     @Test
     void aFixedPriceIsRequiredUntilItIsSent() throws Exception {
         String id = id(create(owner, "{ \"categoryCode\": \"home.furniture\", \"priceMode\": \"FIXED\" }")
-                .andExpect(jsonPath("$.missingFields").value(contains("title", "description", "price",
+                .andExpect(jsonPath("$.missingFields").value(contains("photos", "title", "description", "price",
                         "governorateCode"))));
 
         update(owner, id, "\"1\"", "{ \"price\": 450 }")
-                .andExpect(jsonPath("$.missingFields").value(contains("title", "description", "governorateCode")));
+                .andExpect(jsonPath("$.missingFields").value(contains("photos", "title", "description",
+                        "governorateCode")));
     }
 
     @Test
@@ -252,7 +255,7 @@ class DraftListingApiTests extends IntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value(nullValue()))
                 .andExpect(jsonPath("$.negotiable").value(false))
-                .andExpect(jsonPath("$.missingFields[0]").value("title"));
+                .andExpect(jsonPath("$.missingFields[1]").value("title"));
     }
 
     @Test
@@ -356,7 +359,7 @@ class DraftListingApiTests extends IntegrationTest {
                 .andExpect(jsonPath("$.categoryCode").value("real-estate.apartments"))
                 .andExpect(jsonPath("$.attributes").isEmpty())
                 .andExpect(jsonPath("$.warnings").value(contains("attributes-removed")))
-                .andExpect(jsonPath("$.missingFields").value(contains("attributes.transaction",
+                .andExpect(jsonPath("$.missingFields").value(contains("photos", "attributes.transaction",
                         "attributes.surface-m2", "attributes.rooms")))
                 // Kept: the common fields
                 .andExpect(jsonPath("$.price").value(32000));
@@ -398,7 +401,7 @@ class DraftListingApiTests extends IntegrationTest {
                 .andExpect(jsonPath("$.kind").value("SALE"))
                 .andExpect(jsonPath("$.priceMode").value(nullValue()))
                 .andExpect(jsonPath("$.warnings").value(contains("price-mode-reset")))
-                .andExpect(jsonPath("$.missingFields").value(contains("title", "description", "priceMode",
+                .andExpect(jsonPath("$.missingFields").value(contains("photos", "title", "description", "priceMode",
                         "governorateCode")));
     }
 

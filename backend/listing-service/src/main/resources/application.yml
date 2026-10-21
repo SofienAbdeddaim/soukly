@@ -29,3 +29,28 @@ soukly:
     drafts:
       # Drafts per account (ANN-01)
       max-per-owner: 20
+    photos:
+      # Public URL of the bucket root, the object key is appended (Garage website endpoint locally, ANN-02)
+      public-base-url: ${PHOTO_PUBLIC_BASE_URL:http://soukly-listings.web.localhost:3902}
+      max-per-listing: 10
+      max-size: 5MB
+      max-pixels: 50000000
+      min-long-side: 400
+      min-short-side: 300
+      upload-url-ttl: 10m
+      pending-ttl: 1h
+      cleanup-interval: PT1H
+      webp-quality: 80
+      conversion-timeout: 30s
+      max-concurrent-conversions: 2
+    storage:
+      # S3 API of the object storage: Garage locally (docker-compose.yml), path-style access
+      endpoint: ${S3_ENDPOINT:http://localhost:3900}
+      # Host of the presigned upload URLs, as the browsers reach it; the same as S3_ENDPOINT locally
+      public-endpoint: ${S3_PUBLIC_ENDPOINT:${S3_ENDPOINT:http://localhost:3900}}
+      region: ${S3_REGION:garage}
+      bucket: ${S3_BUCKET:soukly-listings}
+      # The root .env names them S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY; the deployed stacks pass S3_ACCESS_KEY and
+      # S3_SECRET_KEY (infra/compose/compose.yml)
+      access-key: ${S3_ACCESS_KEY:${S3_ACCESS_KEY_ID:}}
+      secret-key: ${S3_SECRET_KEY:${S3_SECRET_ACCESS_KEY:}}
