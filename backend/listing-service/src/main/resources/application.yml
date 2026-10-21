@@ -32,8 +32,8 @@ spring:
   task:
     scheduling:
       pool:
-        # Outbox relay, expiry task and photo cleanup do not wait for each other
-        size: 3
+        # Outbox relay, expiry task, photo cleanup and listing purge do not wait for each other
+        size: 4
 
 management:
   endpoints:
@@ -60,6 +60,12 @@ soukly:
       check-interval: ${LISTING_CHECK_INTERVAL:PT1H}
       check-initial-delay: PT1M
       batch-size: 100
+    # Deletion by the seller (ANN-05): erased for good after purge-after; to confirm with the legal notice (LEG-01)
+    deletion:
+      purge-after: ${LISTING_PURGE_AFTER:30d}
+      purge-interval: P1D
+      purge-initial-delay: PT10M
+      batch-size: 20
     outbox:
       relay-interval: PT1S
       relay-initial-delay: PT5S

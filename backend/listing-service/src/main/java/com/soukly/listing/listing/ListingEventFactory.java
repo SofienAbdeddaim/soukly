@@ -3,6 +3,7 @@ package com.soukly.listing.listing;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import com.soukly.common.event.EventEnvelope;
 import com.soukly.common.event.ListingEvents;
 import com.soukly.common.event.ListingExpiryData;
 import com.soukly.common.event.ListingPublishedData;
+import com.soukly.common.event.ListingUpdatedData;
 import com.soukly.listing.photo.PhotoView;
 
 /**
@@ -39,6 +41,29 @@ class ListingEventFactory {
                 content.negotiable(), content.governorateCode(), content.delegationCode(), photoUrls.getFirst(),
                 photoUrls, publicUrls(listing.id()), List.of(), listing.expiresAt());
         return envelope(ListingEvents.PUBLISHED, listing, now, data);
+    }
+
+    /**
+     * @param view          the published listing after the change, with its READY photos in order
+     * @param changedFields names of the changed members, in form order
+     */
+    EventEnvelope<ListingUpdatedData> updated(ListingView view, List<String> changedFields, Instant now) {
+        Listing listing = view.listing();
+        ListingContent content = listing.content();
+        List<URI> photoUrls = view.photos().stream().map(PhotoView::url).toList();
+        ListingUpdatedData data = new ListingUpdatedData(List.copyOf(changedFields), content.title(),
+                content.description(), content.categoryCode(), content.kind().name(), content.priceMode().name(),
+                content.price(), CURRENCY, content.negotiable(), content.governorateCode(), content.delegationCode(),
+                photoUrls.getFirst(), photoUrls, publicUrls(listing.id()), listing.expiresAt());
+        return envelope(ListingEvents.UPDATED, listing, now, data);
+    }
+
+    EventEnvelope<Map<String, Object>> deactivated(Listing listing, Instant now) {
+        return envelope(ListingEvents.DEACTIVATED, listing, now, Map.of());
+    }
+
+    EventEnvelope<Map<String, Object>> deleted(Listing listing, Instant now) {
+        return envelope(ListingEvents.DELETED, listing, now, Map.of());
     }
 
     EventEnvelope<ListingExpiryData> renewed(Listing listing, Instant now) {

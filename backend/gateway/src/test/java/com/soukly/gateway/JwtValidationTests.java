@@ -35,6 +35,21 @@ class JwtValidationTests extends GatewayIntegrationTest {
     }
 
     @Test
+    void ownListingsAreForwardedWithAValidToken() {
+        String authorization = "Bearer " + validToken();
+
+        client.get().uri("/api/listings/mine?status=EXPIRED")
+                .header(HttpHeaders.AUTHORIZATION, authorization)
+                .exchange()
+                .expectStatus().isOk();
+
+        assertThat(LISTING_SERVICE.received()).singleElement().satisfies(received -> {
+            assertThat(received.uri()).isEqualTo("/listings/mine?status=EXPIRED");
+            assertThat(received.headers().getFirst(HttpHeaders.AUTHORIZATION)).isEqualTo(authorization);
+        });
+    }
+
+    @Test
     void missingTokenIsUnauthorizedProblemAndNeverReachesTheService() {
         client.post().uri("/api/listings")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -106,6 +121,11 @@ class JwtValidationTests extends GatewayIntegrationTest {
         client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
         client.delete().uri("/api/listings/42").exchange().expectStatus().isUnauthorized();
         client.patch().uri("/api/listings/42").exchange().expectStatus().isUnauthorized();
+        client.post().uri("/api/listings/42/deactivate").exchange().expectStatus().isUnauthorized();
+        // Under the public GET /api/listings/**, yet protected (ANN-05)
+        client.get().uri("/api/listings/mine").exchange().expectStatus().isUnauthorized();
+        client.get().uri("/api/listings/mine?status=DRAFT").header(HttpHeaders.AUTHORIZATION, "Bearer invalid")
+                .exchange().expectStatus().isUnauthorized();
         client.get().uri("/api/social/accounts").exchange().expectStatus().isUnauthorized();
 
         assertThat(USER_SERVICE.received()).isEmpty();

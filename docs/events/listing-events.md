@@ -1,6 +1,6 @@
 # Listing events
 
-Events of the life cycle of a listing, produced by `listing-service` (ANN-03) through its transactional outbox.
+Events of the life cycle of a listing, produced by `listing-service` (ANN-03, ANN-05) through its transactional outbox.
 This file is the contract between the producer and every consumer: read it before consuming a topic, and update it
 in the same pull request as any change of an event.
 
@@ -66,7 +66,10 @@ The order of the members of a JSON object is not significant. Java classes of th
 | Type | When | Consumed by |
 | --- | --- | --- |
 | `listing.published` | a draft is published (`POST /listings/{id}/publish`) | `social-publisher` (SOC-04) |
-| `listing.renewed` | a listing is put back online for 60 days (`POST /listings/{id}/renew`) | nobody in V1: `social-publisher` ignores it, a renewal is never posted again on the social networks |
+| `listing.renewed` | an expired or deactivated listing, or one that expires soon, is put back online for 60 days (`POST /listings/{id}/renew`) | nobody in V1: `social-publisher` ignores it, a renewal is never posted again on the social networks |
+| `listing.updated` | the seller changed a `PUBLISHED` listing (`PATCH /listings/{id}` or its photos); visible at once | nobody in V1: `social-publisher` ignores it, a change is never posted again |
+| `listing.deactivated` | the seller deactivated a published listing (`POST /listings/{id}/deactivate`): hidden until a renewal | nobody in V1 |
+| `listing.deleted` | the seller deleted a listing that was published (`DELETE /listings/{id}`); a draft is erased without event | `social-publisher` (SOC-04, SOC-05): removes the posts of the listing |
 | `listing.expiring-soon` | a published listing expires in less than 3 days, once per publication or renewal | `user-service` (reminder email) |
 | `listing.expired` | a published listing reached its expiry date and is no longer visible | nobody in V1 |
 
@@ -128,6 +131,47 @@ The order of the members of a JSON object is not significant. Java classes of th
 | `title` | string | title of the listing when the event happened |
 | `expiresAt` | ISO-8601 instant | new expiry date (`listing.renewed`), coming one (`listing.expiring-soon`) or reached one (`listing.expired`) |
 
+### `listing.updated`
+
+The members of `listing.published` after the change, without `shareTo`, and `changedFields` first:
+
+```json
+{
+  "changedFields": ["price"],
+  "title": "Peugeot 208 Allure",
+  "description": "Première main, carnet d'entretien complet.\nVisible à Sfax.",
+  "categoryCode": "vehicles.cars",
+  "kind": "SALE",
+  "priceMode": "FIXED",
+  "price": 30500,
+  "currency": "TND",
+  "negotiable": true,
+  "governorateCode": "sfax",
+  "delegationCode": "sfax.sfax-ville",
+  "coverPhotoUrl": "https://photos.example.tn/listings/5f0c…/1b2c…/1600.webp",
+  "photoUrls": ["https://photos.example.tn/listings/5f0c…/1b2c…/1600.webp"],
+  "publicUrls": {
+    "fr": "https://soukly.tn/fr/listings/5f0c…",
+    "ar": "https://soukly.tn/ar/listings/5f0c…",
+    "en": "https://soukly.tn/en/listings/5f0c…"
+  },
+  "expiresAt": "2026-12-11T20:00:00Z"
+}
+```
+
+| Member | Type | Meaning |
+| --- | --- | --- |
+| `changedFields` | array of strings | names of the changed members, in form order: `title`, `description`, `priceMode`, `price`, `negotiable`, `governorateCode`, `delegationCode`, `attributes` (any specific attribute), or `photos` (a photo added, removed or moved); never empty |
+| other members | | as in `listing.published`, with the values after the change |
+
+The category never changes once a listing was published. A change of an expired or deactivated listing writes no
+event: the listing is not visible, and `listing.renewed` comes before it is again.
+
+### `listing.deactivated`, `listing.deleted`
+
+`data` is an empty object: `{}`. The envelope says which listing and which seller. A deleted listing is erased for
+good 30 days later (photos and data); its events already sent are not changed.
+
 ## Personal data
 
 No event carries personal data of the seller: no name, email address or phone number. A consumer that needs them
@@ -148,3 +192,4 @@ written by the seller and may be shown publicly; they are not considered persona
 | Ticket | Change |
 | --- | --- |
 | ANN-03 | topics, envelope and the types `listing.published`, `listing.renewed`, `listing.expiring-soon`, `listing.expired` (`schemaVersion` 1) |
+| ANN-05 | new types `listing.updated`, `listing.deactivated`, `listing.deleted` (`schemaVersion` 1); `listing.renewed` also from a deactivated listing |

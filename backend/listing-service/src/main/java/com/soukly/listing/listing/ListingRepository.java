@@ -4,11 +4,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -25,7 +27,7 @@ class ListingRepository {
     private static final String COLUMNS = """
             id, owner_id, status, category_code, title, description, price_mode, price_tnd, negotiable,
             governorate_code, delegation_code, attributes, version, created_at, updated_at, published_at, expires_at,
-            reminder_sent_at""";
+            reminder_sent_at, deleted_at""";
 
     private final JdbcClient jdbc;
     private final JsonMapper json;
@@ -110,7 +112,7 @@ class ListingRepository {
         jdbc.sql("""
                 UPDATE listings
                 SET status = :status, version = :version, updated_at = :updatedAt, published_at = :publishedAt,
-                    expires_at = :expiresAt, reminder_sent_at = :reminderSentAt
+                    expires_at = :expiresAt, reminder_sent_at = :reminderSentAt, deleted_at = :deletedAt
                 WHERE id = :id""")
                 .param("id", listing.id())
                 .param("status", listing.status().name())
@@ -119,7 +121,87 @@ class ListingRepository {
                 .param("publishedAt", timestamp(listing.publishedAt()))
                 .param("expiresAt", timestamp(listing.expiresAt()))
                 .param("reminderSentAt", timestamp(listing.reminderSentAt()))
+                .param("deletedAt", timestamp(listing.deletedAt()))
                 .update();
+    }
+
+    /** Erases a listing whose photos are deleted already; its contact reveals go with it (ANN-05). */
+    void delete(UUID id) {
+        jdbc.sql("DELETE FROM listings WHERE id = :id").param("id", id).update();
+    }
+
+    /**
+     * Locks at most {@code limit} listings deleted at {@code before} or earlier, skipping those another transaction
+     * holds, for the purge (ANN-05).
+     */
+    List<UUID> lockDeletedBefore(Instant before, int limit) {
+        return jdbc.sql("""
+                SELECT id FROM listings
+                WHERE status = 'DELETED' AND deleted_at <= :before
+                ORDER BY deleted_at
+                LIMIT :limit
+                FOR UPDATE SKIP LOCKED""")
+                .param("before", Timestamp.from(before))
+                .param("limit", limit)
+                .query(UUID.class)
+                .list();
+    }
+
+    /**
+     * A page of the listings of {@code ownerId} in {@code status}, the latest changed first, with the id of their
+     * cover photo and the number of members who were shown the phone number (ANN-05).
+     *
+     * @param after the last listing of the previous page, or null for the first page
+     */
+    List<OwnListingRow> ownPage(UUID ownerId, ListingStatus status, OwnListingsCursor after, int limit) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("owner", ownerId);
+        params.put("status", status.name());
+        params.put("limit", limit);
+        String keyset = "";
+        if (after != null) {
+            keyset = " AND (l.updated_at, l.id) < (:afterUpdatedAt, :afterId)";
+            params.put("afterUpdatedAt", Timestamp.from(after.updatedAt()));
+            params.put("afterId", after.id());
+        }
+        String sql = """
+                WITH page AS (
+                    SELECT %s FROM listings l
+                    WHERE l.owner_id = :owner AND l.status = :status%s
+                    ORDER BY l.updated_at DESC, l.id DESC
+                    LIMIT :limit)
+                SELECT page.*, cover.id AS cover_id,
+                       (SELECT count(DISTINCT c.viewer_id) FROM contact_reveals c
+                        WHERE c.listing_id = page.id) AS contact_reveals
+                FROM page
+                LEFT JOIN listing_photos cover
+                       ON cover.listing_id = page.id AND cover.status = 'READY' AND cover.position = 0
+                ORDER BY page.updated_at DESC, page.id DESC""".formatted(qualified(), keyset);
+        return jdbc.sql(sql).params(params)
+                .query((rs, row) -> new OwnListingRow(listing(rs, row), rs.getObject("cover_id", UUID.class),
+                        rs.getLong("contact_reveals")))
+                .list();
+    }
+
+    /** Listings of {@code ownerId} by status; {@code DELETED} ones are never counted. */
+    Map<ListingStatus, Long> countByStatus(UUID ownerId) {
+        Map<ListingStatus, Long> counts = new HashMap<>();
+        jdbc.sql("""
+                SELECT status, count(*) AS total FROM listings
+                WHERE owner_id = :owner AND status <> 'DELETED'
+                GROUP BY status""")
+                .param("owner", ownerId)
+                .query(rs -> {
+                    counts.put(ListingStatus.valueOf(rs.getString("status")), rs.getLong("total"));
+                });
+        return counts;
+    }
+
+    /** {@link #COLUMNS} of the alias {@code l}. */
+    private static String qualified() {
+        return Arrays.stream(COLUMNS.split(","))
+                .map(column -> "l." + column.strip())
+                .collect(Collectors.joining(", "));
     }
 
     /**
@@ -200,6 +282,6 @@ class ListingRepository {
         return new Listing(rs.getObject("id", UUID.class), rs.getObject("owner_id", UUID.class),
                 ListingStatus.valueOf(rs.getString("status")), content, rs.getLong("version"),
                 instant(rs, "created_at"), instant(rs, "updated_at"), instant(rs, "published_at"),
-                instant(rs, "expires_at"), instant(rs, "reminder_sent_at"));
+                instant(rs, "expires_at"), instant(rs, "reminder_sent_at"), instant(rs, "deleted_at"));
     }
 }

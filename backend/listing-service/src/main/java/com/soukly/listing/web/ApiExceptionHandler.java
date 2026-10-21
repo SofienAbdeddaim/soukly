@@ -23,6 +23,7 @@ import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
 import com.soukly.listing.contact.ContactLimitReachedException;
 import com.soukly.listing.listing.AlreadyPublishedException;
+import com.soukly.listing.listing.CategoryLockedException;
 import com.soukly.listing.listing.DraftLimitReachedException;
 import com.soukly.listing.listing.IfMatchRequiredException;
 import com.soukly.listing.listing.InvalidListingException;
@@ -31,6 +32,7 @@ import com.soukly.listing.listing.ListingIncompleteException;
 import com.soukly.listing.listing.ListingNotFoundException;
 import com.soukly.listing.listing.OwnListingException;
 import com.soukly.listing.listing.RenewNotAllowedException;
+import com.soukly.listing.listing.TransitionNotAllowedException;
 import com.soukly.listing.listing.VersionConflictException;
 import com.soukly.listing.photo.PhotoLimitReachedException;
 import com.soukly.listing.photo.PhotoNotFoundException;
@@ -137,7 +139,8 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ResponseEntity<Object> listingIncomplete(ListingIncompleteException e, NativeWebRequest request) {
         ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("listing-incomplete"),
                 HttpStatus.UNPROCESSABLE_CONTENT, "Listing incomplete",
-                "Complete the missing fields before publishing.", instance(request), requestId(request));
+                "Complete the missing fields: a listing that was published stays complete.", instance(request),
+                requestId(request));
         problem.setProperty(MISSING_FIELDS, e.missingFields());
         return problem(problem);
     }
@@ -153,7 +156,21 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     ResponseEntity<Object> renewNotAllowed(RenewNotAllowedException e, NativeWebRequest request) {
         return problem(ProblemDetails.create(ProblemDetails.type("renew-not-allowed"), HttpStatus.CONFLICT,
                 "Renewal not allowed",
-                "Only an expired listing, or a published one that expires soon, can be put back online.",
+                "Only an expired or deactivated listing, or a published one that expires soon, can be put back online.",
+                instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> transitionNotAllowed(TransitionNotAllowedException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("transition-not-allowed"), HttpStatus.CONFLICT,
+                "Transition not allowed", "This action is not possible in the current status of the listing.",
+                instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> categoryLocked(CategoryLockedException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("category-locked"), HttpStatus.CONFLICT,
+                "Category locked", "The category of a listing cannot change once it was published.",
                 instance(request), requestId(request)));
     }
 

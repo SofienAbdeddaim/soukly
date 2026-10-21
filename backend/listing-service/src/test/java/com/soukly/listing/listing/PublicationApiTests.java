@@ -2,8 +2,6 @@ package com.soukly.listing.listing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -207,30 +205,6 @@ class PublicationApiTests extends IntegrationTest {
 
         assertThat(statusOf(id)).isEqualTo("DRAFT");
         assertThat(events(id)).isEmpty();
-    }
-
-    @Test
-    void aPublishedListingIsNotEditableUntilAnn05() throws Exception {
-        UUID id = TestListings.completeDraft(mockMvc, jdbc, owner, 1);
-        publish(owner, id).andExpect(status().isOk());
-
-        mockMvc.perform(patch("/listings/" + id)
-                .header(HttpHeaders.AUTHORIZATION, bearer(owner))
-                .header(HttpHeaders.IF_MATCH, "*")
-                .contentType("application/merge-patch+json")
-                .content("{ \"title\": null }"))
-                .andExpect(status().isNotFound());
-        mockMvc.perform(post("/listings/" + id + "/photos")
-                .header(HttpHeaders.AUTHORIZATION, bearer(owner))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{ \"contentType\": \"image/jpeg\", \"sizeBytes\": 1000 }"))
-                .andExpect(status().isNotFound());
-        // Still readable by its owner
-        mockMvc.perform(get("/listings/" + id)
-                .header(HttpHeaders.AUTHORIZATION, bearer(owner)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PUBLISHED"))
-                .andExpect(jsonPath("$.title").value("Canapé d'angle en cuir"));
     }
 
     @Test
