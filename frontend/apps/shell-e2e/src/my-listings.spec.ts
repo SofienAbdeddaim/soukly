@@ -119,9 +119,9 @@ test.describe('my listings', () => {
     await expect(page).toHaveURL('/fr/account/listings?tab=online');
     expect(api.patches).toEqual([{ title: 'Peugeot 208 diesel, 1re main', price: 30500 }]);
     await expect(page.getByText('Modifications enregistrées')).toBeVisible();
-    await expect(card(page, 'Peugeot 208 diesel, 1re main').getByTestId('own-listing-price')).toHaveText(
-      /30\s500\sDT/,
-    );
+    await expect(
+      card(page, 'Peugeot 208 diesel, 1re main').getByTestId('own-listing-price'),
+    ).toHaveText(/30\s500\sDT/);
   });
 
   test('asks before leaving the edit page without saving', async ({ page }) => {
