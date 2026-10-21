@@ -42,6 +42,9 @@ public class UserAccount implements Persistable<UUID> {
 
     private Instant emailVerifiedAt;
 
+    /** {@code null} until the first successful login. */
+    private Instant lastLoginAt;
+
     private Instant createdAt;
 
     private Instant updatedAt;
@@ -90,6 +93,17 @@ public class UserAccount implements Persistable<UUID> {
             emailVerifiedAt = now;
             updatedAt = now;
         }
+    }
+
+    /**
+     * Records a successful login.
+     *
+     * @return {@code true} for the first login of the account
+     */
+    public boolean recordLogin(Instant now) {
+        boolean first = lastLoginAt == null;
+        lastLoginAt = now;
+        return first;
     }
 
     public UUID id() {
