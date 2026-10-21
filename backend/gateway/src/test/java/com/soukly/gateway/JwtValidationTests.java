@@ -105,6 +105,7 @@ class JwtValidationTests extends GatewayIntegrationTest {
     void protectedPathsRequireAToken() {
         client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
         client.delete().uri("/api/listings/42").exchange().expectStatus().isUnauthorized();
+        client.patch().uri("/api/listings/42").exchange().expectStatus().isUnauthorized();
         client.get().uri("/api/social/accounts").exchange().expectStatus().isUnauthorized();
 
         assertThat(USER_SERVICE.received()).isEmpty();

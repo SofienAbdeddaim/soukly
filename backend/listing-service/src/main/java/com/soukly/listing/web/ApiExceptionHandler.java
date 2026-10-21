@@ -10,6 +10,9 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -18,16 +21,82 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
+import com.soukly.listing.listing.DraftLimitReachedException;
+import com.soukly.listing.listing.IfMatchRequiredException;
+import com.soukly.listing.listing.InvalidListingException;
+import com.soukly.listing.listing.ListingNotFoundException;
+import com.soukly.listing.listing.VersionConflictException;
 import com.soukly.listing.referential.CategoryNotFoundException;
 import com.soukly.listing.referential.GovernorateNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-/** Turns every error into the Soukly {@code application/problem+json} format (SETUP-06). */
+/**
+ * Turns every error into the Soukly {@code application/problem+json} format (SETUP-06). Request bodies are never
+ * logged.
+ */
 @RestControllerAdvice
 class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
+
+    /** Member of a validation problem that lists the invalid fields: {@code [{"field", "code"}]}. */
+    static final String ERRORS = "errors";
+
+    @ExceptionHandler
+    ResponseEntity<Object> invalidListing(InvalidListingException e, NativeWebRequest request) {
+        ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("validation-failed"),
+                HttpStatus.BAD_REQUEST, "Validation failed", "One or more fields are invalid.", instance(request),
+                requestId(request));
+        problem.setProperty(ERRORS, e.errors());
+        return problem(problem);
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> listingNotFound(ListingNotFoundException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("listing-not-found"), HttpStatus.NOT_FOUND,
+                "Listing not found", "No listing with this id is visible to you.", instance(request),
+                requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> draftLimitReached(DraftLimitReachedException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("draft-limit-reached"), HttpStatus.CONFLICT,
+                "Draft limit reached", "An account can keep at most " + e.limit() + " drafts.", instance(request),
+                requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> versionConflict(VersionConflictException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("version-conflict"),
+                HttpStatus.PRECONDITION_FAILED, "Version conflict",
+                "The listing was changed since this version was read. Read it again.", instance(request),
+                requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> ifMatchRequired(IfMatchRequiredException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("if-match-required"),
+                HttpStatus.PRECONDITION_REQUIRED, "If-Match required",
+                "Send the ETag of the version you read in If-Match.", instance(request), requestId(request)));
+    }
+
+    /** Missing or invalid access token (resource server); the reason is never echoed, it may describe the token. */
+    @ExceptionHandler
+    ResponseEntity<Object> unauthenticated(AuthenticationException e, NativeWebRequest request) {
+        String challenge = e instanceof InvalidBearerTokenException ? "Bearer error=\"invalid_token\"" : "Bearer";
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.WWW_AUTHENTICATE, challenge)
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(ProblemDetails.forStatus(HttpStatus.UNAUTHORIZED, "A valid bearer token is required.",
+                        instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> accessDenied(AccessDeniedException e, NativeWebRequest request) {
+        return problem(ProblemDetails.forStatus(HttpStatus.FORBIDDEN, "Access to this resource is denied.",
+                instance(request), requestId(request)));
+    }
 
     @ExceptionHandler
     ResponseEntity<Object> categoryNotFound(CategoryNotFoundException e, NativeWebRequest request) {
@@ -49,7 +118,7 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 instance(request), requestId(request)));
     }
 
-    /** Spring MVC errors (unknown path, wrong method...) in the same format. */
+    /** Spring MVC errors (malformed JSON, unknown path, wrong method...) in the same format. */
     @Override
     protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers,
             HttpStatusCode statusCode, WebRequest request) {

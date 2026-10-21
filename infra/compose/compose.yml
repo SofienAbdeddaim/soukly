@@ -165,6 +165,9 @@ services:
       S3_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is not set}
       PHOTO_PUBLIC_BASE_URL: ${PHOTO_PUBLIC_BASE_URL:?PHOTO_PUBLIC_BASE_URL is not set}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is not set}
+      # Access tokens validated again by the service (ANN-01), with the same JWKS and issuer as the gateway.
+      USER_SERVICE_JWKS_URI: http://user-service:8081/.well-known/jwks.json
+      JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8082/actuator/health"]
       interval: 10s

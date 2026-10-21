@@ -11,12 +11,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Year;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 import com.jayway.jsonpath.JsonPath;
 import com.soukly.listing.support.IntegrationTest;
+import com.soukly.listing.support.TestJwks;
 
 class CategoriesApiTests extends IntegrationTest {
 
@@ -139,9 +142,11 @@ class CategoriesApiTests extends IntegrationTest {
                 .andExpect(jsonPath("$.type").value("urn:soukly:problem:category-not-found"));
     }
 
+    /** Even for a signed-in account (without a token, the resource server answers 401 first, like the gateway). */
     @Test
     void writeMethodsAreNotExposed() throws Exception {
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/categories"))
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/categories")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwks.token(UUID.randomUUID())))
                 .andExpect(status().isMethodNotAllowed())
                 .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON));
     }

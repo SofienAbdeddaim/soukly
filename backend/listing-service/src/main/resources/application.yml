@@ -18,3 +18,14 @@ management:
     web:
       exposure:
         include: health
+
+soukly:
+  listing:
+    jwt:
+      # Same values as the gateway (SETUP-06): JWKS of user-service, internal only, and issuer of the access tokens
+      jwk-set-uri: ${USER_SERVICE_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+      issuer: ${JWT_ISSUER:soukly-user-service}
+      clock-skew: 30s
+    drafts:
+      # Drafts per account (ANN-01)
+      max-per-owner: 20
