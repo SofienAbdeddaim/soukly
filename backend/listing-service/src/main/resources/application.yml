@@ -12,6 +12,28 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:${LISTING_SVC_DB_PASSWORD:}}
   flyway:
     locations: classpath:db/migration
+  # Listing events (ANN-03): Redpanda through the Kafka API. Only the outbox relay produces.
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        # A broker that is down must not hold the relay: the events stay in the outbox and leave at a later run.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+    admin:
+      # Topics are declared at startup (local and dev); a broker that is down does not prevent the start.
+      fail-fast: false
+      operation-timeout: 10s
+  task:
+    scheduling:
+      pool:
+        # Outbox relay, expiry task and photo cleanup do not wait for each other
+        size: 3
 
 management:
   endpoints:
@@ -29,6 +51,26 @@ soukly:
     drafts:
       # Drafts per account (ANN-01)
       max-per-owner: 20
+    # Publication, expiry and reminder (ANN-03)
+    publication:
+      ttl: ${LISTING_TTL:60d}
+      reminder-before: ${LISTING_REMINDER_BEFORE:3d}
+      # Origin of the site, for the page URLs of the events ({lang}/listings/{id})
+      public-base-url: ${PUBLIC_BASE_URL:http://localhost:4200}
+      check-interval: ${LISTING_CHECK_INTERVAL:PT1H}
+      check-initial-delay: PT1M
+      batch-size: 100
+    outbox:
+      relay-interval: PT1S
+      relay-initial-delay: PT5S
+      batch-size: 100
+      send-timeout: 15s
+      retention: 7d
+      purge-interval: PT1H
+      partitions: 3
+    # Local manual tests only: moves the business clock forward (for example P58D to reach the reminder). Never set
+    # in dev or prod.
+    clock-offset: ${LISTING_CLOCK_OFFSET:PT0S}
     photos:
       # Public URL of the bucket root, the object key is appended (Garage website endpoint locally, ANN-02)
       public-base-url: ${PHOTO_PUBLIC_BASE_URL:http://soukly-listings.web.localhost:3902}

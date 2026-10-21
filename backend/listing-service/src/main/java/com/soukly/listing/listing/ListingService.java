@@ -11,28 +11,37 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.soukly.listing.outbox.Outbox;
+
 import tools.jackson.databind.JsonNode;
 
 /**
- * Drafts of listings (ANN-01): creation, change step by step and reading by the owner. A draft of another account
- * is answered exactly like an unknown listing.
+ * Listings of their owner: drafts (ANN-01) created and changed step by step, then published and renewed (ANN-03).
+ * A listing of another account is answered exactly like an unknown listing. Every event is written in the outbox in
+ * the transaction of its change.
  */
 @Service
-@EnableConfigurationProperties(DraftProperties.class)
+@EnableConfigurationProperties({ DraftProperties.class, PublicationProperties.class })
 public class ListingService {
 
     private final ListingRepository repository;
     private final DraftEditor editor;
     private final ListingViews views;
+    private final ListingEventFactory events;
+    private final Outbox outbox;
     private final DraftProperties properties;
+    private final PublicationProperties publication;
     private final Clock clock;
 
-    ListingService(ListingRepository repository, DraftEditor editor, ListingViews views, DraftProperties properties,
-            Clock clock) {
+    ListingService(ListingRepository repository, DraftEditor editor, ListingViews views, ListingEventFactory events,
+            Outbox outbox, DraftProperties properties, PublicationProperties publication, Clock clock) {
         this.repository = repository;
         this.editor = editor;
         this.views = views;
+        this.events = events;
+        this.outbox = outbox;
         this.properties = properties;
+        this.publication = publication;
         this.clock = clock;
     }
 
@@ -49,16 +58,17 @@ public class ListingService {
         }
         Instant now = now();
         Listing listing = new Listing(UUID.randomUUID(), ownerId, ListingStatus.DRAFT, edit.content(), 1, now, now,
-                null);
+                null, null, null);
         repository.insert(listing);
         return views.view(listing, edit.warnings());
     }
 
     /**
-     * Applies a JSON Merge Patch to a draft of {@code ownerId}.
+     * Applies a JSON Merge Patch to a draft of {@code ownerId}. Published and expired listings become editable with
+     * ANN-05; until then they are answered like an unknown listing, as by the photo endpoints.
      *
      * @param ifMatch the {@code If-Match} header
-     * @throws ListingNotFoundException  unknown listing or listing of another account
+     * @throws ListingNotFoundException  unknown listing, listing of another account, or not a draft
      * @throws IfMatchRequiredException  no {@code If-Match}
      * @throws VersionConflictException  {@code If-Match} names another version
      * @throws InvalidListingException   an invalid value
@@ -66,7 +76,7 @@ public class ListingService {
     @Transactional
     public ListingView update(UUID ownerId, UUID id, String ifMatch, JsonNode patch) {
         Listing listing = repository.findForUpdate(id)
-                .filter(found -> found.isOwnedBy(ownerId))
+                .filter(found -> found.isOwnedBy(ownerId) && found.status() == ListingStatus.DRAFT)
                 .orElseThrow(ListingNotFoundException::new);
         if (!Versions.matches(ifMatch, listing.version())) {
             throw new VersionConflictException();
@@ -78,12 +88,64 @@ public class ListingService {
     }
 
     /**
+     * Publishes a complete draft of {@code ownerId} for {@link PublicationProperties#ttl()} and writes
+     * {@code listing.published}.
+     *
+     * @throws ListingNotFoundException    unknown listing, or a listing of another account
+     * @throws AlreadyPublishedException   the listing is not a draft any more
+     * @throws ListingIncompleteException  {@code missingFields} is not empty
+     */
+    @Transactional
+    public ListingView publish(UUID ownerId, UUID id) {
+        Listing listing = lockOwned(ownerId, id);
+        if (listing.status() != ListingStatus.DRAFT) {
+            throw new AlreadyPublishedException();
+        }
+        ListingView draft = views.view(listing, List.of());
+        if (!draft.missingFields().isEmpty()) {
+            throw new ListingIncompleteException(draft.missingFields());
+        }
+        Instant now = now();
+        Listing published = listing.published(now, publication.ttl());
+        repository.updateStatus(published);
+        ListingView view = views.view(published, List.of());
+        outbox.write(events.published(view, now));
+        return view;
+    }
+
+    /**
+     * Puts a listing of {@code ownerId} back online for {@link PublicationProperties#ttl()} and writes
+     * {@code listing.renewed}: an expired listing, or a published one that expires within
+     * {@link PublicationProperties#reminderBefore()}. The listing is not posted again on the social networks.
+     *
+     * @throws ListingNotFoundException  unknown listing, or a listing of another account
+     * @throws RenewNotAllowedException  any other listing
+     */
+    @Transactional
+    public ListingView renew(UUID ownerId, UUID id) {
+        Listing listing = lockOwned(ownerId, id);
+        Instant now = now();
+        boolean allowed = switch (listing.status()) {
+            case EXPIRED -> true;
+            case PUBLISHED -> listing.expiresAt().isBefore(now.plus(publication.reminderBefore()));
+            case DRAFT -> false;
+        };
+        if (!allowed) {
+            throw new RenewNotAllowedException();
+        }
+        Listing renewed = listing.renewed(now, publication.ttl());
+        repository.updateStatus(renewed);
+        outbox.write(events.renewed(renewed, now));
+        return views.view(renewed, List.of());
+    }
+
+    /**
      * @param viewerId the account reading it, or null without a token
-     * @throws ListingNotFoundException unknown listing, or a draft that {@code viewerId} does not own
+     * @throws ListingNotFoundException unknown listing, or a listing that {@code viewerId} does not own
      */
     @Transactional(readOnly = true)
     public ListingView get(UUID viewerId, UUID id) {
-        // Every listing is a draft until ANN-03; the public reading of published listings is CATA-03.
+        // The public reading of published listings is CATA-03.
         return repository.find(id)
                 .filter(found -> viewerId != null && found.isOwnedBy(viewerId))
                 .map(found -> views.view(found, List.of()))
@@ -92,7 +154,7 @@ public class ListingService {
 
     /**
      * Locks a listing of {@code ownerId} whose photos may change until the end of the current transaction (ANN-02):
-     * a draft, and a published listing once ANN-03 adds them.
+     * a draft; ANN-05 opens the photos of published listings, with the rule that they stay complete.
      *
      * @throws ListingNotFoundException unknown listing, or a listing of another account
      */
@@ -100,6 +162,12 @@ public class ListingService {
     public Listing lockForPhotos(UUID ownerId, UUID id) {
         return repository.findForUpdate(id)
                 .filter(found -> found.isOwnedBy(ownerId) && found.status() == ListingStatus.DRAFT)
+                .orElseThrow(ListingNotFoundException::new);
+    }
+
+    private Listing lockOwned(UUID ownerId, UUID id) {
+        return repository.findForUpdate(id)
+                .filter(found -> found.isOwnedBy(ownerId))
                 .orElseThrow(ListingNotFoundException::new);
     }
 

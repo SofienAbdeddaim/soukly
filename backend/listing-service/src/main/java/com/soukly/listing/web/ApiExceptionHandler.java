@@ -21,10 +21,13 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
+import com.soukly.listing.listing.AlreadyPublishedException;
 import com.soukly.listing.listing.DraftLimitReachedException;
 import com.soukly.listing.listing.IfMatchRequiredException;
 import com.soukly.listing.listing.InvalidListingException;
+import com.soukly.listing.listing.ListingIncompleteException;
 import com.soukly.listing.listing.ListingNotFoundException;
+import com.soukly.listing.listing.RenewNotAllowedException;
 import com.soukly.listing.listing.VersionConflictException;
 import com.soukly.listing.photo.PhotoLimitReachedException;
 import com.soukly.listing.photo.PhotoNotFoundException;
@@ -45,6 +48,9 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     /** Member of a validation problem that lists the invalid fields: {@code [{"field", "code"}]}. */
     static final String ERRORS = "errors";
+
+    /** Member of a {@code listing-incomplete} problem: the same list as {@code missingFields} of the listing. */
+    static final String MISSING_FIELDS = "missingFields";
 
     /** Member of a {@code photo-rejected} problem: the stable reason ({@code photo.too-large}...). */
     static final String CODE = "code";
@@ -70,6 +76,30 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(ProblemDetails.create(ProblemDetails.type("draft-limit-reached"), HttpStatus.CONFLICT,
                 "Draft limit reached", "An account can keep at most " + e.limit() + " drafts.", instance(request),
                 requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> listingIncomplete(ListingIncompleteException e, NativeWebRequest request) {
+        ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("listing-incomplete"),
+                HttpStatus.UNPROCESSABLE_CONTENT, "Listing incomplete",
+                "Complete the missing fields before publishing.", instance(request), requestId(request));
+        problem.setProperty(MISSING_FIELDS, e.missingFields());
+        return problem(problem);
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> alreadyPublished(AlreadyPublishedException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("already-published"), HttpStatus.CONFLICT,
+                "Already published", "This listing was published already; an expired one can be renewed.",
+                instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> renewNotAllowed(RenewNotAllowedException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("renew-not-allowed"), HttpStatus.CONFLICT,
+                "Renewal not allowed",
+                "Only an expired listing, or a published one that expires soon, can be put back online.",
+                instance(request), requestId(request)));
     }
 
     @ExceptionHandler

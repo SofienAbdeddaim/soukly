@@ -1,7 +1,5 @@
 package com.soukly.listing.referential;
 
-import java.time.Clock;
-
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,10 +18,5 @@ class ReferentialCacheConfig {
                 new FilterRegistrationBean<>(new ShallowEtagHeaderFilter());
         registration.addUrlPatterns("/categories", "/categories/*", "/locations/*");
         return registration;
-    }
-
-    @Bean
-    Clock clock() {
-        return Clock.systemDefaultZone();
     }
 }

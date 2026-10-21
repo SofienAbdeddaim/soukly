@@ -3,7 +3,9 @@ package com.soukly.listing.listing;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,7 +24,8 @@ class ListingRepository {
 
     private static final String COLUMNS = """
             id, owner_id, status, category_code, title, description, price_mode, price_tnd, negotiable,
-            governorate_code, delegation_code, attributes, version, created_at, updated_at, published_at""";
+            governorate_code, delegation_code, attributes, version, created_at, updated_at, published_at, expires_at,
+            reminder_sent_at""";
 
     private final JdbcClient jdbc;
     private final JsonMapper json;
@@ -82,7 +85,7 @@ class ListingRepository {
                 .param("version", listing.version())
                 .param("createdAt", Timestamp.from(listing.createdAt()))
                 .param("updatedAt", Timestamp.from(listing.updatedAt()))
-                .param("publishedAt", listing.publishedAt() == null ? null : Timestamp.from(listing.publishedAt()))
+                .param("publishedAt", timestamp(listing.publishedAt()))
                 .update();
     }
 
@@ -100,6 +103,75 @@ class ListingRepository {
                 .param("version", listing.version())
                 .param("updatedAt", Timestamp.from(listing.updatedAt()))
                 .update();
+    }
+
+    /** Writes the status, its dates and the version of a listing locked by {@link #findForUpdate(UUID)}. */
+    void updateStatus(Listing listing) {
+        jdbc.sql("""
+                UPDATE listings
+                SET status = :status, version = :version, updated_at = :updatedAt, published_at = :publishedAt,
+                    expires_at = :expiresAt, reminder_sent_at = :reminderSentAt
+                WHERE id = :id""")
+                .param("id", listing.id())
+                .param("status", listing.status().name())
+                .param("version", listing.version())
+                .param("updatedAt", Timestamp.from(listing.updatedAt()))
+                .param("publishedAt", timestamp(listing.publishedAt()))
+                .param("expiresAt", timestamp(listing.expiresAt()))
+                .param("reminderSentAt", timestamp(listing.reminderSentAt()))
+                .update();
+    }
+
+    /**
+     * Makes {@code EXPIRED} at most {@code limit} published listings whose expiry date is reached, skipping those
+     * another transaction holds, and returns them as changed.
+     */
+    List<Listing> expireDue(Instant now, int limit) {
+        return jdbc.sql("""
+                UPDATE listings
+                SET status = 'EXPIRED', version = version + 1, updated_at = :now
+                WHERE id IN (SELECT id FROM listings
+                             WHERE status = 'PUBLISHED' AND expires_at <= :now
+                             ORDER BY expires_at
+                             LIMIT :limit
+                             FOR UPDATE SKIP LOCKED)
+                RETURNING\s""" + COLUMNS)
+                .param("now", Timestamp.from(now))
+                .param("limit", limit)
+                .query(this::listing)
+                .list();
+    }
+
+    /**
+     * Marks the reminder as written for at most {@code limit} published listings that expire after {@code now} and
+     * at the latest at {@code until}, without a reminder yet, skipping those another transaction holds; returns them
+     * as changed.
+     */
+    List<Listing> markReminderDue(Instant now, Instant until, int limit) {
+        return jdbc.sql("""
+                UPDATE listings
+                SET reminder_sent_at = :now
+                WHERE id IN (SELECT id FROM listings
+                             WHERE status = 'PUBLISHED' AND reminder_sent_at IS NULL
+                               AND expires_at > :now AND expires_at <= :until
+                             ORDER BY expires_at
+                             LIMIT :limit
+                             FOR UPDATE SKIP LOCKED)
+                RETURNING\s""" + COLUMNS)
+                .param("now", Timestamp.from(now))
+                .param("until", Timestamp.from(until))
+                .param("limit", limit)
+                .query(this::listing)
+                .list();
+    }
+
+    private static Timestamp timestamp(Instant instant) {
+        return instant == null ? null : Timestamp.from(instant);
+    }
+
+    private static Instant instant(ResultSet rs, String column) throws SQLException {
+        Timestamp timestamp = rs.getTimestamp(column);
+        return timestamp == null ? null : timestamp.toInstant();
     }
 
     private Map<String, Object> contentParams(ListingContent content) {
@@ -125,10 +197,9 @@ class ListingRepository {
                 rs.getString("description"), priceMode == null ? null : PriceMode.valueOf(priceMode),
                 price, rs.getBoolean("negotiable"), rs.getString("governorate_code"),
                 rs.getString("delegation_code"), json.readValue(rs.getString("attributes"), ATTRIBUTES));
-        Timestamp publishedAt = rs.getTimestamp("published_at");
         return new Listing(rs.getObject("id", UUID.class), rs.getObject("owner_id", UUID.class),
                 ListingStatus.valueOf(rs.getString("status")), content, rs.getLong("version"),
-                rs.getTimestamp("created_at").toInstant(), rs.getTimestamp("updated_at").toInstant(),
-                publishedAt == null ? null : publishedAt.toInstant());
+                instant(rs, "created_at"), instant(rs, "updated_at"), instant(rs, "published_at"),
+                instant(rs, "expires_at"), instant(rs, "reminder_sent_at"));
     }
 }

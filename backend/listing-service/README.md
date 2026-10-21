@@ -1,7 +1,8 @@
 # listing-service
 
 Listings of Soukly. CAT-01 adds the read-only **referentials** that listings (ANN) and search (CATA) rely on:
-categories, specific attributes, governorates and delegations. ANN-01 adds the **drafts** of listings. Port 8082,
+categories, specific attributes, governorates and delegations. ANN-01 adds the **drafts** of listings, ANN-02 their
+**photos**, ANN-03 their **publication**, expiry and **events**. Port 8082,
 package `com.soukly.listing`, database `soukly_listing` (user `listing_svc`).
 
 ## Referential endpoints
@@ -233,7 +234,7 @@ converts it with **libvips** to two WebP versions without any metadata. Package 
 A photo answers `{ id, status, url, thumbnailUrl, width, height, position }` (`width` and `height` of the 1600
 version). `GET /api/listings/{id}` lists the READY photos in `photos`, cover first, without `status`.
 
-- **Access**: the owner of a draft only (published listings join with ANN-03); anyone else gets `404`
+- **Access**: the owner of a draft only (published listings join with ANN-05, which keeps them complete); anyone else gets `404`
   `listing-not-found`, like for the listing. An unknown photo is `404` `photo-not-found`.
 - **Limit**: 10 photos per listing, READY photos and uploads in progress (`PENDING_UPLOAD`) counted; a rejected photo
   frees its place. Every change locks the listing row, so two requests in parallel never pass the limit or mix the
@@ -311,6 +312,73 @@ curl -s -X POST http://localhost:8080/api/listings/$ID/photos/$PHOTO_ID/complete
 # then open url and thumbnailUrl: http://soukly-listings.web.localhost:3902/listings/…/1600.webp
 ```
 
+## Publication, expiry and events (ANN-03)
+
+| Endpoint (through the gateway, JWT) | Answers |
+| --- | --- |
+| `POST /api/listings/{id}/publish` | `200` listing + `ETag`, `404`, `409` `already-published`, `422` `listing-incomplete` |
+| `POST /api/listings/{id}/renew` | `200` listing + `ETag`, `404`, `409` `renew-not-allowed` |
+
+Statuses: `DRAFT` → `PUBLISHED` → `EXPIRED`, and back to `PUBLISHED` by a renewal (ANN-05 adds `INACTIVE` and
+`DELETED`). The answers now carry `publishedAt` (first publication, kept by renewals) and `expiresAt`.
+
+- **Publish** (owner only, no body, no `If-Match`): the draft must have an empty `missingFields` (at least one READY
+  photo, every required field and attribute). Otherwise `422` with the same list:
+  ```json
+  { "type": "urn:soukly:problem:listing-incomplete", "status": 422, "missingFields": ["photos"] }
+  ```
+  A listing that is not a draft any more (`PUBLISHED` or `EXPIRED`) answers `409` `already-published`: an expired
+  one is renewed instead. Effect: `PUBLISHED`, `published_at` = now, `expires_at` = now + 60 days, `version` + 1,
+  and `listing.published` written in the outbox **in the same transaction**.
+- **Renew** (owner only): allowed for an `EXPIRED` listing, or a `PUBLISHED` one that expires in less than 3 days;
+  anything else (a draft, a listing with more time left) answers `409` `renew-not-allowed`. Effect: `PUBLISHED`,
+  `expires_at` = now + 60 days, `reminder_sent_at` cleared, `version` + 1, and `listing.renewed`. Never
+  `listing.published`: a renewal is not posted again on the social networks.
+- **Hourly task** (`ListingLifecycle`, first run one minute after the start): published listings whose `expires_at`
+  is reached become `EXPIRED` (`version` + 1) with `listing.expired`; then those that expire within 3 days and have
+  no reminder yet get `listing.expiring-soon` and `reminder_sent_at`, once per publication or renewal. user-service
+  sends the reminder email (see its README). Batches of 100 listings per transaction, locked with
+  `FOR UPDATE SKIP LOCKED`, so several instances can run it.
+- Until ANN-05, a published or expired listing is read-only: `PATCH` and the photo endpoints answer `404` as for a
+  listing of another account, and `GET /api/listings/{id}` still answers its owner only (public reading is CATA-03).
+
+### Events and outbox
+
+The contract (topic `soukly.listing-events`, key `listingId`, envelope, `data` of each type, evolution rules) is
+[`docs/events/listing-events.md`](../../docs/events/listing-events.md). No event carries the seller's name, email or
+phone number.
+
+- Business code never sends to Kafka: it writes the event in `outbox_events` (`id` = `eventId`, `aggregate_id`,
+  `type`, `payload` JSONB with the whole envelope, `created_at`, `sent_at`, `attempts`, `last_error`) in the
+  transaction of the change. A rollback leaves neither the change nor the event.
+- The **relay** (`OutboxRelay`) runs every second after its previous run: it locks up to 100 unsent events in order of
+  creation (`FOR UPDATE SKIP LOCKED`), sends them with an idempotent producer (`acks=all`) and sets `sent_at` only
+  after the broker acknowledged each one. An event leaves only when every older unsent event of its listing is in
+  the same batch, so two relays (two instances) never reorder the events of a listing.
+- **Broker down**: the sends time out (5 s for the metadata, 10 s per delivery), the events stay unsent with
+  `attempts` + 1 and the type of the error in `last_error`, and a warning is logged (event id and type, never the
+  payload). They leave in order when the broker is back. Publishing never fails because of the broker.
+- Delivery is **at least once** (a crash between the acknowledgement and `sent_at` sends again): consumers deduplicate
+  by `eventId`. Sent events are deleted after 7 days (hourly purge).
+- **Topics**: `listing-service` declares `soukly.listing-events` (3 partitions) and `soukly.listing-events.dlq`
+  (1 partition), replication 1, at startup when they are missing (local and dev). On the VM they are created first
+  by `infra/compose/redpanda/init-topics.sh` (DEP-02); declaring them again changes nothing.
+
+### Trying it
+
+With the local infrastructure (`docker compose --profile tools up -d --wait`), user-service, listing-service and the
+gateway running, an access token in `$TOKEN` and a complete draft in `$ID` (with a READY photo):
+
+```bash
+curl -i -X POST http://localhost:8080/api/listings/$ID/publish -H "Authorization: Bearer $TOKEN"   # 200, PUBLISHED
+docker compose exec redpanda rpk topic consume soukly.listing-events -o start -n 1                 # or Redpanda Console, http://localhost:8090
+```
+
+To see the reminder without waiting 57 days, restart listing-service with `LISTING_CLOCK_OFFSET=P58D`: one minute
+after the start, the task writes `listing.expiring-soon` and the email arrives in Mailpit (http://localhost:8025) in
+the seller's language. `LISTING_CLOCK_OFFSET` moves the business clock only (dates of listings and photos), never
+the validation of access tokens; it is for a local machine only and stays unset in dev and prod.
+
 ## Data
 
 Flyway migrations in `src/main/resources/db/migration`:
@@ -324,6 +392,7 @@ Flyway migrations in `src/main/resources/db/migration`:
 | `V5__insert_delegations.sql` | 264 delegations, with their INS code |
 | `V6__create_listings.sql` | table `listings` (ANN-01): content of a listing, `attributes` in JSONB, `version`, index `(owner_id, status)` |
 | `V7__create_listing_photos.sql` | table `listing_photos` (ANN-02): status, position, size of the 1600 version, bytes, rejection code |
+| `V8__publish_listings.sql` | ANN-03: `listings.expires_at` and `reminder_sent_at`, statuses `PUBLISHED` and `EXPIRED`, table `outbox_events` |
 
 Places come from the official INS "Code géographique tunisien" (December 2012, division at 31 December 2012); the
 source, its checksum and the few display fixes are in the header of `V5`. Never invent a place: a delegation created
@@ -366,6 +435,12 @@ Write a **new** migration (`V5__…`, never edit a released one: Flyway checks t
 | `S3_BUCKET` | `soukly-listings` | bucket of the photos |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` of the root `.env` | key with read and write on the bucket |
 | `PHOTO_PUBLIC_BASE_URL` | `http://soukly-listings.web.localhost:3902` | public URL of the bucket root, the object key is appended |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:19092` | Kafka API of Redpanda (outbox relay) |
+| `PUBLIC_BASE_URL` | `http://localhost:4200` | origin of the site, for `publicUrls` of `listing.published` |
+| `LISTING_TTL` | `60d` | visibility of a publication or a renewal |
+| `LISTING_REMINDER_BEFORE` | `3d` | the reminder is written, and renewal allowed, this long before the expiry |
+| `LISTING_CHECK_INTERVAL` | `PT1H` | period of the expiry and reminder task |
+| `LISTING_CLOCK_OFFSET` | `PT0S` | local manual tests only: moves the business clock forward (`P58D`) |
 
 Photo limits and timings are under `soukly.listing.photos.*` in `application.yml` (10 photos, 5 MB, 50 megapixels,
 400 × 300, URL valid 10 minutes, cleanup every hour after 1 hour, WebP quality 80, 30 s per conversion, 2 conversions
@@ -378,6 +453,14 @@ one shared Spring context, base class `support/IntegrationTest`. Access tokens a
 the tests start and published by a local JWKS server (`support/TestJwks`); no key is committed. Listing tests use a new
 account id each time instead of resetting the database. `AttributeValidatorTest` covers every attribute type and
 bound without the database.
+
+Publication tests (`listing/PublicationApiTests`, `listing/ListingLifecycleTests`, `outbox/OutboxRelayTests`) also
+start Redpanda v26.2.4 (`support/TestRedpanda`) and move a test clock (`support/MutableClock`); the scheduled tasks
+never run on their own in the tests, which call them. They cover every scenario of ANN-03: nominal publication with
+the message read back from the topic (3 photo URLs in order, exactly the members of the contract), incomplete draft,
+atomicity (a PostgreSQL trigger makes the outbox insert fail after the status update: the listing stays `DRAFT`, no
+event), broker down (a relay pointed at a closed port, then the real one: sent once), reminder once, expiry, renewal
+without `listing.published`, and two relays at the same time on 240 events (each sent once, in order per listing).
 
 Photo tests (`photo/PhotoApiTests`) also start Garage v2.4.1 (`support/TestGarage`, set up through its admin API with
 random secrets) and need the libvips tools on the machine, like the CI. The images are generated by the tests
