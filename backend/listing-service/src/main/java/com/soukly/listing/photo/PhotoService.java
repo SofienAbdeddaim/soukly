@@ -22,6 +22,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.soukly.listing.listing.FieldError;
 import com.soukly.listing.listing.InvalidListingException;
+import com.soukly.listing.listing.Listing;
+import com.soukly.listing.listing.ListingIncompleteException;
 import com.soukly.listing.listing.ListingNotFoundException;
 import com.soukly.listing.listing.ListingService;
 
@@ -41,6 +43,8 @@ public class PhotoService {
     static final String CONTENT_TYPE = "contentType";
     static final String SIZE_BYTES = "sizeBytes";
     static final String PHOTO_IDS = "photoIds";
+    /** Member of {@code missingFields} when a listing has no READY photo (same as {@code ListingViews}). */
+    static final String MISSING_PHOTOS = "photos";
 
     private final ListingService listings;
     private final PhotoRepository repository;
@@ -126,13 +130,15 @@ public class PhotoService {
         }
         storage.delete(List.of(PhotoKeys.incoming(listingId, photoId)));
         try {
-            return locked(ownerId, listingId, () -> {
+            return transaction.execute(status -> {
+                Listing listing = listings.lockForPhotos(ownerId, listingId);
                 repository.markReady(photoId, converted.width(), converted.height(), converted.bytes(), now());
                 ListingPhoto done = find(listingId, photoId);
                 if (done.status() == PhotoStatus.REJECTED) {
                     // Rejected by the cleanup while it was converted
                     throw new PhotoRejectedException(PhotoRejection.ofCode(done.rejectionCode()));
                 }
+                listings.photosChanged(listing);
                 return urls.view(done);
             });
         } catch (ListingNotFoundException | PhotoNotFoundException | PhotoRejectedException e) {
@@ -151,40 +157,54 @@ public class PhotoService {
      */
     @Transactional
     public List<PhotoView> reorder(UUID ownerId, UUID listingId, List<UUID> photoIds) {
-        listings.lockForPhotos(ownerId, listingId);
+        Listing listing = listings.lockForPhotos(ownerId, listingId);
         List<ListingPhoto> ready = repository.ready(listingId);
         Map<UUID, ListingPhoto> byId = ready.stream().collect(Collectors.toMap(ListingPhoto::id, Function.identity()));
         if (photoIds == null || photoIds.size() != ready.size() || !byId.keySet().equals(new HashSet<>(photoIds))) {
             throw new InvalidListingException(List.of(new FieldError(PHOTO_IDS, "photo-order.invalid")));
         }
         Instant now = now();
+        boolean moved = false;
         for (int position = 0; position < photoIds.size(); position++) {
             if (byId.get(photoIds.get(position)).position() != position) {
                 repository.setPosition(photoIds.get(position), position, now);
+                moved = true;
             }
+        }
+        if (moved) {
+            listings.photosChanged(listing);
         }
         return repository.ready(listingId).stream().map(urls::view).toList();
     }
 
     /**
-     * Deletes a photo, whatever its status, and its objects; the next ones move up.
+     * Deletes a photo, whatever its status, and its objects; the next ones move up. A listing that was published keeps
+     * at least one READY photo (ANN-05).
      *
-     * @throws ListingNotFoundException unknown listing, or a listing of another account
-     * @throws PhotoNotFoundException   unknown photo
+     * @throws ListingNotFoundException    unknown listing, or a listing of another account
+     * @throws PhotoNotFoundException      unknown photo
+     * @throws ListingIncompleteException  the last READY photo of a listing that was published
      */
     @Transactional
     public void delete(UUID ownerId, UUID listingId, UUID photoId) {
-        listings.lockForPhotos(ownerId, listingId);
-        find(listingId, photoId);
+        Listing listing = listings.lockForPhotos(ownerId, listingId);
+        ListingPhoto photo = find(listingId, photoId);
+        boolean ready = photo.status() == PhotoStatus.READY;
+        if (ready && listing.publishedAt() != null && repository.ready(listingId).size() <= 1) {
+            throw new ListingIncompleteException(List.of(MISSING_PHOTOS));
+        }
         // Objects first: if the storage fails, the photo stays and the request can be repeated.
         storage.delete(PhotoKeys.all(listingId, photoId));
         repository.delete(photoId);
         repository.compact(listingId, now());
+        if (ready) {
+            listings.photosChanged(listing);
+        }
     }
 
     /**
-     * Deletes every photo of a listing and its objects, for the deletion of the listing (ANN-05), which calls it with
-     * the listing locked.
+     * Deletes every photo of a listing and its objects, for the deletion and the purge of the listing (ANN-05), which
+     * call it with the listing locked.
      */
     @Transactional
     public void deleteAllPhotos(UUID listingId) {

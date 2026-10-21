@@ -339,8 +339,8 @@ Statuses: `DRAFT` → `PUBLISHED` → `EXPIRED`, and back to `PUBLISHED` by a re
   no reminder yet get `listing.expiring-soon` and `reminder_sent_at`, once per publication or renewal. user-service
   sends the reminder email (see its README). Batches of 100 listings per transaction, locked with
   `FOR UPDATE SKIP LOCKED`, so several instances can run it.
-- Until ANN-05, a published or expired listing is read-only: `PATCH` and the photo endpoints answer `404` as for a
-  listing of another account, and `GET /api/listings/{id}` still answers its owner only (public reading is CATA-03).
+- Since ANN-05, a published, expired or deactivated listing is editable too, and a deactivated one is renewed like an
+  expired one: see "My listings" below.
 
 ### Events and outbox
 
@@ -499,7 +499,8 @@ the listing.
 | `EXPIRED`, or `PUBLISHED` past its expiry, or seller's account no longer active | `410` `listing-gone` | `200` full view (with `status`) |
 | `DRAFT` or unknown | `404` `listing-not-found` | `200` full view (ANN-01) |
 
-ANN-05 adds `INACTIVE` (`410`, owner `200`) and deleted listings (`410` for everyone).
+| `INACTIVE` (ANN-05) | `410` `listing-gone` | `200` full view (with `status`) |
+| `DELETED` (ANN-05) | `410` `listing-gone` | `410` `listing-gone` |
 
 - **Public view** (`Cache-Control: no-cache, private`, no `ETag`): `id`, `status`, `kind`, `categoryCode`, `title`,
   `description`, `priceMode`, `price`, `currency`, `negotiable`, `governorateCode`, `delegationCode`, `attributes` (in
@@ -529,6 +530,49 @@ ANN-05 adds `INACTIVE` (`410`, owner `200`) and deleted listings (`410` for ever
   serialized by an advisory lock. Limit and window: `soukly.listing.contact.*` (`CONTACT_MAX_LISTINGS_PER_DAY`, an
   assumption of V1).
 - The number is read from `GET /internal/users/{id}/contact` at every request: never cached, stored or logged.
+
+## My listings (ANN-05)
+
+The seller manages their listings. Every status change is checked by `ListingTransitions` (the only place that says
+which action is allowed from which status, unit tested) with the listing locked, in the transaction of the change:
+
+| Action | From | To | Event |
+| --- | --- | --- | --- |
+| Edit (`PATCH`, photo endpoints) | `DRAFT`, `PUBLISHED`, `EXPIRED`, `INACTIVE` | same status | `listing.updated` if `PUBLISHED` |
+| Deactivate | `PUBLISHED` | `INACTIVE` | `listing.deactivated` |
+| Renew | `EXPIRED`, `INACTIVE`, `PUBLISHED` expiring within 3 days | `PUBLISHED` for 60 days | `listing.renewed` |
+| Delete | every status but `DELETED` | draft erased; others `DELETED` | `listing.deleted` (not for a draft) |
+
+| Endpoint (through the gateway, JWT) | Answers |
+| --- | --- |
+| `GET /api/listings/mine?status=&limit=&cursor=` | `200` page, `400` `validation-failed` (`status.invalid`, `limit.invalid`, `cursor.invalid`) |
+| `PATCH /api/listings/{id}` | as ANN-01, plus `409` `category-locked` and `422` `listing-incomplete` once published |
+| `POST /api/listings/{id}/deactivate` | `200` listing + `ETag`, `404`, `409` `transition-not-allowed` |
+| `POST /api/listings/{id}/renew` | as ANN-03, also from `INACTIVE` |
+| `DELETE /api/listings/{id}` | `204`, `404` |
+
+- **List**: one status per call (`PUBLISHED` by default, `DRAFT`, `EXPIRED` or `INACTIVE`; never `DELETED`), the
+  latest changed first (`updated_at DESC, id DESC`), `limit` 1 to 50 (default 20), `Cache-Control: no-store`. Each
+  item: `id`, `status`, `title`, `kind`, `categoryCode`, `priceMode`, `price`, `currency`, `coverThumbnailUrl` (400
+  px), `updatedAt`, `publishedAt`, `expiresAt`, `contactRevealsCount` (distinct members shown the number, CATA-03),
+  and for a draft only `missingFields` and `missingFieldsCount`. The first page (without `cursor`) also has `counts`
+  (`PUBLISHED`, `DRAFT`, `EXPIRED`, `INACTIVE`); `nextCursor` is absent on the last page. The cursor is opaque and
+  bound to its status; unlike the search cursors it is not signed, since it only selects among the caller's listings.
+- **Edit** of a listing that was published: `If-Match` as for a draft; another `categoryCode` answers `409`
+  `category-locked`; a patch that would empty a required field answers `422` `listing-incomplete` with
+  `missingFields`, and deleting its last READY photo too (`missingFields: ["photos"]`). A change of a `PUBLISHED`
+  listing is visible at once in the search and on its page, and writes `listing.updated` with `changedFields` (API
+  member names, for example `["price"]`, or `["photos"]` after a photo change); a patch that changes nothing writes
+  none. Never `listing.published`.
+- **Deactivate**: hidden from the search, `410` on its page, still read in full by its owner; the hourly task never
+  expires it. Renewing it puts it online for 60 days.
+- **Delete**: a draft is erased at once with its photos (`PhotoService.deleteAllPhotos`), without event. Any other
+  listing becomes `DELETED` (`deleted_at` = now, `version` + 1) with `listing.deleted` (`data` `{}`); it answers `404`
+  on every private endpoint, to its owner too, and `410` on its page. No restoration in V1.
+- **Purge** (`ListingPurge`, daily, first run 10 minutes after the start): listings deleted for more than 30 days
+  (`LISTING_PURGE_AFTER`) are erased for good: photos (originals and WebP versions) in the bucket, then the
+  `listing_photos`, `contact_reveals` and `listings` rows. Events already written are left as they are. Batches of 20
+  listings per transaction, locked with `FOR UPDATE SKIP LOCKED`, so several instances can run it.
 
 ## Data
 
@@ -593,6 +637,7 @@ Write a **new** migration (`V5__…`, never edit a released one: Flyway checks t
 | `LISTING_TTL` | `60d` | visibility of a publication or a renewal |
 | `LISTING_REMINDER_BEFORE` | `3d` | the reminder is written, and renewal allowed, this long before the expiry |
 | `LISTING_CHECK_INTERVAL` | `PT1H` | period of the expiry and reminder task |
+| `LISTING_PURGE_AFTER` | `30d` | a deleted listing is erased for good this long after its deletion (ANN-05) |
 | `LISTING_CLOCK_OFFSET` | `PT0S` | local manual tests only: moves the business clock forward (`P58D`) |
 | `SEARCH_CURSOR_SECRET` | empty (random key per start) | signs the search cursors |
 | `USER_SERVICE_URL` | `http://localhost:8081` | user-service as this service reaches it (internal endpoints, CATA-03) |

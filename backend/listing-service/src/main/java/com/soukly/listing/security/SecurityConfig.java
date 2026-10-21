@@ -22,7 +22,8 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
  *
  * <p>Unlike the gateway, a token sent on {@code GET /listings/{id}} is validated: it identifies the owner of the
  * listing (full view, CATA-03), and an invalid one is answered with {@code 401} so that the front end refreshes it.
- * {@code POST /listings/{id}/contact} needs a token, like every path not listed here.
+ * {@code POST /listings/{id}/contact} needs a token, like every path not listed here, and {@code GET /listings/mine}
+ * (ANN-05), although it looks like the reading of a listing.
  */
 @Configuration(proxyBeanMethods = false)
 class SecurityConfig {
@@ -50,6 +51,8 @@ class SecurityConfig {
                 .requestCache(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests
+                        // Before GET /listings/*: the listings of the caller (ANN-05)
+                        .requestMatchers(get("/listings/mine")).authenticated()
                         .requestMatchers(PUBLIC).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer

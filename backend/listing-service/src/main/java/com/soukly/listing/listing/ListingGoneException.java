@@ -1,9 +1,8 @@
 package com.soukly.listing.listing;
 
 /**
- * A listing that was online and is not any more ({@code 410}): expired, or its seller's account is no longer active
- * (ANN-05 adds deactivated and deleted listings). Only its subcategory and governorate are given, to suggest similar
- * listings.
+ * A listing that was online and is not any more ({@code 410}): expired, deactivated or deleted (ANN-05), or its
+ * seller's account is no longer active. Only its subcategory and governorate are given, to suggest similar listings.
  */
 public class ListingGoneException extends RuntimeException {
 

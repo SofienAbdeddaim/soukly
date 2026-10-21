@@ -1,8 +1,8 @@
 package com.soukly.listing.listing;
 
 /**
- * Only an expired listing, or a published one that expires within the reminder period, can be renewed
- * ({@code 409}).
+ * Only an expired or deactivated listing, or a published one that expires within the reminder period, can be put
+ * back online ({@code 409}).
  */
 public class RenewNotAllowedException extends RuntimeException {
 
