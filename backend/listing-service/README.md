@@ -2,7 +2,7 @@
 
 Listings of Soukly. CAT-01 adds the read-only **referentials** that listings (ANN) and search (CATA) rely on:
 categories, specific attributes, governorates and delegations. ANN-01 adds the **drafts** of listings, ANN-02 their
-**photos**, ANN-03 their **publication**, expiry and **events**. Port 8082,
+**photos**, ANN-03 their **publication**, expiry and **events**, CATA-01 the public **search**. Port 8082,
 package `com.soukly.listing`, database `soukly_listing` (user `listing_svc`).
 
 ## Referential endpoints
@@ -379,6 +379,115 @@ after the start, the task writes `listing.expiring-soon` and the email arrives i
 the seller's language. `LISTING_CLOCK_OFFSET` moves the business clock only (dates of listings and photos), never
 the validation of access tokens; it is for a local machine only and stays unset in dev and prod.
 
+## Search (CATA-01)
+
+`GET /api/listings` (public, no JWT; `GET /listings` on the service) searches the **published** listings with the
+full text search of PostgreSQL: never a draft nor an expired listing, nor one past its expiry date that the hourly
+task has not expired yet. Not to be confused with `GET /api/listings/{id}` (one listing). The gateway allows 120
+searches per minute and per IP (`RATE_LIMIT_SEARCH_PER_MINUTE`), then `429` with `Retry-After`.
+
+| Parameter | Rule |
+| --- | --- |
+| `q` | free text, 2 to 100 characters once normalized; optional |
+| `category` | a family (all its subcategories) or a subcategory code |
+| `governorate` | governorate code |
+| `delegation` | delegation code; needs the `governorate` it belongs to |
+| `priceMin`, `priceMax` | whole dinars, inclusive; either one leaves out the listings "on quote" |
+| `attr.<code>` | filter on a **filterable** attribute of the subcategory in `category` (see below) |
+| `sort` | `recent` (default without `q`), `relevance` (default with `q`, needs `q`), `price-asc`, `price-desc` |
+| `limit` | 1 to 48, default 24 |
+| `cursor` | `nextCursor` of the previous page, with the same parameters |
+
+Attribute filters (`category` must be a subcategory that has the attribute):
+
+| Type | Syntax | Meaning |
+| --- | --- | --- |
+| `INTEGER` | `attr.year.min=2015`, `attr.mileage-km.max=100000` | inclusive bounds, either or both |
+| `ENUM` | `attr.fuel=diesel,hybrid` | one of the values |
+| `BOOLEAN` | `attr.furnished=true` | `true` or `false` |
+| `TEXT` | `attr.brand=peugeot` | the same text, whatever the case and the accents |
+
+Answer (`Cache-Control: public, max-age=30`), never with any data of the seller:
+
+```json
+{ "items": [ { "id": "…", "title": "Peugeot 208 diesel", "kind": "SALE", "categoryCode": "vehicles.cars",
+    "priceMode": "FIXED", "price": 32000, "currency": "TND", "negotiable": true,
+    "governorateCode": "sfax", "delegationCode": null,
+    "coverThumbnailUrl": "http://soukly-listings.web.localhost:3902/listings/…/…/400.webp", "photoCount": 4,
+    "summary": { "brand": "Peugeot", "year": 2019, "mileage-km": 62000 },
+    "publishedAt": "2026-10-21T09:12:44.123456Z" } ],
+  "nextCursor": "eyJzIjoicmVjZW50Ii….Xb3…", "total": 1254 }
+```
+
+- `summary`: at most 3 attributes of the listing, in the display order of its subcategory. `coverThumbnailUrl` is
+  null without a photo, `price` null "on quote".
+- `total`: exact, on the first page only (without `cursor`). `nextCursor`: absent on the last page. An empty result
+  is `200` with `"items": []` and `"total": 0`.
+- **Sorts**: `recent` = `published_at` (first publication, kept by a renewal) descending; `price-asc` /
+  `price-desc` = price then `published_at`, the listings "on quote" last in both; `relevance` = full text score
+  (title weighs more than description) plus the trigram similarity of the title or the brand, then `published_at`.
+  The id breaks the remaining ties, so the order is total.
+- **Pagination**: keyset, no page number. The cursor holds the sort, the rank key, the publication date and the id
+  of the last card, as `base64url(json).base64url(HMAC-SHA256)`: a listing published between two pages never makes a
+  card appear twice. A changed cursor, or one used with another `sort`, is refused. The key is
+  `SEARCH_CURSOR_SECRET`; when it is empty, a random key is drawn at start and the cursors of a previous start are
+  refused (the front end then starts the search over).
+
+### Text matching
+
+Title and description are indexed in a generated `search_vector` column (`tsvector`, configuration `simple`, title
+weight A, description weight B): always in step with the row and filled by the migration for existing listings,
+nothing to maintain in the code. Indexed text and query go through the same SQL function `soukly_normalize`: lower
+case, Latin accents removed (`unaccent`), and for Arabic the diacritics (tashkil) and tatweel removed and
+`أ إ آ → ا`, `ة → ه`, `ى → ي` (so `سياره` finds `سيارة`). No stemming in V1 (listings mix languages).
+
+A listing matches when its full text matches every word of `q`, **or** when its title or its brand contains a word
+close to `q` (`pg_trgm` word similarity ≥ 0.5, `soukly.listing.search.similarity-threshold`): `peugot` finds
+`Peugeot` (0.57). `unaccent` and `pg_trgm` are trusted extensions: the migration creates them as `listing_svc`, the
+owner of the database, without a superuser.
+
+The ordering is behind `ListingRankingStrategy` (one bean per `sort`: SQL rank key, order, keyset condition, cursor
+key). The mixed ranking of V2 (promoted listings, distance, recommendations) will be a new strategy, without touching
+the filters or the pagination.
+
+### Error codes
+
+`400` of type `urn:soukly:problem:invalid-search`, with a stable `code`:
+
+| `code` | When |
+| --- | --- |
+| `query.invalid-length` | `q` shorter than 2 or longer than 100 characters once normalized |
+| `filter.unknown-category` | `category` is not an active family or subcategory |
+| `filter.unknown-place` | unknown `governorate` or `delegation`, or a delegation without its governorate |
+| `filter.invalid-value` | not a whole number, `priceMin` > `priceMax`, unknown enumeration value, `attr.year` without `.min`/`.max`, a bound on a non-integer attribute… |
+| `filter.requires-subcategory` | `attr.*` without a subcategory in `category` (`category=vehicles&attr.year.min=2015`) |
+| `filter.unknown-attribute` | `attr.<code>` that the subcategory does not have, or that is not filterable (`model`) |
+| `sort.invalid` | unknown `sort`, or `relevance` without `q` |
+| `limit.invalid` | `limit` outside 1 to 48 |
+| `cursor.invalid` | malformed or changed cursor, or a cursor of another `sort` |
+
+### Performance
+
+Partial indexes on the published listings (GIN on `search_vector`, GIN trigram on the normalized title and brand) and
+B-tree indexes `(status, published_at DESC, id DESC)`, `(status, category_code, published_at DESC)`,
+`(status, governorate_code, published_at DESC)`, `(status, price_tnd)`. A GIN `jsonb_path_ops` index on `attributes`
+was not needed: the attribute filters always come with a subcategory, whose index is selective enough.
+
+Measured locally (PostgreSQL 18.6 of `docker-compose.yml`, 100,000 published listings, 100 calls per query straight
+on the service), p95 of the first page: home 28 ms, text with 3 filters 105 ms, Arabic text 125 ms, attributes 90 ms;
+every next page under 60 ms. To measure again, generate the data set with the `perf-seed` profile, **local only**
+(it refuses a database that is not on `localhost`, and does nothing when its listings exist already):
+
+```bash
+./mvnw -pl listing-service spring-boot:run -Dspring-boot.run.profiles=perf-seed
+curl -s 'http://localhost:8082/listings?q=peugot&category=vehicles.cars&governorate=sfax&priceMax=60000'
+```
+
+It writes 100,000 listings (cars with their attributes, apartments, services "on quote", the other subcategories;
+French and Arabic titles; every governorate; 1 to 4 photo rows each) owned by the account
+`00000000-0000-4000-8000-00000000cafe`. Remove them with
+`DELETE FROM listing_photos WHERE listing_id IN (SELECT id FROM listings WHERE owner_id = '00000000-0000-4000-8000-00000000cafe'); DELETE FROM listings WHERE owner_id = '00000000-0000-4000-8000-00000000cafe';`.
+
 ## Data
 
 Flyway migrations in `src/main/resources/db/migration`:
@@ -393,6 +502,7 @@ Flyway migrations in `src/main/resources/db/migration`:
 | `V6__create_listings.sql` | table `listings` (ANN-01): content of a listing, `attributes` in JSONB, `version`, index `(owner_id, status)` |
 | `V7__create_listing_photos.sql` | table `listing_photos` (ANN-02): status, position, size of the 1600 version, bytes, rejection code |
 | `V8__publish_listings.sql` | ANN-03: `listings.expires_at` and `reminder_sent_at`, statuses `PUBLISHED` and `EXPIRED`, table `outbox_events` |
+| `V9__search_listings.sql` | CATA-01: extensions `unaccent` and `pg_trgm`, function `soukly_normalize`, generated column `search_vector`, search indexes |
 
 Places come from the official INS "Code géographique tunisien" (December 2012, division at 31 December 2012); the
 source, its checksum and the few display fixes are in the header of `V5`. Never invent a place: a delegation created
@@ -441,6 +551,7 @@ Write a **new** migration (`V5__…`, never edit a released one: Flyway checks t
 | `LISTING_REMINDER_BEFORE` | `3d` | the reminder is written, and renewal allowed, this long before the expiry |
 | `LISTING_CHECK_INTERVAL` | `PT1H` | period of the expiry and reminder task |
 | `LISTING_CLOCK_OFFSET` | `PT0S` | local manual tests only: moves the business clock forward (`P58D`) |
+| `SEARCH_CURSOR_SECRET` | empty (random key per start) | signs the search cursors |
 
 Photo limits and timings are under `soukly.listing.photos.*` in `application.yml` (10 photos, 5 MB, 50 megapixels,
 400 × 300, URL valid 10 minutes, cleanup every hour after 1 hour, WebP quality 80, 30 s per conversion, 2 conversions
@@ -461,6 +572,12 @@ the message read back from the topic (3 photo URLs in order, exactly the members
 atomicity (a PostgreSQL trigger makes the outbox insert fail after the status update: the listing stays `DRAFT`, no
 event), broker down (a relay pointed at a closed port, then the real one: sent once), reminder once, expiry, renewal
 without `listing.published`, and two relays at the same time on 240 events (each sent once, in order per listing).
+
+Search tests (`search/SearchApiTests`) empty the listings before each test (the search reads every published
+listing) and insert published listings straight into the table with chosen dates; one test per scenario of CATA-01,
+plus every sort paged through with equal keys, refused cursors, error codes and the SQL normalization compared with
+its Java mirror (`SearchText`). `SearchTextTest` (Arabic and Latin normalization) and `SearchCursorCodecTest` (round
+trip, tampering, wrong sort or key) run without the database.
 
 Photo tests (`photo/PhotoApiTests`) also start Garage v2.4.1 (`support/TestGarage`, set up through its admin API with
 random secrets) and need the libvips tools on the machine, like the CI. The images are generated by the tests
