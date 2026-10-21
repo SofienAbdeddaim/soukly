@@ -1,7 +1,4 @@
 {
-  "coming-soon": {
-    "text": "Posting and managing your listings are coming here soon."
-  },
   "steps": {
     "category": "Category",
     "photos": "Photos",
@@ -116,6 +113,78 @@
       "invalid-value": "This value is not valid.",
       "unknown": "This field does not exist in this category."
     },
-    "unexpected": "This value was not accepted."
+    "unexpected": "This value was not accepted.",
+    "price-mode": {
+      "required": "Choose a price or \"On quote\".",
+      "not-allowed": "\"On quote\" is not possible in this category."
+    },
+    "price": {
+      "required": "Enter a price.",
+      "invalid": "Enter a whole number of dinars.",
+      "out-of-range": "The price must be between {{ min }} and {{ max }} dinars.",
+      "not-allowed": "A listing \"on quote\" has no price."
+    },
+    "governorate": {
+      "required": "Choose a governorate.",
+      "unknown": "This governorate does not exist."
+    },
+    "delegation": {
+      "unknown": "This delegation does not exist.",
+      "not-in-governorate": "This delegation is not in the chosen governorate."
+    }
+  },
+  "price-location": {
+    "title": "Your price and place",
+    "mode": "Pricing",
+    "fixed": "Price",
+    "on-quote": "On quote",
+    "price": "Price",
+    "price-hint": "In dinars, without millimes",
+    "negotiable": "Negotiable price",
+    "place": "Place",
+    "governorate": "Governorate",
+    "delegation": "Delegation",
+    "choose-governorate": "Choose a governorate",
+    "choose-delegation": "Choose a delegation",
+    "load-error": "The governorates could not be loaded.",
+    "delegations-error": "The delegations could not be loaded. You can continue without one."
+  },
+  "preview": {
+    "title": "Check your listing",
+    "missing": "Still missing:",
+    "fields": {
+      "categoryCode": "Category",
+      "photos": "At least one photo",
+      "title": "Title",
+      "description": "Description",
+      "priceMode": "Price or \"On quote\"",
+      "price": "Price",
+      "governorateCode": "Governorate",
+      "attribute": "A field of the details"
+    },
+    "error": "The listing could not be published. Check your connection and try again.",
+    "photo-count": "1 / {{ count }}",
+    "no-title": "Untitled",
+    "on-quote": "On quote",
+    "negotiable": "negotiable",
+    "yes": "Yes",
+    "no": "No",
+    "edit-photos": "Edit the photos",
+    "edit-details": "Edit the details",
+    "edit-price-location": "Edit the price and place",
+    "online": "Online for 60 days",
+    "reminder": "Reminder 3 days before",
+    "rules-before": "By publishing, you confirm that your listing follows the",
+    "rules-link": "publishing rules",
+    "rules-after": ".",
+    "edit": "Edit",
+    "publish": "Publish",
+    "place": "{{ delegation }}, {{ governorate }}"
+  },
+  "done": {
+    "title": "Your listing is online",
+    "text": "It stays visible for 60 days. We will remind you 3 days before the end.",
+    "view": "See the listing",
+    "another": "Post another listing"
   }
 }

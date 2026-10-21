@@ -37,7 +37,7 @@ describe('App (ui-showcase)', () => {
     const { element } = await setup();
     expect(element.querySelector('h1')?.textContent).toContain('Soukly');
     expect(element.querySelectorAll('[ui-button]').length).toBeGreaterThan(8);
-    expect(element.querySelectorAll('ui-field').length).toBe(6);
+    expect(element.querySelectorAll('ui-field').length).toBe(7);
     expect(element.querySelectorAll('ui-checkbox').length).toBe(2);
     expect(element.querySelectorAll('ui-alert').length).toBe(3);
     expect(element.querySelectorAll('ui-listing-card').length).toBe(3);

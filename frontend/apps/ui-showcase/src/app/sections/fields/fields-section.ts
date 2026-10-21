@@ -6,6 +6,7 @@ import {
   UiField,
   UiFieldControl,
   UiFieldPrefix,
+  UiFieldUnit,
   UiFieldSuffix,
 } from '@soukly/ui';
 import { ShowcaseLocale } from '../../core/showcase-locale';
@@ -23,6 +24,7 @@ import { ShowcaseSection } from '../../layout/showcase-section/showcase-section'
     UiField,
     UiFieldControl,
     UiFieldPrefix,
+    UiFieldUnit,
     UiFieldSuffix,
   ],
   templateUrl: './fields-section.html',

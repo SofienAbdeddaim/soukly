@@ -1,4 +1,10 @@
-import { formatLocalDate, formatPrice, formatRelativeTime } from './format';
+import {
+  currencySymbol,
+  formatLocalDate,
+  formatNumber,
+  formatPrice,
+  formatRelativeTime,
+} from './format';
 
 /** Intl puts direction marks (U+200E, U+200F) and non-breaking spaces in its output. */
 function plain(text: string): string {
@@ -17,6 +23,18 @@ describe('formats', () => {
       expect(plain(formatPrice(180, 'fr-TN'))).toBe('180 DT');
       expect(plain(formatPrice(0, 'en-TN'))).toBe('TND 0');
     });
+  });
+
+  it('gives the symbol of the dinar for a price field', () => {
+    expect(currencySymbol('fr-TN')).toBe('DT');
+    expect(currencySymbol('ar-TN')).toBe('د.ت.');
+    expect(currencySymbol('en-TN')).toBe('TND');
+  });
+
+  it('groups the thousands of a number in the language', () => {
+    expect(plain(formatNumber(32000, 'fr-TN'))).toBe('32 000');
+    expect(plain(formatNumber(32000, 'ar-TN'))).toBe('32.000');
+    expect(plain(formatNumber(32000, 'en-TN'))).toBe('32,000');
   });
 
   it('writes digits in Latin script in Arabic too', () => {

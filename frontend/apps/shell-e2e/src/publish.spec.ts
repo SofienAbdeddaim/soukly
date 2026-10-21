@@ -3,9 +3,11 @@ import { expectNoSeriousA11yViolations } from './support/axe';
 import { fakeAccountApi } from './support/fake-api';
 import { draft, fakeListingApi, fakePhoto, LISTING_ID } from './support/fake-listing-api';
 
+const OTHER_ID = '1b9d6c3e-6a43-4c5e-9f0e-2d7a1b8c4e52';
+
 /**
- * Publish form of ANN-04, steps 1 to 3, with a faked listing-service (support/fake-listing-api.ts)
- * and a signed-in member. Steps 4 and 5 come with the second part of the ticket.
+ * Publish form of ANN-04, from the category to the confirmation, with a faked listing-service
+ * (support/fake-listing-api.ts) and a signed-in member.
  */
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -116,6 +118,91 @@ test.describe('publish form', () => {
     // The back button of the browser goes back to the previous step.
     await page.goBack();
     await expect(page).toHaveURL(`/fr/publish/${LISTING_ID}/details`);
+    await page.goForward();
+    await expect(step(page, 'Prix et lieu')).toBeVisible();
+
+    await page.getByRole('textbox', { name: 'Prix', exact: true }).fill('32000');
+    await page.getByLabel('Prix négociable').check();
+    await page.getByLabel('Gouvernorat').selectOption({ label: 'Sfax' });
+    await expect(page.getByLabel('Délégation')).toContainText('Sakiet Ezzit');
+    await expectNoSeriousA11yViolations(page);
+    await page.getByTestId('continue').click();
+
+    await expect(page).toHaveURL(`/fr/publish/${LISTING_ID}/preview`);
+    await expect(step(page, 'Aperçu')).toBeVisible();
+    const card = page.getByTestId('preview-card');
+    await expect(card).toContainText('Peugeot 208 diesel, première main');
+    await expect(card).toContainText(/32\s000\sDT/u);
+    await expect(card).toContainText('négociable');
+    await expect(card).toContainText('Sfax');
+    await expect(page.getByTestId('missing-fields')).toHaveCount(0);
+    await expectNoSeriousA11yViolations(page);
+    await page.getByTestId('publish').click();
+
+    await expect(page).toHaveURL(`/fr/publish/${LISTING_ID}/done`);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Votre annonce est en ligne');
+    await expect(page.getByRole('link', { name: "Voir l'annonce" })).toHaveAttribute(
+      'href',
+      `/fr/listings/${LISTING_ID}`,
+    );
+    expect(api.listings.get(LISTING_ID)?.status).toBe('PUBLISHED');
+    expect(api.listings.get(LISTING_ID)).toMatchObject({
+      priceMode: 'FIXED',
+      price: 32000,
+      negotiable: true,
+      governorateCode: 'sfax',
+    });
+    await expectNoSeriousA11yViolations(page);
+  });
+
+  test('"on quote": a service can choose it, a piece of furniture cannot', async ({ page }) => {
+    await fakeAccountApi(page, { signedIn: true });
+    const api = await fakeListingApi(page, [
+      draft({ categoryCode: 'services.home-repair' }),
+      draft({ id: OTHER_ID, categoryCode: 'home.furniture' }),
+    ]);
+
+    await page.goto(`/fr/publish/${LISTING_ID}/price-location`);
+    await page.getByRole('button', { name: 'Sur devis' }).click();
+    await expect(page.getByRole('textbox', { name: 'Prix', exact: true })).toHaveCount(0);
+    await expect.poll(() => api.listings.get(LISTING_ID)?.priceMode).toBe('ON_QUOTE');
+
+    await page.goto(`/fr/publish/${OTHER_ID}/price-location`);
+    await expect(page.getByRole('textbox', { name: 'Prix', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sur devis' })).toHaveCount(0);
+  });
+
+  test('incomplete preview: the governorate is missing, with a link to step 4', async ({
+    page,
+  }) => {
+    await fakeAccountApi(page, { signedIn: true });
+    await fakeListingApi(page, [
+      draft({
+        title: 'Peugeot 208 diesel',
+        description: 'Très bon état, entretien suivi, carnet à jour.',
+        priceMode: 'FIXED',
+        price: 32000,
+        attributes: {
+          brand: 'Peugeot',
+          year: 2019,
+          'mileage-km': 62000,
+          fuel: 'diesel',
+          gearbox: 'manual',
+        },
+        photos: [fakePhoto('a', 0)],
+      }),
+    ]);
+
+    await page.goto(`/fr/publish/${LISTING_ID}/preview`);
+    const missing = page.getByTestId('missing-fields');
+    await expect(missing.getByRole('link', { name: 'Gouvernorat' })).toHaveAttribute(
+      'href',
+      `/fr/publish/${LISTING_ID}/price-location`,
+    );
+    await expect(page.getByTestId('publish')).toBeDisabled();
+
+    await missing.getByRole('link', { name: 'Gouvernorat' }).click();
+    await expect(step(page, 'Prix et lieu')).toBeVisible();
   });
 
   test('resume: the photos and the category are kept, the details are empty', async ({ page }) => {
@@ -219,6 +306,22 @@ test.describe('publish form', () => {
       await expect(page.getByText('الخطوة 3 من 5')).toBeVisible();
       await expect(page.getByLabel('سنة الصنع')).toHaveCSS('direction', 'ltr');
       await expect(page.getByLabel('الطراز')).toBeVisible();
+      await expectNoSeriousA11yViolations(page);
+    });
+
+    test('the price is typed left to right, before "د.ت."', async ({ page }) => {
+      await fakeAccountApi(page, { signedIn: true });
+      await fakeListingApi(page, [draft({ photos: [fakePhoto('a', 0)] })]);
+      await page.goto(`/ar/publish/${LISTING_ID}/price-location`);
+
+      await expect(step(page, 'السعر والمكان')).toBeVisible();
+      const price = page.getByRole('textbox', { name: 'السعر', exact: true });
+      await expect(price).toHaveCSS('direction', 'ltr');
+      await expect(page.locator('.ui-field__unit')).toHaveText('د.ت.');
+      await price.fill('32000');
+      await price.blur();
+      await expect(price).toHaveValue('32.000');
+      await page.getByLabel('الولاية').selectOption({ label: 'صفاقس' });
       await expectNoSeriousA11yViolations(page);
     });
   });

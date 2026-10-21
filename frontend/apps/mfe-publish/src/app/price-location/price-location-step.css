@@ -1,0 +1,10 @@
+.place {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.place__subtitle {
+  margin-block-start: 8px;
+  font-size: 1.125rem;
+}

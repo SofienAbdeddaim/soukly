@@ -30,6 +30,8 @@ export interface ShowcaseLabels {
   priceLabel: string;
   priceError: string;
   phoneLabel: string;
+  amountLabel: string;
+  currency: string;
   phoneHint: string;
   passwordLabel: string;
   showPassword: string;
@@ -104,6 +106,8 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     priceLabel: 'Prix (DT)',
     priceError: 'Indiquez un prix en dinars, sans millimes.',
     phoneLabel: 'Téléphone',
+    amountLabel: 'Montant',
+    currency: 'DT',
     phoneHint: '8 chiffres, après l’indicatif +216.',
     passwordLabel: 'Mot de passe',
     showPassword: 'Afficher le mot de passe',
@@ -193,6 +197,8 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     priceLabel: 'السعر (د.ت)',
     priceError: 'أدخل السعر بالدينار، دون مليمات.',
     phoneLabel: 'الهاتف',
+    amountLabel: 'المبلغ',
+    currency: 'د.ت.',
     phoneHint: '8 أرقام بعد المفتاح ‎+216.',
     passwordLabel: 'كلمة المرور',
     showPassword: 'إظهار كلمة المرور',

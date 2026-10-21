@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { UiField, UiFieldControl, UiFieldPrefix, UiFieldSuffix } from './field';
+import { UiField, UiFieldControl, UiFieldPrefix, UiFieldSuffix, UiFieldUnit } from './field';
 
 @Component({
   imports: [UiField, UiFieldControl],
@@ -97,6 +97,19 @@ describe('UiField', () => {
     expect(children[0].classList).toContain('ui-field__prefix');
     expect(children[2].classList).toContain('ui-field__suffix');
   });
+
+  it('projects a unit right after the control, in the direction of the page', async () => {
+    const fixture = TestBed.createComponent(UnitHost);
+    await fixture.whenStable();
+    const group = (fixture.nativeElement as HTMLElement).querySelector(
+      '.ui-field__group',
+    ) as HTMLElement;
+    const children = Array.from(group.children);
+
+    expect(group.hasAttribute('dir')).toBe(false);
+    expect(children.map((child) => child.tagName)).toEqual(['INPUT', 'SPAN']);
+    expect(children[1].classList).toContain('ui-field__unit');
+  });
 });
 
 @Component({
@@ -110,3 +123,14 @@ describe('UiField', () => {
   `,
 })
 class AddonsHost {}
+
+@Component({
+  imports: [UiField, UiFieldControl, UiFieldUnit],
+  template: `
+    <ui-field label="Prix">
+      <span uiFieldUnit>DT</span>
+      <input uiControl type="text" inputmode="numeric" dir="ltr" />
+    </ui-field>
+  `,
+})
+class UnitHost {}

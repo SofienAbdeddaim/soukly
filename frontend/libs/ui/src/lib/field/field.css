@@ -74,7 +74,10 @@
   border-width: 2px;
 }
 
-/* Prefix and suffix: an addon glued before the control (+216) and an icon button inside its end. */
+/*
+ * Addons: a prefix glued before the control (+216), a unit glued after it (DT) and an icon button
+ * inside its end.
+ */
 .ui-field .ui-field__group {
   position: relative;
   display: flex;
@@ -104,6 +107,31 @@
   border-color: var(--color-danger);
   border-block-width: 2px;
   border-inline-start-width: 2px;
+}
+
+.ui-field .ui-field__unit {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding-inline: 12px;
+  border: 1px solid var(--color-border-strong);
+  border-inline-start: 0;
+  border-start-end-radius: var(--radius-md);
+  border-end-end-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ui-field .ui-control:has(+ .ui-field__unit) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.ui-field--invalid .ui-field__unit {
+  border-color: var(--color-danger);
+  border-block-width: 2px;
+  border-inline-end-width: 2px;
 }
 
 .ui-field .ui-field__group:has(.ui-field__suffix) .ui-control {

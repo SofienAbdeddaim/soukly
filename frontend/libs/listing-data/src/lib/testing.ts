@@ -1,4 +1,4 @@
-import { AttributeDefinition, CategoryFamily, Listing } from './models';
+import { AttributeDefinition, CategoryFamily, Delegation, Governorate, Listing } from './models';
 
 /**
  * Fixtures for unit tests, copied from the referentials of listing-service (CAT-01): two families
@@ -189,5 +189,21 @@ export const APARTMENT_ATTRIBUTES: AttributeDefinition[] = [
     required: false,
     filterable: true,
     label: { fr: 'Meublé', ar: 'مفروش', en: 'Furnished' },
+  },
+];
+
+/** Three of the 24 governorates, in the order of the referentials. */
+export const TEST_GOVERNORATES: Governorate[] = [
+  { code: 'tunis', label: { fr: 'Tunis', ar: 'تونس', en: 'Tunis' } },
+  { code: 'ariana', label: { fr: 'Ariana', ar: 'أريانة', en: 'Ariana' } },
+  { code: 'sfax', label: { fr: 'Sfax', ar: 'صفاقس', en: 'Sfax' } },
+];
+
+/** Delegations of Sfax (INS 2012). */
+export const SFAX_DELEGATIONS: Delegation[] = [
+  { code: 'sfax.sfax-ville', label: { fr: 'Sfax Ville', ar: 'صفاقس المدينة', en: 'Sfax Ville' } },
+  {
+    code: 'sfax.sakiet-ezzit',
+    label: { fr: 'Sakiet Ezzit', ar: 'ساقية الزيت', en: 'Sakiet Ezzit' },
   },
 ];

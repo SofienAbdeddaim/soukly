@@ -23,6 +23,10 @@
     <span uiFieldPrefix aria-hidden="true">+216</span>
     <input uiControl type="tel" inputmode="numeric" value="20 123 456" />
   </ui-field>
+  <ui-field [label]="t().amountLabel">
+    <input uiControl type="text" inputmode="numeric" dir="ltr" value="32 000" />
+    <span uiFieldUnit>{{ t().currency }}</span>
+  </ui-field>
   <ui-field [label]="t().passwordLabel">
     <input uiControl [type]="showPassword() ? 'text' : 'password'" value="motdepasse" />
     <button

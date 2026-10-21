@@ -3,7 +3,8 @@ import { problem } from './fake-api';
 
 /**
  * Fakes listing-service in the browser (the CI has no back end): referentials (a part of CAT-01),
- * drafts with their versions (ANN-01), photos with presigned uploads (ANN-02). The storage of
+ * drafts with their versions (ANN-01), photos with presigned uploads (ANN-02), publication
+ * (ANN-03). The storage of
  * the uploads is `http://storage.test`, the photos are served from `http://photos.test`.
  * Register it after `fakeAccountApi`: what it does not answer falls back to the account API.
  */
@@ -56,6 +57,19 @@ const FAMILIES = [
     ],
   })),
 ];
+
+const GOVERNORATES = [
+  { code: 'tunis', label: l('Tunis', 'تونس', 'Tunis') },
+  { code: 'ariana', label: l('Ariana', 'أريانة', 'Ariana') },
+  { code: 'sfax', label: l('Sfax', 'صفاقس', 'Sfax') },
+];
+
+const DELEGATIONS: Record<string, { code: string; label: Labels }[]> = {
+  sfax: [
+    { code: 'sfax.sfax-ville', label: l('Sfax Ville', 'صفاقس المدينة', 'Sfax Ville') },
+    { code: 'sfax.sakiet-ezzit', label: l('Sakiet Ezzit', 'ساقية الزيت', 'Sakiet Ezzit') },
+  ],
+};
 
 const enumValues = (...values: [string, Labels][]) =>
   values.map(([code, label]) => ({ code, label }));
@@ -186,6 +200,7 @@ export interface FakeListing {
   delegationCode: string | null;
   attributes: Record<string, unknown>;
   photos: FakePhoto[];
+  status?: 'DRAFT' | 'PUBLISHED';
 }
 
 export interface FakeListingApi {
@@ -235,6 +250,7 @@ function view(listing: FakeListing, warnings: string[] = []) {
   if (!listing.title) missing.push('title');
   if (!listing.description) missing.push('description');
   if (!listing.priceMode) missing.push('priceMode');
+  else if (listing.priceMode === 'FIXED' && listing.price === null) missing.push('price');
   if (!listing.governorateCode) missing.push('governorateCode');
   for (const attribute of ATTRIBUTES[listing.categoryCode] ?? []) {
     if (attribute['required'] && !(String(attribute['code']) in listing.attributes)) {
@@ -244,14 +260,14 @@ function view(listing: FakeListing, warnings: string[] = []) {
   const family = listing.categoryCode.split('.')[0];
   return {
     ...listing,
-    status: 'DRAFT',
+    status: listing.status ?? 'DRAFT',
     kind: family === 'services' || family === 'jobs' ? 'SERVICE' : 'SALE',
     missingFields: missing,
     warnings,
     createdAt: '2026-10-21T08:00:00Z',
     updatedAt: '2026-10-21T08:00:00Z',
-    publishedAt: null,
-    expiresAt: null,
+    publishedAt: listing.status === 'PUBLISHED' ? '2026-10-21T09:00:00Z' : null,
+    expiresAt: listing.status === 'PUBLISHED' ? '2026-12-20T09:00:00Z' : null,
   };
 }
 
@@ -317,6 +333,13 @@ export async function fakeListingApi(
     if (path === '/api/categories') {
       return json(route, 200, FAMILIES);
     }
+    if (path === '/api/locations/governorates') {
+      return json(route, 200, GOVERNORATES);
+    }
+    const delegations = path.match(/^\/api\/locations\/governorates\/([^/]+)\/delegations$/);
+    if (delegations) {
+      return json(route, 200, DELEGATIONS[decodeURIComponent(delegations[1])] ?? []);
+    }
     const attributes = path.match(/^\/api\/categories\/([^/]+)\/attributes$/);
     if (attributes) {
       return json(route, 200, ATTRIBUTES[decodeURIComponent(attributes[1])] ?? []);
@@ -368,6 +391,14 @@ export async function fakeListingApi(
       }
       listing.version++;
       return answer(route, listing, 200, warnings);
+    }
+    if (rest === '/publish' && method === 'POST') {
+      const { missingFields } = view(listing);
+      if (missingFields.length) {
+        return json(route, 422, { ...problem('listing-incomplete', 422), missingFields });
+      }
+      listing.status = 'PUBLISHED';
+      return answer(route, listing);
     }
     if (rest === '/photos' && method === 'POST') {
       const photoId = `photo-${nextPhoto++}`;

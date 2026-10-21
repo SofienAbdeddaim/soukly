@@ -76,6 +76,8 @@ export const routes: Routes = [
 | Pipe / function                       | Rule                                                               | `fr-TN`        | `ar-TN`      | `en-TN`        |
 | ------------------------------------- | ------------------------------------------------------------------ | -------------- | ------------ | -------------- |
 | `price` / `formatPrice`               | whole dinars (TND, no millimes), no decimals                       | `1 250 DT`     | `1.250 د.ت.` | `TND 1,250`    |
+| `currencySymbol`                      | symbol of the dinar, for the unit of a price field                 | `DT`           | `د.ت.`       | `TND`          |
+| `formatNumber`                        | whole number with the thousands separators of the language         | `32 000`       | `32.000`     | `32,000`       |
 | `localDate` / `formatLocalDate`       | `dateStyle: 'medium'`                                              | `12 oct. 2026` | `12/10/2026` | `Oct 12, 2026` |
 | `relativeTime` / `formatRelativeTime` | `Intl.RelativeTimeFormat`, `numeric: 'auto'`, largest fitting unit | `hier`         | `أمس`        | `yesterday`    |
 
