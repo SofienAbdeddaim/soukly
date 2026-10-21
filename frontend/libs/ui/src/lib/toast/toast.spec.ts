@@ -57,6 +57,24 @@ describe('ToastService', () => {
     expect(region('assertive')?.textContent).not.toContain('Erreur');
   });
 
+  it('runs the action of a toast, then closes it', async () => {
+    const run = vi.fn();
+    service.show({
+      message: 'Annonce désactivée.',
+      closeLabel: 'Fermer',
+      action: { label: 'Annuler', run },
+    });
+    vi.advanceTimersByTime(UI_TOAST_REGION_DELAY);
+    render();
+    const action = [...(region('polite')?.querySelectorAll('button') ?? [])].find(
+      (button) => button.textContent?.trim() === 'Annuler',
+    ) as HTMLButtonElement;
+    action.click();
+    render();
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(service.toasts()).toEqual([]);
+  });
+
   it('closes a toast on its own after 5 seconds', async () => {
     service.show({ message: 'Info', closeLabel: 'Fermer' });
     vi.advanceTimersByTime(UI_TOAST_REGION_DELAY);

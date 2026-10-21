@@ -1,0 +1,109 @@
+<div class="edit">
+  <header class="edit__header">
+    <a
+      class="edit__back"
+      [routerLink]="'/account/listings' | localePath"
+      [queryParams]="{ tab: listTab() }"
+      [attr.aria-label]="'publish.edit.back' | transloco"
+      data-testid="edit-back"
+    >
+      <svg lucideArrowLeft class="ui-flip-rtl" [size]="22" aria-hidden="true"></svg>
+    </a>
+    <h1 class="edit__title" tabindex="-1">{{ 'publish.edit.title' | transloco }}</h1>
+  </header>
+
+  @switch (store.loadState()) { @case ('ready') { @if (status() !== 'DRAFT') {
+  <div class="edit__content">
+    <ui-alert
+      [type]="status() === 'PUBLISHED' ? 'success' : 'info'"
+      [live]="false"
+      data-testid="edit-banner"
+    >
+      {{ 'publish.edit.banner.' + (status() ?? 'PUBLISHED') | transloco }}
+    </ui-alert>
+
+    @if (store.saveState() === 'conflict') {
+    <ui-alert type="error" data-testid="conflict">
+      <p class="edit__alert-text">{{ 'publish.conflict.message' | transloco }}</p>
+      <button ui-button variant="secondary" type="button" (click)="reload()">
+        {{ 'publish.conflict.reload' | transloco }}
+      </button>
+    </ui-alert>
+    } @if (category()) {
+    <div class="edit__category" data-testid="edit-category">
+      <p class="edit__label">{{ 'publish.edit.category' | transloco }}</p>
+      <p class="edit__category-value">
+        {{ category() }}
+        <span class="edit__muted">{{ 'publish.edit.category-locked' | transloco }}</span>
+      </p>
+    </div>
+    }
+
+    <section class="edit__section">
+      <app-photos-section />
+    </section>
+    <section class="edit__section">
+      <app-details-section (submitted)="save()" />
+    </section>
+    <section class="edit__section">
+      <app-price-location-section (submitted)="save()" />
+    </section>
+  </div>
+
+  <footer class="edit__footer">
+    @switch (store.saveState()) { @case ('offline') {
+    <p class="edit__status" role="status" data-testid="edit-status">
+      {{ 'publish.edit.offline' | transloco }}
+    </p>
+    } @case ('invalid') {
+    <p class="edit__status" role="status" data-testid="edit-status">
+      {{ 'publish.save.invalid' | transloco }}
+    </p>
+    } @case ('error') {
+    <p class="edit__status" role="status" data-testid="edit-status">
+      {{ 'publish.edit.error' | transloco }}
+    </p>
+    } }
+    <div class="edit__actions">
+      <button ui-button variant="ghost" type="button" data-testid="edit-cancel" (click)="cancel()">
+        {{ 'publish.edit.cancel' | transloco }}
+      </button>
+      <button
+        ui-button
+        type="button"
+        class="edit__primary"
+        data-testid="edit-save"
+        [loading]="saving()"
+        [disabled]="store.saveState() === 'conflict'"
+        (click)="save()"
+      >
+        {{ 'publish.edit.save' | transloco }}
+      </button>
+    </div>
+  </footer>
+  } } @case ('loading') {
+  <div class="edit__content" aria-busy="true" data-testid="edit-loading">
+    <ui-skeleton variant="block" blockSize="3rem" />
+    <ui-skeleton variant="block" blockSize="88px" />
+    <ui-skeleton variant="line" inlineSize="60%" blockSize="2rem" />
+    <ui-skeleton variant="block" blockSize="12rem" />
+  </div>
+  } @default {
+  <div class="edit__content" data-testid="edit-error">
+    <ui-alert type="error">
+      {{ (store.loadState() === 'not-found' ? 'publish.edit.not-found' : 'publish.edit.load-error')
+      | transloco }}
+    </ui-alert>
+    <div class="edit__retry">
+      @if (store.loadState() === 'error') {
+      <button ui-button variant="secondary" type="button" (click)="retry()">
+        {{ 'publish.actions.retry' | transloco }}
+      </button>
+      }
+      <a ui-button [routerLink]="'/account/listings' | localePath">
+        {{ 'publish.edit.my-listings' | transloco }}
+      </a>
+    </div>
+  </div>
+  } }
+</div>

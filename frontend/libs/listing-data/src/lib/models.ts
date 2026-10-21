@@ -56,7 +56,11 @@ export interface Delegation {
   label: Labels;
 }
 
-export type ListingStatus = 'DRAFT' | 'PUBLISHED' | 'EXPIRED';
+/**
+ * Life cycle of a listing (ANN-03, ANN-05): `INACTIVE` when its seller deactivated it, `DELETED`
+ * never reaches the front end (answered `404` or `410`).
+ */
+export type ListingStatus = 'DRAFT' | 'PUBLISHED' | 'EXPIRED' | 'INACTIVE' | 'DELETED';
 export type ListingKind = 'SALE' | 'SERVICE';
 export type PriceMode = 'FIXED' | 'ON_QUOTE';
 export type AttributeValue = string | number | boolean;
@@ -146,6 +150,42 @@ export interface ListingPatch {
   governorateCode?: string | null;
   delegationCode?: string | null;
   attributes?: Record<string, AttributeValue | null> | null;
+}
+
+/** Statuses listed on "My listings" (ANN-05), one tab each, in the order of the tabs. */
+export const OWN_LISTING_STATUSES = ['PUBLISHED', 'DRAFT', 'EXPIRED', 'INACTIVE'] as const;
+export type OwnListingStatus = (typeof OWN_LISTING_STATUSES)[number];
+
+/** A listing on "My listings" of its owner (`GET /listings/mine`, ANN-05). */
+export interface OwnListingCard {
+  id: string;
+  status: OwnListingStatus;
+  /** Null for a draft whose title is not filled in yet. */
+  title: string | null;
+  kind: ListingKind;
+  categoryCode: string;
+  priceMode: PriceMode | null;
+  /** Whole dinars; null on quote or not filled in yet. */
+  price: number | null;
+  currency: string;
+  /** 400 px WebP of the cover, null without photo. */
+  coverThumbnailUrl: string | null;
+  updatedAt: string;
+  publishedAt: string | null;
+  /** End of visibility; the past one of an expired listing; null for a draft. */
+  expiresAt: string | null;
+  /** Drafts only: required fields still empty, in form order. */
+  missingFields?: string[];
+  missingFieldsCount?: number;
+  /** Members who were shown the phone number on this listing (CATA-03). */
+  contactRevealsCount: number;
+}
+
+/** Body of `GET /listings/mine`: `counts` on the first page only, `nextCursor` absent on the last. */
+export interface OwnListingsPage {
+  items: OwnListingCard[];
+  nextCursor?: string;
+  counts?: Record<OwnListingStatus, number>;
 }
 
 /** A listing with the `ETag` of its version, to send back in `If-Match`. */

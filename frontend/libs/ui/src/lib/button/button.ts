@@ -8,7 +8,7 @@ import {
   input,
 } from '@angular/core';
 
-export type UiButtonVariant = 'primary' | 'secondary' | 'ghost';
+export type UiButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type UiButtonSize = 'md' | 'lg';
 
 /**
@@ -26,6 +26,7 @@ export type UiButtonSize = 'md' | 'lg';
     '[class.ui-button--primary]': "variant() === 'primary'",
     '[class.ui-button--secondary]': "variant() === 'secondary'",
     '[class.ui-button--ghost]': "variant() === 'ghost'",
+    '[class.ui-button--danger]': "variant() === 'danger'",
     '[class.ui-button--lg]': "size() === 'lg'",
     '[class.ui-button--loading]': 'loading()',
     '[attr.disabled]': "isButton && disabled() ? '' : null",

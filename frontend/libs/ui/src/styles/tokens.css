@@ -21,6 +21,7 @@
   --soukly-cream-200: #f0e3cc;
   --soukly-white: #ffffff;
   --soukly-saffron-400: #f2b33d;
+  --soukly-saffron-100: #fce8b8;
   --soukly-terracotta-700: #b4441f;
   --soukly-terracotta-800: #8e3416;
   --soukly-terracotta-500: #e0602f;
@@ -53,6 +54,7 @@
   --color-danger-surface: var(--soukly-red-50);
   --color-success: var(--soukly-green-700);
   --color-success-surface: var(--soukly-green-50);
+  --color-warning-surface: var(--soukly-saffron-100);
 
   --font-display: 'Lalezar', 'Rubik', system-ui, sans-serif;
   --font-body: 'Rubik', system-ui, sans-serif;

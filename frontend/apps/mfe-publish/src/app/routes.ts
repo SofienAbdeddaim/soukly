@@ -7,6 +7,8 @@ import { DetailsStep } from './details/details-step';
 import { DraftPage } from './draft/draft-page';
 import { ResumeStep } from './draft/resume-step';
 import { DonePage } from './done/done-page';
+import { EditPage } from './edit/edit-page';
+import { confirmLeaveGuard } from './edit/leave-guard';
 import { PhotosStep } from './photos/photos-step';
 import { PreviewStep } from './preview/preview-step';
 import { PriceLocationStep } from './price-location/price-location-step';
@@ -20,7 +22,9 @@ import { PriceLocationStep } from './price-location/price-location-step';
  * - `new`: step 1 without a draft; the draft is created when the subcategory is chosen;
  * - `{id}`: the first incomplete step of the draft (resumed from "My listings", ANN-05);
  * - `{id}/{step}`: a step of the draft, read again from the API when the URL is reloaded;
- * - `{id}/done`: confirmation after the publication.
+ * - `{id}/done`: confirmation after the publication;
+ * - `{id}/edit`: edit page of a published, expired or deactivated listing (ANN-05), which asks
+ *   before changes not saved are lost.
  */
 export const routes: Routes = [
   {
@@ -32,6 +36,7 @@ export const routes: Routes = [
       { path: 'new', component: NewListingPage },
       // Before `:id`: once published, the listing is no longer a draft the draft page can read.
       { path: ':id/done', component: DonePage },
+      { path: ':id/edit', component: EditPage, canDeactivate: [confirmLeaveGuard] },
       {
         path: ':id',
         component: DraftPage,

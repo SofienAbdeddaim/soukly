@@ -1,0 +1,141 @@
+/*
+ * Component styles only (no Tailwind utility): the page is rendered inside the shell, whose
+ * stylesheet only knows the classes of the shell. Tokens of libs/ui, logical properties only.
+ */
+:host {
+  display: block;
+}
+
+.edit {
+  display: flex;
+  flex-direction: column;
+  max-inline-size: 640px;
+  min-block-size: 100%;
+  margin-inline: auto;
+}
+
+.edit__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block: 14px;
+  padding-inline: 16px;
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.edit__back {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: var(--control-height);
+  block-size: var(--control-height);
+  margin-inline-start: -10px;
+  border-radius: var(--radius-full);
+  color: var(--color-on-brand);
+}
+
+.edit__back:hover {
+  color: var(--color-accent);
+}
+
+.edit__title {
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  outline: none;
+}
+
+/* Focused when the page opens, so that it is announced: no ring for a heading. */
+.edit__title:focus-visible {
+  box-shadow: none;
+}
+
+.edit__content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 20px;
+  padding-block: 18px 24px;
+  padding-inline: 16px;
+}
+
+.edit__section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.edit__section + .edit__section {
+  padding-block-start: 20px;
+  border-block-start: 1px solid var(--color-border);
+}
+
+.edit__alert-text {
+  margin-block-end: 8px;
+}
+
+.edit__category {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.edit__category-value {
+  padding-block: 10px;
+  padding-inline: 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+}
+
+.edit__muted,
+.edit__status {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.edit__retry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Kept in sight above the mobile bar of the shell (3.5rem and its border, below 768px). */
+.edit__footer {
+  position: sticky;
+  inset-block-end: calc(3.5rem + 1px);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-block: 12px;
+  padding-inline: 16px;
+  border-block-start: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.edit__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.edit__primary {
+  flex: 1 1 auto;
+}
+
+@media (min-width: 768px) {
+  .edit__header {
+    margin-block-start: 24px;
+    border-start-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+  }
+
+  .edit__footer {
+    inset-block-end: 0;
+  }
+}

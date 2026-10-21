@@ -4,6 +4,8 @@ import {
   Delegation,
   Governorate,
   Listing,
+  OwnListingCard,
+  OwnListingStatus,
   PublicListing,
 } from './models';
 
@@ -50,6 +52,34 @@ export function draftListing(overrides: Partial<Listing> = {}): Listing {
     ...overrides,
   };
 }
+
+/** A published car on "My listings" (ANN-05), online until 2026-12-18, its number shown 8 times. */
+export function ownListingCard(overrides: Partial<OwnListingCard> = {}): OwnListingCard {
+  return {
+    id: TEST_ID,
+    status: 'PUBLISHED',
+    title: 'Peugeot 208 diesel, première main',
+    kind: 'SALE',
+    categoryCode: 'vehicles.cars',
+    priceMode: 'FIXED',
+    price: 32000,
+    currency: 'TND',
+    coverThumbnailUrl: 'https://photos.example.test/listings/1/400.webp',
+    updatedAt: '2026-10-19T10:00:00Z',
+    publishedAt: '2026-10-19T10:00:00Z',
+    expiresAt: '2026-12-18T10:00:00Z',
+    contactRevealsCount: 8,
+    ...overrides,
+  };
+}
+
+/** Counts of the tabs of "My listings": 3 online, 1 draft, 1 expired, none deactivated. */
+export const OWN_COUNTS: Record<OwnListingStatus, number> = {
+  PUBLISHED: 3,
+  DRAFT: 1,
+  EXPIRED: 1,
+  INACTIVE: 0,
+};
 
 /** A published car as anyone but its owner reads it (CATA-03), with 4 photos. */
 export function publicListing(overrides: Partial<PublicListing> = {}): PublicListing {

@@ -1,0 +1,112 @@
+/*
+ * Component styles only (no Tailwind utility): the page is rendered inside the shell, whose
+ * stylesheet only knows the classes of the shell. Tokens of libs/ui, logical properties only.
+ */
+:host {
+  display: block;
+}
+
+.listings {
+  display: flex;
+  flex-direction: column;
+  max-inline-size: 720px;
+  margin-inline: auto;
+  padding-block-end: 48px;
+}
+
+.listings__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block: 14px;
+  padding-inline: 16px;
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.listings__back {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: var(--control-height);
+  block-size: var(--control-height);
+  margin-inline-start: -10px;
+  border-radius: var(--radius-full);
+  color: var(--color-on-brand);
+}
+
+.listings__back:hover {
+  color: var(--color-accent);
+}
+
+.listings__title {
+  flex: 1 1 auto;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+.listings__post {
+  flex: none;
+  padding-inline: 14px;
+  border-radius: var(--radius-full);
+}
+
+.listings__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-block: 16px;
+  padding-inline: 16px;
+  outline: none;
+}
+
+.listings__list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listings__note {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.listings__more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.listings__state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.listings__state--empty {
+  align-items: center;
+  padding-block: 32px;
+  text-align: center;
+}
+
+.listings__empty-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+@media (min-width: 768px) {
+  .listings__header {
+    margin-block-start: 24px;
+    border-start-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+  }
+
+  .listings__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

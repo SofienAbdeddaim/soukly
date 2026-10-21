@@ -58,6 +58,16 @@ import { LocalePathPipe, LocaleService } from '@soukly/i18n';
         </a>
       </li>
       <li>
+        <a
+          class="flex min-h-11 items-center rounded-sm px-3 text-text no-underline hover:bg-surface-muted"
+          [routerLink]="'/account/listings' | localePath"
+          data-testid="user-menu-listings"
+          (click)="open.set(false)"
+        >
+          {{ 'header.my-listings' | transloco }}
+        </a>
+      </li>
+      <li>
         <button
           type="button"
           class="flex min-h-11 w-full items-center rounded-sm px-3 text-start text-text hover:bg-surface-muted"

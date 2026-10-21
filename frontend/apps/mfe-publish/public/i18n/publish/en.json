@@ -78,7 +78,8 @@
       "limit": "A listing has 10 photos at most: this photo was not added.",
       "remove": "The photo could not be deleted. Try again.",
       "order": "The order of the photos could not be saved. Try again.",
-      "unexpected": "This photo could not be uploaded."
+      "unexpected": "This photo could not be uploaded.",
+      "last-photo": "A listing online keeps at least one photo: add another one before deleting this one."
     }
   },
   "details": {
@@ -186,5 +187,31 @@
     "text": "It stays visible for 60 days. We will remind you 3 days before the end.",
     "view": "See the listing",
     "another": "Post another listing"
+  },
+  "edit": {
+    "title": "Edit the listing",
+    "back": "Back to my listings",
+    "banner": {
+      "PUBLISHED": "Listing online. Your changes are visible as soon as you save them.",
+      "EXPIRED": "This listing has expired. Your changes are saved; put it back online from My listings.",
+      "INACTIVE": "This listing is deactivated. Your changes are saved; put it back online from My listings."
+    },
+    "category": "Category",
+    "category-locked": "(cannot be changed after publication)",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saved": "Changes saved",
+    "close": "Close",
+    "offline": "Offline: your changes were not saved. Try again.",
+    "error": "Your changes could not be saved. Try again.",
+    "not-found": "This listing cannot be found.",
+    "load-error": "This listing could not be loaded. Check your connection.",
+    "my-listings": "My listings",
+    "leave": {
+      "title": "Leave without saving?",
+      "text": "Your changes will be lost.",
+      "stay": "Keep editing",
+      "confirm": "Leave without saving"
+    }
   }
 }

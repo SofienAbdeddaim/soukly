@@ -21,6 +21,13 @@ export interface UiToastOptions {
   closeLabel: string;
   /** Milliseconds before the toast closes on its own; 0 keeps it open. Default: 5000. */
   duration?: number;
+  /** A button before the close button, for example "Undo"; the toast closes once it is pressed. */
+  action?: UiToastAction;
+}
+
+export interface UiToastAction {
+  label: string;
+  run: () => void;
 }
 
 export interface UiToast {
@@ -28,6 +35,7 @@ export interface UiToast {
   type: UiToastType;
   message: string;
   closeLabel: string;
+  action?: UiToastAction;
 }
 
 export const UI_TOAST_DEFAULT_DURATION = 5000;
@@ -58,6 +66,7 @@ export class ToastService {
       type: options.type ?? 'info',
       message: options.message,
       closeLabel: options.closeLabel,
+      action: options.action,
     };
     const duration = options.duration ?? UI_TOAST_DEFAULT_DURATION;
     const add = () => {
@@ -74,6 +83,13 @@ export class ToastService {
       setTimeout(add, UI_TOAST_REGION_DELAY);
     }
     return toast.id;
+  }
+
+  /** Runs the action of a toast, then closes it. */
+  act(id: number): void {
+    const action = this.items().find((toast) => toast.id === id)?.action;
+    this.dismiss(id);
+    action?.run();
   }
 
   dismiss(id: number): void {
@@ -111,7 +127,7 @@ export class ToastService {
   }
 }
 
-/** One toast: icon, message and close button. Used by the toast region. */
+/** One toast: icon, message, optional action and close button. Used by the toast region. */
 @Component({
   selector: 'ui-toast',
   imports: [LucideCircleAlert, LucideCircleCheck, LucideInfo, LucideX],
