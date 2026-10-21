@@ -8,11 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 
+import org.springframework.test.web.reactive.server.EntityExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec;
 
 import com.soukly.gateway.support.GatewayIntegrationTest;
 
-// These tests use up the login, register and resend budgets of the shared gateway context: a fresh context
+// These tests use up the login, register, resend and search budgets of the shared gateway context: a fresh context
 // afterwards keeps later test classes (RoutingTests registers once) from getting a 429.
 @DirtiesContext
 class RateLimitTests extends GatewayIntegrationTest {
@@ -54,6 +55,31 @@ class RateLimitTests extends GatewayIntegrationTest {
 
         register("203.0.113.99").expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
         assertThat(USER_SERVICE.received()).hasSizeLessThanOrEqualTo(10);
+    }
+
+    @Test
+    void searchIsLimitedToOneHundredTwentyPerMinuteButNotTheReadingOfAListing() {
+        for (int i = 0; i < 120; i++) {
+            search().expectStatus().isOk();
+        }
+        // The bucket refills by 2 per second while the 120 searches run: a few more may pass before the 429
+        int extra = 0;
+        EntityExchangeResult<String> refused = search().expectBody(String.class).returnResult();
+        while (refused.getStatus().is2xxSuccessful()) {
+            extra++;
+            assertThat(extra).isLessThan(10);
+            refused = search().expectBody(String.class).returnResult();
+        }
+
+        assertThat(refused.getStatus()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(refused.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER)).isNotBlank();
+        assertThat(refused.getResponseBody()).contains("urn:soukly:problem:too-many-requests");
+        client.get().uri("/api/listings/42").exchange().expectStatus().isOk();
+        assertThat(LISTING_SERVICE.received()).hasSize(120 + extra + 1);
+    }
+
+    private ResponseSpec search() {
+        return client.get().uri("/api/listings?q=peugeot").exchange();
     }
 
     private ResponseSpec login() {
