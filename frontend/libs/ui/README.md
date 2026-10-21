@@ -1,6 +1,6 @@
 # @soukly/ui
 
-Soukly design system, ambiance A "Warm market" (Marché chaleureux): design tokens as CSS variables, a Tailwind CSS v4 theme that exposes them, self-hosted fonts and 5 standalone Angular components (`OnPush`, signal inputs, `ui-` prefix), usable in LTR (fr, en) and RTL (ar).
+Soukly design system, ambiance A "Warm market" (Marché chaleureux): design tokens as CSS variables, a Tailwind CSS v4 theme that exposes them, self-hosted fonts and 7 standalone Angular components (`OnPush`, signal inputs, `ui-` prefix), usable in LTR (fr, en) and RTL (ar).
 
 It is a library, not a micro frontend. The `ui-showcase` app shows every component in all its states:
 
@@ -24,7 +24,7 @@ pnpm nx lint ui             # ESLint, including the RTL rule
 
 2. `.postcssrc.json` at the root of the app: `{ "plugins": { "@tailwindcss/postcss": {} } }`.
 3. In the app's `eslint.config.mjs`: `import rtlConfig from '../../libs/ui/eslint.rtl.mjs';` then `...rtlConfig` after the base config.
-4. In components: `import { UiButton, UiField, UiFieldControl, UiListingCard, UiSkeleton, ToastService } from '@soukly/ui';`.
+4. In components: `import { UiAlert, UiButton, UiCheckbox, UiCheckboxControl, UiField, UiFieldControl, UiFieldPrefix, UiFieldSuffix, UiListingCard, UiSkeleton, ToastService } from '@soukly/ui';`.
 
 Fonts are referenced with relative `url()` in `fonts.css`: the Angular builder copies them to `media/` with a hash. No network call to a third-party service (fonts, icons, CDN).
 
@@ -52,7 +52,9 @@ Defined once in [`src/styles/tokens.css`](src/styles/tokens.css), on `:root`, on
 | `--color-primary-hover`                  | `#8E3416`                             | hover of the primary button and links                   | `bg-primary-hover`            |
 | `--color-decorative`                     | `#E0602F` light terracotta            | decoration only (dot, icon on indigo), never under text | `bg-decorative`               |
 | `--color-danger`                         | `#A8201A`                             | field errors, error toast                               | `text-danger`                 |
+| `--color-danger-surface`                 | `#FDECEA`                             | background of an error alert                            | `bg-danger-surface`           |
 | `--color-success`                        | `#1B6E45`                             | success toast                                           | `text-success`                |
+| `--color-success-surface`                | `#E8F3EC`                             | background of a success alert                           | `bg-success-surface`          |
 
 Other tokens: `--font-display` (Lalezar, `h1`/`h2` headings), `--font-body` (Rubik 400, 500, 600); `--radius-sm` 6px, `--radius-md` 10px, `--radius-lg` 14px, `--radius-full`; `--shadow-card`, `--shadow-overlay`; `--focus-ring` (double ring: a background-coloured gap then an indigo ring, visible on light backgrounds and on indigo); `--control-height` 44px and `--control-height-lg` 52px. Spacing follows the default Tailwind scale.
 
@@ -80,6 +82,9 @@ Ratios computed with the WCAG 2.x formula on the `tokens.css` values (2026-10-15
 | `danger` on `surface`           | error toast, required asterisk              | 7.28  | OK                |
 | `danger` on `bg`                | field error message                         | 6.89  | OK                |
 | `success` on `surface`          | success toast icon and border               | 6.24  | OK                |
+| `danger` on `danger-surface`    | error alert                                 | 6.36  | OK                |
+| `success` on `success-surface`  | success alert                               | 5.49  | OK                |
+| `accent` on `brand`             | welcome text on indigo (AUTH-03)            | 8.12  | OK                |
 | `border-strong` on `surface`    | field border, `ghost` button (non-text)     | 3.75  | OK (3:1)          |
 | `border-strong` on `bg`         | same on cream                               | 3.55  | OK (3:1)          |
 | `on-brand` on `brand`           | header, footer                              | 14.31 | OK                |
@@ -92,13 +97,15 @@ The disabled button (reduced opacity) is exempt under WCAG (1.4.3, inactive comp
 
 No hard-coded text: every label ("Fermer", "Ajouter aux favoris"…) comes in through an input or an option, translated by the app with Transloco and formatted with the pipes of [`@soukly/i18n`](../i18n/README.md).
 
-| Component                    | Usage                                                                                                                                                                 | Accessibility                                                                                                                                                 |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `UiButton`                   | `<button ui-button variant="primary\|secondary\|ghost" size="md\|lg" [loading] [disabled]>` or `<a ui-button>`; optional icon: `<svg lucidePlus uiButtonIcon></svg>`  | height ≥ 44px, visible focus, `aria-busy` and clicks ignored while loading (the button stays focusable), `aria-disabled` + `tabindex="-1"` on a disabled link |
-| `UiField` + `UiFieldControl` | `<ui-field label="…" hint="…" [error]="…" required><input uiControl /></ui-field>` (also `textarea`, `select`)                                                        | `label for`, `aria-describedby` to the hint and the error, `aria-invalid="true"` while an error is shown                                                      |
-| `UiListingCard`              | `title`, `price` (formatted), `city`, `dateLabel`, `dateTime`, `typeLabel`, `href`, `imageUrl` (or placeholder), `favorite`, `favoriteLabel`, `favoriteToggle` output | `article`, `h3` title (link stretched over the whole card), favourite button with `aria-label` and `aria-pressed`, price isolated in `<bdi>`                  |
-| `UiSkeleton`                 | `variant="line\|block\|card"`, `inlineSize`, `blockSize`                                                                                                              | `aria-hidden="true"` (the loading region carries `aria-busy`), animation stopped under `prefers-reduced-motion`                                               |
-| `ToastService`               | `show({ type: 'info'\|'success'\|'error', message, closeLabel, duration? })` returns an id; `dismiss(id)`                                                             | Angular CDK overlay, `aria-live="polite"` region (`assertive` for `error`), auto-close after 5 s (paused on hover and focus) and a close button               |
+| Component                          | Usage                                                                                                                                                                                                                                                                                                                | Accessibility                                                                                                                                                 |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UiButton`                         | `<button ui-button variant="primary\|secondary\|ghost" size="md\|lg" [loading] [disabled]>` or `<a ui-button>`; optional icon: `<svg lucidePlus uiButtonIcon></svg>`                                                                                                                                                 | height ≥ 44px, visible focus, `aria-busy` and clicks ignored while loading (the button stays focusable), `aria-disabled` + `tabindex="-1"` on a disabled link |
+| `UiField` + `UiFieldControl`       | `<ui-field label="…" hint="…" [error]="…" required><input uiControl /></ui-field>` (also `textarea`, `select`); optional `<span uiFieldPrefix>+216</span>` before the control and `<button uiFieldSuffix aria-label="…">` inside its end; `ltr` keeps the control and its addons left-to-right in RTL (phone, email) | `label for`, `aria-describedby` to the hint and the error, `aria-invalid="true"` while an error is shown                                                      |
+| `UiCheckbox` + `UiCheckboxControl` | `<ui-checkbox [error]="…"><input uiCheckboxControl type="checkbox" /> label, links allowed</ui-checkbox>`                                                                                                                                                                                                            | `label for`, `aria-describedby` to the error and `aria-invalid="true"` while an error is shown, 20px box with the focus ring                                  |
+| `UiAlert`                          | `<ui-alert type="info\|success\|error" [live]>message</ui-alert>`; `focus()`                                                                                                                                                                                                                                         | `role="alert"` for errors, `role="status"` otherwise (none when `live` is false), focusable (`tabindex="-1"`) so a form can move the focus to its message     |
+| `UiListingCard`                    | `title`, `price` (formatted), `city`, `dateLabel`, `dateTime`, `typeLabel`, `href`, `imageUrl` (or placeholder), `favorite`, `favoriteLabel`, `favoriteToggle` output                                                                                                                                                | `article`, `h3` title (link stretched over the whole card), favourite button with `aria-label` and `aria-pressed`, price isolated in `<bdi>`                  |
+| `UiSkeleton`                       | `variant="line\|block\|card"`, `inlineSize`, `blockSize`                                                                                                                                                                                                                                                             | `aria-hidden="true"` (the loading region carries `aria-busy`), animation stopped under `prefers-reduced-motion`                                               |
+| `ToastService`                     | `show({ type: 'info'\|'success'\|'error', message, closeLabel, duration? })` returns an id; `dismiss(id)`                                                                                                                                                                                                            | Angular CDK overlay, `aria-live="polite"` region (`assertive` for `error`), auto-close after 5 s (paused on hover and focus) and a close button               |
 
 The favourite button has no logic: it reflects `favorite` and emits the next state; favourites management is out of V1.
 

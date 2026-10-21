@@ -30,7 +30,9 @@
   --color-on-primary: var(--color-on-primary);
   --color-decorative: var(--color-decorative);
   --color-danger: var(--color-danger);
+  --color-danger-surface: var(--color-danger-surface);
   --color-success: var(--color-success);
+  --color-success-surface: var(--color-success-surface);
   --color-transparent: transparent;
   --color-current: currentcolor;
 

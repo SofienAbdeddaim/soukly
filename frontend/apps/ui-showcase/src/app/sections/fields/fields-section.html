@@ -19,4 +19,32 @@
   <ui-field [label]="t().descriptionLabel">
     <textarea uiControl rows="3"></textarea>
   </ui-field>
+  <ui-field [label]="t().phoneLabel" [hint]="t().phoneHint" ltr>
+    <span uiFieldPrefix aria-hidden="true">+216</span>
+    <input uiControl type="tel" inputmode="numeric" value="20 123 456" />
+  </ui-field>
+  <ui-field [label]="t().passwordLabel">
+    <input uiControl [type]="showPassword() ? 'text' : 'password'" value="motdepasse" />
+    <button
+      uiFieldSuffix
+      type="button"
+      [attr.aria-label]="t().showPassword"
+      [attr.aria-pressed]="showPassword()"
+      (click)="showPassword.set(!showPassword())"
+    >
+      @if (showPassword()) {
+      <svg lucideEyeOff [size]="20" aria-hidden="true"></svg>
+      } @else {
+      <svg lucideEye [size]="20" aria-hidden="true"></svg>
+      }
+    </button>
+  </ui-field>
+  <ui-checkbox>
+    <input uiCheckboxControl type="checkbox" checked />
+    {{ t().termsLabel }}
+  </ui-checkbox>
+  <ui-checkbox [error]="t().termsError">
+    <input uiCheckboxControl type="checkbox" />
+    {{ t().termsLabel }}
+  </ui-checkbox>
 </app-showcase-section>

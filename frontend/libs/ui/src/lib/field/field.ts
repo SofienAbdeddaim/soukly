@@ -23,6 +23,19 @@ let nextFieldId = 0;
  *
  * The field links the label to the control and points `aria-describedby` to the hint and the
  * error; `aria-invalid` is set while an error is shown. All texts come from inputs.
+ *
+ * Optional addons: a prefix glued before the control and an icon button inside its end.
+ *
+ * ```html
+ * <ui-field label="Phone" ltr>
+ *   <span uiFieldPrefix>+216</span>
+ *   <input uiControl type="tel" />
+ * </ui-field>
+ * <ui-field label="Password">
+ *   <input uiControl type="password" />
+ *   <button uiFieldSuffix type="button" aria-label="Show the password">…</button>
+ * </ui-field>
+ * ```
  */
 @Component({
   selector: 'ui-field',
@@ -42,6 +55,8 @@ export class UiField {
   readonly hint = input<string>();
   readonly error = input<string | null>();
   readonly required = input(false, { transform: booleanAttribute });
+  /** Keeps the control and its addons left-to-right in RTL pages (phone numbers, emails). */
+  readonly ltr = input(false, { transform: booleanAttribute });
   /** Id of the control; generated when not set. */
   readonly controlId = input(`ui-field-${nextFieldId++}`);
 
@@ -68,3 +83,11 @@ export class UiField {
 export class UiFieldControl {
   protected readonly field = inject(UiField);
 }
+
+/** Addon shown before the control of a `ui-field`, for example a fixed `+216`. */
+@Directive({ selector: '[uiFieldPrefix]', host: { class: 'ui-field__prefix' } })
+export class UiFieldPrefix {}
+
+/** Icon button inside the end of the control of a `ui-field`; it needs an `aria-label`. */
+@Directive({ selector: 'button[uiFieldSuffix]', host: { class: 'ui-field__suffix' } })
+export class UiFieldSuffix {}

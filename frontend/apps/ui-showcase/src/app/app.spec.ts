@@ -33,11 +33,13 @@ describe('App (ui-showcase)', () => {
     return { fixture, element: fixture.nativeElement as HTMLElement };
   }
 
-  it('shows every component: buttons, fields, listing cards, skeletons and toast triggers', async () => {
+  it('shows every component: buttons, fields, checkboxes, alerts, listing cards, skeletons and toast triggers', async () => {
     const { element } = await setup();
     expect(element.querySelector('h1')?.textContent).toContain('Soukly');
     expect(element.querySelectorAll('[ui-button]').length).toBeGreaterThan(8);
-    expect(element.querySelectorAll('ui-field').length).toBe(4);
+    expect(element.querySelectorAll('ui-field').length).toBe(6);
+    expect(element.querySelectorAll('ui-checkbox').length).toBe(2);
+    expect(element.querySelectorAll('ui-alert').length).toBe(3);
     expect(element.querySelectorAll('ui-listing-card').length).toBe(3);
     expect(element.querySelectorAll('ui-skeleton').length).toBeGreaterThan(1);
     expect(element.querySelector('[aria-invalid=true]')).not.toBeNull();
