@@ -99,6 +99,40 @@ export interface Listing {
   updatedAt: string;
   publishedAt: string | null;
   expiresAt: string | null;
+  /** Public profile of the seller once the listing is not a draft (CATA-03), null for a draft. */
+  seller?: ListingSeller | null;
+}
+
+/** The seller as a listing page shows them (CATA-03): never their phone number or email. */
+export interface ListingSeller {
+  id: string;
+  displayName: string;
+  /** Month of the registration, `2026-03`. */
+  memberSince: string;
+}
+
+/**
+ * A listing as `GET /listings/{id}` answers anyone but its owner (CATA-03): a published listing,
+ * with its seller. The owner gets the full {@link Listing} instead, `seller` included.
+ */
+export interface PublicListing {
+  id: string;
+  status: ListingStatus;
+  kind: ListingKind;
+  categoryCode: string;
+  title: string;
+  description: string;
+  priceMode: PriceMode;
+  /** Whole dinars (TND); null "on quote". */
+  price: number | null;
+  currency: string;
+  negotiable: boolean;
+  governorateCode: string;
+  delegationCode: string | null;
+  attributes: Record<string, AttributeValue>;
+  photos: ListingPhoto[];
+  publishedAt: string;
+  seller: ListingSeller;
 }
 
 /** A JSON Merge Patch (RFC 7396) of a draft: `null` clears a field, an absent one is unchanged. */

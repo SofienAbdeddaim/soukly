@@ -1,0 +1,158 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+  inline-size: 100%;
+  padding-block: 10px 18px;
+  padding-inline: 16px;
+  border-start-start-radius: 18px;
+  border-start-end-radius: 18px;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: var(--shadow-overlay);
+}
+
+@media (min-width: 768px) {
+  :host {
+    border-radius: var(--radius-lg);
+    padding-block: 20px;
+    padding-inline: 20px;
+  }
+
+  .sheet__handle {
+    display: none;
+  }
+}
+
+.sheet__handle {
+  align-self: center;
+  inline-size: 40px;
+  block-size: 4px;
+  border-radius: 2px;
+  background-color: var(--color-border);
+}
+
+.sheet__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sheet__initial {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-brand);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.sheet__who {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.sheet__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.sheet__listing {
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet__close {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.sheet__phone {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.sheet__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.sheet__action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-block-size: 48px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sheet__action--call {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.sheet__action--call:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.sheet__action--whatsapp {
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.sheet__copy {
+  min-block-size: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.sheet__action:focus-visible,
+.sheet__copy:focus-visible,
+.sheet__close:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.sheet__safety {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding-block: 10px;
+  padding-inline: 12px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.sheet__safety svg {
+  flex: 0 0 auto;
+  color: var(--color-success);
+}

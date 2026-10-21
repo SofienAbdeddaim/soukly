@@ -1,0 +1,176 @@
+@switch (store.status()) { @case ('loading') {
+<div class="detail detail--loading" aria-busy="true" data-testid="detail-loading">
+  <span class="ui-visually-hidden" role="status">{{ 'catalog.detail.loading' | transloco }}</span>
+  <div class="detail__layout" aria-hidden="true">
+    <div class="detail__main">
+      <ui-skeleton variant="block" blockSize="270px" />
+      <div class="detail__content">
+        <ui-skeleton variant="line" inlineSize="40%" />
+        <ui-skeleton variant="line" inlineSize="80%" />
+        <ui-skeleton variant="line" inlineSize="60%" />
+        <ui-skeleton variant="block" blockSize="120px" />
+      </div>
+    </div>
+  </div>
+</div>
+} @case ('error') {
+<div class="detail__state" role="alert" data-testid="detail-error">
+  <p class="detail__state-title">{{ 'catalog.errors.network' | transloco }}</p>
+  <button ui-button variant="secondary" type="button" (click)="store.retry()">
+    {{ 'catalog.actions.retry' | transloco }}
+  </button>
+</div>
+} @case ('not-found') {
+<div class="detail__state" data-testid="listing-not-found">
+  <h1 class="detail__state-heading">{{ 'catalog.not-found.title' | transloco }}</h1>
+  <p class="detail__state-text">{{ 'catalog.not-found.text' | transloco }}</p>
+  <a ui-button [routerLink]="homeCommands()">{{ 'catalog.not-found.home' | transloco }}</a>
+</div>
+} @case ('gone') {
+<div class="detail__gone">
+  <app-listing-gone
+    [categoryCode]="store.gone()?.categoryCode ?? null"
+    [governorateCode]="store.gone()?.governorateCode ?? null"
+  />
+</div>
+} @case ('ready') { @if (view(); as view) {
+<article class="detail" data-testid="listing-detail" [attr.aria-labelledby]="'listing-title'">
+  <div class="detail__layout">
+    <div class="detail__main">
+      <div class="detail__media">
+        <app-gallery
+          [photos]="photos()"
+          [title]="view.title"
+          [familyLabel]="view.familyLabel"
+          (opened)="openViewer($event)"
+        />
+        <div class="detail__tools">
+          <button
+            type="button"
+            class="detail__tool"
+            data-testid="back"
+            [attr.aria-label]="'catalog.detail.back' | transloco"
+            (click)="back()"
+          >
+            @if (locale.dir() === 'rtl') {
+            <svg lucideArrowRight [size]="22" aria-hidden="true"></svg>
+            } @else {
+            <svg lucideArrowLeft [size]="22" aria-hidden="true"></svg>
+            }
+          </button>
+          <button
+            type="button"
+            class="detail__tool"
+            data-testid="share"
+            [attr.aria-label]="'catalog.detail.share' | transloco"
+            (click)="share()"
+          >
+            <svg lucideShare2 [size]="20" aria-hidden="true"></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="detail__content">
+        @if (!desktop()) {
+        <ng-container [ngTemplateOutlet]="summary" />
+        } @if (view.facts.length) {
+        <section class="detail__section" aria-labelledby="listing-facts">
+          <h2 id="listing-facts" class="detail__heading">
+            {{ 'catalog.detail.facts' | transloco }}
+          </h2>
+          <dl class="detail__facts" data-testid="facts">
+            @for (fact of view.facts; track fact.code) {
+            <div class="detail__fact">
+              <dt>{{ fact.label }}</dt>
+              <dd>
+                @if (fact.value !== null) { <bdi>{{ fact.value }}</bdi> } @else { {{ (fact.yes ?
+                'catalog.detail.yes' : 'catalog.detail.no') | transloco }} }
+              </dd>
+            </div>
+            }
+          </dl>
+        </section>
+        }
+        <section class="detail__section" aria-labelledby="listing-description">
+          <h2 id="listing-description" class="detail__heading">
+            {{ 'catalog.detail.description' | transloco }}
+          </h2>
+          <app-listing-description [text]="view.description" />
+        </section>
+        @if (!desktop()) {
+        <ng-container [ngTemplateOutlet]="seller" />
+        }
+      </div>
+    </div>
+
+    @if (desktop()) {
+    <aside class="detail__aside" [attr.aria-label]="'catalog.detail.contact-area' | transloco">
+      <ng-container [ngTemplateOutlet]="summary" />
+      <ng-container [ngTemplateOutlet]="seller" />
+      <ng-container [ngTemplateOutlet]="contact" />
+    </aside>
+    }
+  </div>
+
+  @if (!desktop()) {
+  <div class="detail__bar" data-testid="contact-bar">
+    <ng-container [ngTemplateOutlet]="contact" />
+  </div>
+  }
+</article>
+
+<ng-template #summary>
+  <div class="detail__summary">
+    <p class="detail__price" data-testid="price">
+      <bdi
+        >{{ view.price ?? ('catalog.card.on-quote' | transloco) }}{{ view.unitKey ? (view.unitKey |
+        transloco) : '' }}</bdi
+      >
+      @if (view.negotiable) {
+      <span class="detail__chip" data-testid="negotiable"
+        >{{ 'catalog.detail.negotiable' | transloco }}</span
+      >
+      }
+    </p>
+    <h1 id="listing-title" class="detail__title" dir="auto">{{ view.title }}</h1>
+    <p class="detail__meta" data-testid="place">
+      <span>{{ view.place }}</span>
+      @if (view.dateLabel) {
+      <span aria-hidden="true"> · </span>
+      <time [attr.datetime]="view.dateTime"
+        >{{ 'catalog.detail.published' | transloco: { when: view.dateLabel } }}</time
+      >
+      }
+    </p>
+  </div>
+</ng-template>
+
+<ng-template #seller>
+  @if (view.seller; as seller) {
+  <section class="detail__seller" data-testid="seller" aria-labelledby="listing-seller">
+    <h2 id="listing-seller" class="ui-visually-hidden">
+      {{ 'catalog.detail.seller' | transloco }}
+    </h2>
+    <span class="detail__initial" aria-hidden="true">{{ seller.initial }}</span>
+    <div>
+      <p class="detail__seller-name">{{ seller.displayName }}</p>
+      <p class="detail__seller-since">
+        {{ 'catalog.detail.member-since' | transloco: { since: seller.memberSince } }}
+      </p>
+    </div>
+  </section>
+  }
+</ng-template>
+
+<ng-template #contact>
+  <app-contact-panel
+    [owned]="store.owned()"
+    [status]="store.listing()?.status ?? 'PUBLISHED'"
+    [authenticated]="auth.isAuthenticated()"
+    [contact]="store.contact()"
+    [myListingsCommands]="myListingsCommands()"
+    (reveal)="reveal()"
+    (login)="login()"
+  />
+</ng-template>
+} } }

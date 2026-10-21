@@ -20,12 +20,12 @@ export function createShellRoutes(): Routes {
   ]);
 }
 
-/** First segments of the pages of mfe-catalog (CATA-02), after the language prefix. */
-export const CATALOG_SEGMENTS = ['search', 'c'];
+/** First segments of the pages of mfe-catalog (CATA-02, CATA-03), after the language prefix. */
+export const CATALOG_SEGMENTS = ['search', 'c', 'listings'];
 
 /**
  * Pages served by mfe-catalog: the home page (`/{lang}`), the results (`/{lang}/search`,
- * `/{lang}/c/{category}`). Nothing is consumed: the remote matches the whole path itself, and
+ * `/{lang}/c/{category}`) and the listing pages (`/{lang}/listings/{id}`). Nothing is consumed: the remote matches the whole path itself, and
  * another URL never downloads it.
  */
 export function catalogPaths(segments: UrlSegment[]): UrlMatchResult | null {

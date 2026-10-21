@@ -1,0 +1,58 @@
+<div class="gallery" data-testid="gallery">
+  @if (count()) {
+  <div class="gallery__stage">
+    <ul
+      #track
+      class="gallery__track"
+      [attr.aria-label]="'catalog.detail.photos' | transloco"
+      (scroll)="onScroll()"
+    >
+      @for (photo of photos(); track photo.id; let i = $index) {
+      <li class="gallery__slide">
+        <button
+          type="button"
+          class="gallery__open"
+          [attr.aria-label]="'catalog.detail.open-photo' | transloco: { n: i + 1, count: count() }"
+          (click)="opened.emit(i)"
+        >
+          <img
+            class="gallery__image"
+            [src]="photo.url"
+            [attr.srcset]="srcset(photo)"
+            sizes="(min-width: 768px) 60vw, 100vw"
+            [alt]="'catalog.detail.photo-alt' | transloco: { n: i + 1, count: count(), title: title() }"
+            [attr.loading]="i === 0 ? 'eager' : 'lazy'"
+            decoding="async"
+          />
+        </button>
+      </li>
+      }
+    </ul>
+    <span class="gallery__counter" data-testid="gallery-counter" aria-hidden="true"
+      ><bdi>{{ current() + 1 }} / {{ count() }}</bdi></span
+    >
+  </div>
+  @if (count() > 1) {
+  <ul class="gallery__thumbs" [attr.aria-label]="'catalog.detail.thumbnails' | transloco">
+    @for (photo of photos(); track photo.id; let i = $index) {
+    <li>
+      <button
+        type="button"
+        class="gallery__thumb"
+        [class.gallery__thumb--current]="i === current()"
+        [attr.aria-current]="i === current() ? 'true' : null"
+        [attr.aria-label]="'catalog.detail.show-photo' | transloco: { n: i + 1, count: count() }"
+        (click)="show(i)"
+      >
+        <img [src]="photo.thumbnailUrl" alt="" loading="lazy" decoding="async" />
+      </button>
+    </li>
+    }
+  </ul>
+  } } @else {
+  <div class="gallery__empty" data-testid="gallery-empty">
+    <svg lucideImage [size]="40" [strokeWidth]="1.5" aria-hidden="true"></svg>
+    <span>{{ familyLabel() || ('catalog.detail.no-photo' | transloco) }}</span>
+  </div>
+  }
+</div>

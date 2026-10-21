@@ -1,17 +1,20 @@
 import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
 import { provideI18nScope } from '@soukly/i18n';
+import { DetailPage } from './detail/detail-page';
 import { HomePage } from './home/home-page';
 import { ResultsPage } from './results/results-page';
 
 /**
  * Routes exposed to the shell as "./routes" (federation.config.mjs). The shell mounts them right
- * under the language prefix, for `/{lang}/`, `/{lang}/search` and `/{lang}/c/…` only. The wrapping
+ * under the language prefix, for `/{lang}/`, `/{lang}/search`, `/{lang}/c/…` and
+ * `/{lang}/listings/…` only. The wrapping
  * route provides the "catalog" translations, downloaded from this remote (public/i18n/catalog)
  * when one of its pages is shown.
  *
  * - ``: home page;
  * - `search`: results, every criterion in the query parameters;
- * - `c/{categoryCode}`: results of a family or of a subcategory (`/fr/c/vehicles.cars`), same page.
+ * - `c/{categoryCode}`: results of a family or of a subcategory (`/fr/c/vehicles.cars`), same page;
+ * - `listings/{id}`: page of a listing (CATA-03), the address of ANN-03 and of the social posts.
  */
 export const routes: Routes = [
   {
@@ -20,6 +23,7 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', component: HomePage },
       { matcher: resultsPaths, component: ResultsPage },
+      { path: 'listings/:id', component: DetailPage },
     ],
   },
 ];

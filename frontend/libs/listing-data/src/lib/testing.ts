@@ -1,4 +1,11 @@
-import { AttributeDefinition, CategoryFamily, Delegation, Governorate, Listing } from './models';
+import {
+  AttributeDefinition,
+  CategoryFamily,
+  Delegation,
+  Governorate,
+  Listing,
+  PublicListing,
+} from './models';
 
 /**
  * Fixtures for unit tests, copied from the referentials of listing-service (CAT-01): two families
@@ -40,6 +47,40 @@ export function draftListing(overrides: Partial<Listing> = {}): Listing {
     updatedAt: '2026-10-21T08:00:00Z',
     publishedAt: null,
     expiresAt: null,
+    ...overrides,
+  };
+}
+
+/** A published car as anyone but its owner reads it (CATA-03), with 4 photos. */
+export function publicListing(overrides: Partial<PublicListing> = {}): PublicListing {
+  return {
+    id: TEST_ID,
+    status: 'PUBLISHED',
+    kind: 'SALE',
+    categoryCode: 'vehicles.cars',
+    title: 'Peugeot 208 diesel',
+    description: 'Première main, carnet d’entretien.\nPneus neufs.',
+    priceMode: 'FIXED',
+    price: 32000,
+    currency: 'TND',
+    negotiable: true,
+    governorateCode: 'sfax',
+    delegationCode: 'sfax.sakiet-ezzit',
+    attributes: { brand: 'Peugeot', year: 2019, 'mileage-km': 62000, fuel: 'diesel' },
+    photos: [0, 1, 2, 3].map((position) => ({
+      id: `photo-${position}`,
+      url: `https://photos.example.test/${position}/1600.webp`,
+      thumbnailUrl: `https://photos.example.test/${position}/400.webp`,
+      width: 1600,
+      height: 1200,
+      position,
+    })),
+    publishedAt: '2026-10-21T08:00:00Z',
+    seller: {
+      id: 'a1b2c3d4-0000-4000-8000-000000000001',
+      displayName: 'Mohamed B.',
+      memberSince: '2026-03',
+    },
     ...overrides,
   };
 }

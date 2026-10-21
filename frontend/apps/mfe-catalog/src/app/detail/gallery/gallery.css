@@ -1,0 +1,120 @@
+:host {
+  display: block;
+}
+
+.gallery__stage {
+  position: relative;
+}
+
+.gallery__track {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-inline: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  background-color: var(--color-surface-muted);
+}
+
+.gallery__track::-webkit-scrollbar {
+  display: none;
+}
+
+.gallery__slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+}
+
+.gallery__open {
+  display: block;
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-in;
+}
+
+.gallery__open:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px var(--color-text);
+}
+
+.gallery__image {
+  display: block;
+  inline-size: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.gallery__counter {
+  position: absolute;
+  inset-block-end: 12px;
+  inset-inline-end: 12px;
+  padding-block: 3px;
+  padding-inline: 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+
+.gallery__thumbs {
+  display: none;
+}
+
+.gallery__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  aspect-ratio: 4 / 3;
+  background-color: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 768px) {
+  .gallery__track,
+  .gallery__empty {
+    border-radius: var(--radius-lg);
+  }
+
+  .gallery__thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    margin-block-start: 8px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .gallery__thumb {
+    display: block;
+    inline-size: 72px;
+    block-size: 54px;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background-color: var(--color-surface-muted);
+    cursor: pointer;
+  }
+
+  .gallery__thumb--current {
+    border-color: var(--color-primary);
+  }
+
+  .gallery__thumb:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+
+  .gallery__thumb img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+}
