@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Drafts of listings (ANN-01), under {@code /api/listings} at the gateway. The owner is the {@code sub} of the
+ * Listings of their owner: drafts (ANN-01), publication and renewal (ANN-03), under {@code /api/listings} at the gateway. The owner is the {@code sub} of the
  * access token, validated by {@code SecurityConfig}.
  */
 @RestController
@@ -56,6 +56,20 @@ class ListingController {
         return answer(ResponseEntity.ok(), listings.update(ownerId(jwt), listingId, ifMatch, patch));
     }
 
+    /** Publishes a complete draft (ANN-03); no {@code If-Match}: publishing never overwrites a change. */
+    @PostMapping("/{id}/publish")
+    ResponseEntity<ListingResponse> publish(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
+        UUID listingId = listingId(id).orElseThrow(ListingNotFoundException::new);
+        return answer(ResponseEntity.ok(), listings.publish(ownerId(jwt), listingId));
+    }
+
+    /** Puts an expired listing, or one that expires soon, back online (ANN-03). */
+    @PostMapping("/{id}/renew")
+    ResponseEntity<ListingResponse> renew(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
+        UUID listingId = listingId(id).orElseThrow(ListingNotFoundException::new);
+        return answer(ResponseEntity.ok(), listings.renew(ownerId(jwt), listingId));
+    }
+
     /** Public at the gateway: the token, when there is one, says whether the reader owns the draft. */
     @GetMapping("/{id}")
     ResponseEntity<ListingResponse> get(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
@@ -63,7 +77,7 @@ class ListingController {
         return answer(ResponseEntity.ok(), listings.get(jwt == null ? null : ownerId(jwt), listingId));
     }
 
-    /** A draft is private: never stored by a cache. */
+    /** The owner's view is private: never stored by a cache. */
     private static ResponseEntity<ListingResponse> answer(ResponseEntity.BodyBuilder builder, ListingView view) {
         return builder.eTag(Versions.etag(view.listing().version()))
                 .cacheControl(CacheControl.noStore())

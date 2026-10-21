@@ -16,6 +16,19 @@ spring:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration
+  # Listing events (ANN-03): only listing.expiring-soon is handled, for the reminder email
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    consumer:
+      group-id: user-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      # Dead-letter messages only
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
@@ -35,6 +48,10 @@ soukly:
     mail-from: ${MAIL_FROM:no-reply@example.com}
     verification-token-ttl: 24h
     verification-resends-per-hour: 3
+    # Consumer of the listing events (ANN-03): a failed message is retried 3 times, then sent to the DLQ
+    listing-events:
+      retries: 3
+      retry-interval: 2s
     # Access tokens (AUTH-02): JWT RS256. The default key path is the one of scripts/gen-jwt-key.sh, seen from
     # backend/user-service (the working directory of spring-boot:run).
     jwt:

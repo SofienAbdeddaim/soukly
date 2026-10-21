@@ -1,0 +1,12 @@
+[(#{common.greeting(${displayName})})]
+
+[(#{listing-expiring.intro(${expiryDate})})]
+[(${listingTitle})]
+
+[(#{listing-expiring.renew-hint})]
+
+[(#{listing-expiring.button})]: [(${listingsUrl})]
+
+[(#{listing-expiring.sold})]
+
+[(#{common.signature})]

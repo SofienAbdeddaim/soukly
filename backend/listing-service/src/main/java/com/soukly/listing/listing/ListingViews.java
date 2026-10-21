@@ -33,8 +33,7 @@ class ListingViews {
     ListingView view(Listing listing, List<String> warnings) {
         ListingContent content = listing.content();
         List<Attribute> definitions = definitions(content.categoryCode());
-        Listing ordered = new Listing(listing.id(), listing.ownerId(), listing.status(), ordered(content, definitions),
-                listing.version(), listing.createdAt(), listing.updatedAt(), listing.publishedAt());
+        Listing ordered = listing.withContent(ordered(content, definitions));
         List<PhotoView> ready = photos.ready(listing.id());
         return new ListingView(ordered, ready, missingFields(content, definitions, ready.isEmpty()), warnings);
     }

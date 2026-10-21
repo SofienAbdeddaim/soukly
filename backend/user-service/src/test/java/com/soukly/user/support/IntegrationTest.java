@@ -3,6 +3,8 @@ package com.soukly.user.support;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+import org.apache.kafka.clients.admin.NewTopic;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,19 +14,23 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.soukly.common.event.ListingEvents;
+
 /**
  * Base of the integration tests: one Spring context for every class, a PostgreSQL container (Testcontainers), an
- * in-memory SMTP server (GreenMail), JWT keys generated for the run (active {@code k2}, previous {@code k1}) and a
- * clock that tests can move. Each test starts with empty tables, an empty mailbox and the clock at the real time.
+ * in-memory SMTP server (GreenMail), JWT keys generated for the run (active {@code k2}, previous {@code k1}), a
+ * Redpanda container for the listing events ({@link TestRedpanda}) and a clock that tests can move. Each test starts
+ * with empty tables, an empty mailbox and the clock at the real time.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import({ PostgresContainerConfig.class, IntegrationTest.ClockConfig.class })
+@Import({ PostgresContainerConfig.class, IntegrationTest.ClockConfig.class, IntegrationTest.TopicsConfig.class })
 public abstract class IntegrationTest {
 
     protected static final TestSmtpServer SMTP = new TestSmtpServer();
@@ -51,6 +57,8 @@ public abstract class IntegrationTest {
         registry.add("soukly.user.jwt.previous-key-id", () -> TestKeys.PREVIOUS_KID);
         registry.add("soukly.user.jwt.previous-public-key-path", TestKeys.PREVIOUS_PUBLIC_PEM::toString);
         registry.add("soukly.user.session.allowed-origins", () -> FRONT_ORIGIN);
+        registry.add("spring.kafka.bootstrap-servers", TestRedpanda::bootstrapServers);
+        registry.add("soukly.user.listing-events.retry-interval", () -> "100ms");
     }
 
     @BeforeEach
@@ -58,7 +66,7 @@ public abstract class IntegrationTest {
         SMTP.ensureRunning();
         SMTP.purge();
         clock.reset();
-        jdbc.execute("TRUNCATE users, login_throttle CASCADE");
+        jdbc.execute("TRUNCATE users, login_throttle, processed_events CASCADE");
     }
 
     /** Inserts an account directly, {@code ACTIVE} or {@code PENDING_VERIFICATION}, and returns its id. */
@@ -72,6 +80,21 @@ public abstract class IntegrationTest {
                 id, email, passwordEncoder.encode(password), status, now,
                 "ACTIVE".equals(status) ? now : null, now, now);
         return id;
+    }
+
+    /** The topics of listing-service, which creates them outside the tests. */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class TopicsConfig {
+
+        @Bean
+        NewTopic listingEventsTopic() {
+            return TopicBuilder.name(ListingEvents.TOPIC).partitions(3).replicas(1).build();
+        }
+
+        @Bean
+        NewTopic listingEventsDlqTopic() {
+            return TopicBuilder.name(ListingEvents.DLQ_TOPIC).partitions(1).replicas(1).build();
+        }
     }
 
     @TestConfiguration(proxyBeanMethods = false)

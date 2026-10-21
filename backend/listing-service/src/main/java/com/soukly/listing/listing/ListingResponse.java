@@ -12,13 +12,16 @@ import com.soukly.listing.photo.PhotoView;
  * Body of the listing endpoints. Empty fields are present with {@code null}, so the front end can tell them apart
  * from unknown members.
  *
- * @param price  whole dinars (TND)
- * @param photos READY photos, cover first (ANN-02)
+ * @param price       whole dinars (TND)
+ * @param photos      READY photos, cover first (ANN-02)
+ * @param publishedAt first publication, null for a draft (ANN-03)
+ * @param expiresAt   end of visibility of a published listing, its past expiry for an expired one
  */
 public record ListingResponse(UUID id, ListingStatus status, long version, ListingKind kind, String categoryCode,
         String title, String description, PriceMode priceMode, Long price, boolean negotiable,
         String governorateCode, String delegationCode, Map<String, Object> attributes, List<Photo> photos,
-        List<String> missingFields, List<String> warnings, Instant createdAt, Instant updatedAt) {
+        List<String> missingFields, List<String> warnings, Instant createdAt, Instant updatedAt,
+        Instant publishedAt, Instant expiresAt) {
 
     static ListingResponse of(ListingView view) {
         Listing listing = view.listing();
@@ -27,7 +30,8 @@ public record ListingResponse(UUID id, ListingStatus status, long version, Listi
                 content.categoryCode(), content.title(), content.description(), content.priceMode(),
                 content.price(), content.negotiable(), content.governorateCode(), content.delegationCode(),
                 content.attributes(), view.photos().stream().map(Photo::of).toList(), view.missingFields(),
-                view.warnings(), listing.createdAt(), listing.updatedAt());
+                view.warnings(), listing.createdAt(), listing.updatedAt(), listing.publishedAt(),
+                listing.expiresAt());
     }
 
     /** A photo of the listing; the status is left out, since only READY photos are listed. */

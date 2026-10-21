@@ -53,7 +53,12 @@ public final class TestSmtpServer {
 
     /** Waits until {@code count} emails have arrived since the start of the test (emails are sent asynchronously). */
     public List<MimeMessage> awaitEmails(int count) {
-        if (!greenMail.waitForIncomingEmail(10_000, count)) {
+        return awaitEmails(count, 10_000);
+    }
+
+    /** Same, waiting at most {@code timeoutMillis}. */
+    public List<MimeMessage> awaitEmails(int count, long timeoutMillis) {
+        if (!greenMail.waitForIncomingEmail(timeoutMillis, count)) {
             throw new AssertionError("Expected " + count + " email(s), got " + received().size());
         }
         return received();
