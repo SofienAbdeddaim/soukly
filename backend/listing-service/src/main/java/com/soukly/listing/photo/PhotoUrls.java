@@ -1,6 +1,7 @@
 package com.soukly.listing.photo;
 
 import java.net.URI;
+import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,11 @@ class PhotoUrls {
         return new PhotoView(photo.id(), photo.status(), url(PhotoKeys.large(photo.listingId(), photo.id())),
                 url(PhotoKeys.thumbnail(photo.listingId(), photo.id())), photo.width(), photo.height(),
                 photo.position());
+    }
+
+    /** The 400 px version of a READY photo. */
+    URI thumbnail(UUID listingId, UUID photoId) {
+        return url(PhotoKeys.thumbnail(listingId, photoId));
     }
 
     private URI url(String key) {

@@ -68,6 +68,15 @@ soukly:
       retention: 7d
       purge-interval: PT1H
       partitions: 3
+    # Public search (CATA-01)
+    search:
+      default-limit: 24
+      max-limit: 48
+      # Lowest trigram word similarity of a title or a brand with a misspelt query
+      similarity-threshold: 0.5
+      # Signs the pagination cursors; empty = a random key per start (one instance in V1)
+      cursor-secret: ${SEARCH_CURSOR_SECRET:}
+      cache-max-age: 30s
     # Local manual tests only: moves the business clock forward (for example P58D to reach the reminder). Never set
     # in dev or prod.
     clock-offset: ${LISTING_CLOCK_OFFSET:PT0S}

@@ -34,6 +34,7 @@ import com.soukly.listing.photo.PhotoNotFoundException;
 import com.soukly.listing.photo.PhotoRejectedException;
 import com.soukly.listing.referential.CategoryNotFoundException;
 import com.soukly.listing.referential.GovernorateNotFoundException;
+import com.soukly.listing.search.InvalidSearchException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -52,7 +53,10 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     /** Member of a {@code listing-incomplete} problem: the same list as {@code missingFields} of the listing. */
     static final String MISSING_FIELDS = "missingFields";
 
-    /** Member of a {@code photo-rejected} problem: the stable reason ({@code photo.too-large}...). */
+    /**
+     * Member of a {@code photo-rejected} problem, the stable reason ({@code photo.too-large}...), and of an
+     * {@code invalid-search} problem ({@code filter.unknown-attribute}, {@code cursor.invalid}...).
+     */
     static final String CODE = "code";
 
     @ExceptionHandler
@@ -61,6 +65,15 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.BAD_REQUEST, "Validation failed", "One or more fields are invalid.", instance(request),
                 requestId(request));
         problem.setProperty(ERRORS, e.errors());
+        return problem(problem);
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> invalidSearch(InvalidSearchException e, NativeWebRequest request) {
+        ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("invalid-search"),
+                HttpStatus.BAD_REQUEST, "Invalid search", "A search parameter cannot be applied.",
+                instance(request), requestId(request));
+        problem.setProperty(CODE, e.code());
         return problem(problem);
     }
 

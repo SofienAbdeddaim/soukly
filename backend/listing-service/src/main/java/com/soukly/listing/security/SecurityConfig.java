@@ -18,7 +18,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 
 /**
  * Access policy of listing-service, the same as the gateway's (defense in depth): the referentials (CAT-01), the
- * reading of a listing and the health check are public; everything else needs a valid access token. Stateless.
+ * search (CATA-01), the reading of a listing and the health check are public; everything else needs a valid access token. Stateless.
  *
  * <p>Unlike the gateway, a token sent on {@code GET /listings/{id}} is validated: it identifies the owner of a
  * draft, and an invalid one is answered with {@code 401} so that the front end refreshes it.
@@ -29,6 +29,7 @@ class SecurityConfig {
     static final RequestMatcher PUBLIC = new OrRequestMatcher(
             get("/categories/**"),
             get("/locations/**"),
+            get("/listings"),
             get("/listings/*"),
             get("/actuator/health"),
             PathPatternRequestMatcher.pathPattern("/error"));
