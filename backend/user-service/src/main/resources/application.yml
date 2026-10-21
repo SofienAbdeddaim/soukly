@@ -35,6 +35,31 @@ soukly:
     mail-from: ${MAIL_FROM:no-reply@example.com}
     verification-token-ttl: 24h
     verification-resends-per-hour: 3
+    # Access tokens (AUTH-02): JWT RS256. The default key path is the one of scripts/gen-jwt-key.sh, seen from
+    # backend/user-service (the working directory of spring-boot:run).
+    jwt:
+      issuer: ${JWT_ISSUER:soukly-user-service}
+      key-id: ${JWT_KEY_ID:local}
+      private-key-path: ${JWT_PRIVATE_KEY_PATH:../../.secrets/jwt/jwt-private.pem}
+      # Key rotation only: public key and kid of the previous pair, still published in the JWKS
+      previous-key-id: ${JWT_PREVIOUS_KEY_ID:}
+      previous-public-key-path: ${JWT_PREVIOUS_PUBLIC_KEY_PATH:}
+      access-token-ttl: ${ACCESS_TOKEN_TTL:15m}
+    # Sessions (AUTH-02): opaque refresh token in the soukly_rt cookie, 30 days renewed by every refresh
+    session:
+      refresh-token-ttl: ${REFRESH_TOKEN_TTL:30d}
+      # Path seen by the browser: the gateway removes /api before forwarding
+      cookie-path: ${REFRESH_COOKIE_PATH:/api/users}
+      cookie-secure: ${REFRESH_COOKIE_SECURE:true}
+      # Same exact origins as the CORS of the gateway, comma-separated; never '*'
+      allowed-origins: ${ALLOWED_ORIGINS:${CORS_ALLOWED_ORIGINS:http://localhost:4200}}
+      purge-retention: 7d
+      purge-cron: "0 30 3 * * *"
+      throttle:
+        free-failures: 5
+        first-delay: 30s
+        max-delay: 15m
+        forget-after: 1d
 
 management:
   health:

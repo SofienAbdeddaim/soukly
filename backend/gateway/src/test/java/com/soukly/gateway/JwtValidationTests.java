@@ -70,6 +70,37 @@ class JwtValidationTests extends GatewayIntegrationTest {
                 .containsExactly("/users/register", "/users/verify-email");
     }
 
+    // login is public too: RateLimitTests calls it without a token (not here, to keep its budget).
+    @Test
+    void sessionPathsArePublicAndKeepTheirCookie() {
+        for (String path : new String[] { "/api/users/refresh", "/api/users/logout" }) {
+            client.post().uri(path)
+                    .header(HttpHeaders.ORIGIN, "http://localhost:4200")
+                    .cookie("soukly_rt", "opaque-refresh-token")
+                    .exchange()
+                    .expectStatus().isOk();
+        }
+
+        assertThat(USER_SERVICE.received()).extracting(received -> received.uri())
+                .containsExactly("/users/refresh", "/users/logout");
+        assertThat(USER_SERVICE.received()).allSatisfy(received -> {
+            assertThat(received.headers().getFirst(HttpHeaders.COOKIE)).isEqualTo("soukly_rt=opaque-refresh-token");
+            assertThat(received.headers().getFirst(HttpHeaders.ORIGIN)).isEqualTo("http://localhost:4200");
+        });
+    }
+
+    @Test
+    void jwksOfUserServiceIsNotExposed() {
+        for (String path : new String[] { "/.well-known/jwks.json", "/api/.well-known/jwks.json",
+                "/api/users/.well-known/jwks.json" }) {
+            client.get().uri(path).exchange().expectStatus().isUnauthorized();
+        }
+        client.get().uri("/.well-known/jwks.json")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken())
+                .exchange()
+                .expectStatus().isNotFound();
+    }
+
     @Test
     void protectedPathsRequireAToken() {
         client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();

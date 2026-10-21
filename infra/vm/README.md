@@ -365,9 +365,13 @@ S3 one and is to be confirmed on the first try).
 - **Database or Redpanda by tunnel**: nothing is published on the host. Use `docker exec`, for
   example `docker exec -it soukly-dev-postgres-1 psql -U postgres`, or a tunnel to the
   container's address (`docker inspect soukly-dev-postgres-1`).
-- **JWT key rotation**: move the current `jwt-public.pem` aside for `JWT_PREVIOUS_PUBLIC_KEY_PATH`
-  (AUTH-02), delete `jwt-private.pem`, run `gen-jwt-keys.sh <env>` again, change `JWT_KEY_ID`
-  and restart the stack.
+- **JWT key rotation** (AUTH-02): in `/opt/soukly/<env>/secrets`, rename `jwt-public.pem` to
+  `jwt-previous-public.pem` and delete `jwt-private.pem`; run `gen-jwt-keys.sh <env>` again; in
+  the `.env`, set `JWT_PREVIOUS_KEY_ID` to the current `JWT_KEY_ID` and give `JWT_KEY_ID` a new
+  value; restart the stack. The JWKS then publishes both keys and the access tokens of the old key
+  stay valid until they expire. After 15 minutes (their lifetime), empty `JWT_PREVIOUS_KEY_ID`,
+  delete `jwt-previous-public.pem` and restart again. Sessions are not affected: refresh tokens
+  do not depend on the key.
 
 ## 7. Deploy to dev
 
