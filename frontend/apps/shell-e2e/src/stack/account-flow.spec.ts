@@ -107,7 +107,7 @@ test.describe('account screens on the local stack', () => {
     await expect(page).toHaveURL('/fr/account/login?returnUrl=%2Ffr%2Fpublish%2Fnew');
     await logIn(page, email);
     await expect(page).toHaveURL('/fr/publish/new');
-    await expect(page.getByTestId('coming-soon-mfe-publish')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Catégorie' })).toBeVisible();
   });
 
   test('a wrong password shows one general message, focused', async ({ page, request }) => {

@@ -1,6 +1,8 @@
 <label class="ui-field__label" [for]="controlId()">
   {{ label() }} @if (required()) {
   <span class="ui-field__required" aria-hidden="true">*</span>
+  } @else if (optionalLabel()) {
+  <span class="ui-field__optional">{{ optionalLabel() }}</span>
   }
 </label>
 <div class="ui-field__group" [attr.dir]="ltr() ? 'ltr' : null">

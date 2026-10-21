@@ -33,7 +33,7 @@ test.describe('shell navigation', () => {
     await page.getByRole('banner').getByRole('link', { name: 'Déposer une annonce' }).click();
 
     await expect(page).toHaveURL('/fr/publish/new');
-    await expect(page.getByTestId('coming-soon-mfe-publish')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Catégorie' })).toBeVisible();
   });
 
   test('an unknown URL shows the 404 page with a link to the home page', async ({ page }) => {

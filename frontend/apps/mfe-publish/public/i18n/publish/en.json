@@ -1,6 +1,121 @@
 {
   "coming-soon": {
-    "title": "Posting ads on Soukly, coming soon",
     "text": "Posting and managing your listings are coming here soon."
+  },
+  "steps": {
+    "category": "Category",
+    "photos": "Photos",
+    "details": "Details",
+    "price-location": "Price and location",
+    "preview": "Preview"
+  },
+  "header": {
+    "back": "Back",
+    "step": "Step {{ number }} of {{ total }}",
+    "progress": "Progress of your listing",
+    "progress-text": "Step {{ number }} of {{ total }}: {{ title }}"
+  },
+  "save": {
+    "saving": "Saving…",
+    "saved": "Draft saved",
+    "offline": "Offline, trying again…",
+    "invalid": "Correct the highlighted fields",
+    "error": "Could not save"
+  },
+  "conflict": {
+    "message": "This listing was changed somewhere else.",
+    "reload": "Reload"
+  },
+  "actions": {
+    "continue": "Continue",
+    "retry": "Try again"
+  },
+  "load": {
+    "not-found": "This draft cannot be found or can no longer be edited here.",
+    "error": "Your draft could not be loaded. Check your connection.",
+    "new": "Post a new listing"
+  },
+  "category": {
+    "title": "What are you offering?",
+    "families": "Family",
+    "load-error": "The categories could not be loaded.",
+    "creating": "Creating your draft…",
+    "warnings": {
+      "attributes-removed": "The details specific to the previous category were removed.",
+      "price-mode-reset": "\"On quote\" is not available in this category: enter a price."
+    },
+    "errors": {
+      "draft-limit-reached": "You already have 20 drafts. Publish or delete one before starting another.",
+      "unexpected": "The category could not be saved. Try again."
+    }
+  },
+  "photos": {
+    "title": "Add your photos",
+    "intro": "Up to 10 photos. The first one is the cover photo.",
+    "add": "Add",
+    "add-label": "Add photos",
+    "count": "Photos: {{ count }} of 10",
+    "move-hint": "Long press a photo to move it, or use the arrows with a keyboard.",
+    "cover": "Cover",
+    "alt": "Photo {{ number }} of {{ count }}",
+    "alt-cover": "Photo {{ number }} of {{ count }}, cover",
+    "remove": "Delete photo {{ number }}",
+    "move-before": "Move photo {{ number }} before",
+    "move-after": "Move photo {{ number }} after",
+    "moved": "Photo moved to position {{ number }}.",
+    "uploading": "Uploading \"{{ name }}\"",
+    "failed": "Upload failed",
+    "retry": "Try again",
+    "need-one": "Add at least one photo to continue.",
+    "wait": "Wait until the photos are uploaded.",
+    "errors": {
+      "photo": {
+        "unsupported-format": "This file is not an image. Accepted formats: JPEG, PNG, WebP.",
+        "too-large": "This photo is too heavy (5 MB at most).",
+        "too-small": "This photo is too small.",
+        "too-many-pixels": "This photo has too many pixels.",
+        "processing-failed": "This photo could not be processed. Try another one.",
+        "not-uploaded": "The upload did not finish. Add the photo again.",
+        "invalid-size": "This file is empty."
+      },
+      "limit": "A listing has 10 photos at most: this photo was not added.",
+      "remove": "The photo could not be deleted. Try again.",
+      "order": "The order of the photos could not be saved. Try again.",
+      "unexpected": "This photo could not be uploaded."
+    }
+  },
+  "details": {
+    "title": "Describe your listing",
+    "title-label": "Title",
+    "title-hint": "Between 5 and 80 characters",
+    "description-label": "Description",
+    "description-count": "{{ count }} / {{ max }} characters",
+    "optional": "(optional)",
+    "choose": "Choose",
+    "load-error": "The fields of this category could not be loaded."
+  },
+  "errors": {
+    "title": {
+      "required": "Enter a title.",
+      "too-short": "The title needs at least 5 characters.",
+      "too-long": "The title can have at most 80 characters.",
+      "invalid": "This title contains characters that are not allowed."
+    },
+    "description": {
+      "required": "Describe your listing.",
+      "too-short": "The description needs at least 20 characters.",
+      "too-long": "The description can have at most 4000 characters.",
+      "invalid": "This description contains characters that are not allowed."
+    },
+    "attribute": {
+      "required": "This field is required.",
+      "too-short": "At least {{ min }} characters.",
+      "too-long": "At most {{ max }} characters.",
+      "out-of-range": "Expected between {{ min }} and {{ max }}.",
+      "invalid-type": "Enter a whole number.",
+      "invalid-value": "This value is not valid.",
+      "unknown": "This field does not exist in this category."
+    },
+    "unexpected": "This value was not accepted."
   }
 }

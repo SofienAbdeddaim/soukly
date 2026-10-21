@@ -1,0 +1,116 @@
+/*
+ * Component styles only (no Tailwind utility): the steps are rendered inside the shell, whose
+ * stylesheet only knows the classes of the shell. Tokens of libs/ui, logical properties only.
+ */
+:host {
+  display: block;
+}
+
+.flow {
+  display: flex;
+  flex-direction: column;
+  max-inline-size: 640px;
+  min-block-size: 100%;
+  margin-inline: auto;
+}
+
+.flow__header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-block: 12px 14px;
+  padding-inline: 16px;
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.flow__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.flow__back {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: var(--control-height);
+  block-size: var(--control-height);
+  margin-inline-start: -10px;
+  border-radius: var(--radius-full);
+  color: var(--color-on-brand);
+}
+
+.flow__back:hover {
+  color: var(--color-accent);
+}
+
+.flow__step {
+  color: var(--color-on-brand-muted);
+  font-size: 0.75rem;
+}
+
+.flow__title {
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  outline: none;
+}
+
+.flow__title:focus-visible {
+  box-shadow: none;
+}
+
+.flow__conflict {
+  margin-block-start: 16px;
+  margin-inline: 16px;
+}
+
+.flow__conflict-text {
+  margin-block-end: 8px;
+}
+
+.flow__content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 16px;
+  padding-block: 18px 24px;
+  padding-inline: 16px;
+}
+
+/* Kept in sight above the mobile bar of the shell (3.5rem and its border, below 768px). */
+.flow__footer {
+  position: sticky;
+  inset-block-end: calc(3.5rem + 1px);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block: 12px;
+  padding-inline: 16px;
+  border-block-start: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+@media (min-width: 768px) {
+  .flow__header {
+    margin-block-start: 24px;
+    border-start-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+  }
+
+  .flow__footer {
+    inset-block-end: 0;
+  }
+}
+
+.flow__actions {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 10px;
+}
+
+.flow__actions:empty {
+  display: none;
+}

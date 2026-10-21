@@ -1,6 +1,121 @@
 {
   "coming-soon": {
-    "title": "Dépôt d'annonces Soukly, bientôt disponible",
     "text": "Le dépôt et la gestion de vos annonces arrivent bientôt ici."
+  },
+  "steps": {
+    "category": "Catégorie",
+    "photos": "Photos",
+    "details": "Détails",
+    "price-location": "Prix et lieu",
+    "preview": "Aperçu"
+  },
+  "header": {
+    "back": "Retour",
+    "step": "Étape {{ number }} sur {{ total }}",
+    "progress": "Progression du dépôt",
+    "progress-text": "Étape {{ number }} sur {{ total }} : {{ title }}"
+  },
+  "save": {
+    "saving": "Enregistrement…",
+    "saved": "Brouillon enregistré",
+    "offline": "Hors ligne, nouvelle tentative…",
+    "invalid": "Corrigez les champs signalés",
+    "error": "Échec de l'enregistrement"
+  },
+  "conflict": {
+    "message": "Cette annonce a été modifiée ailleurs.",
+    "reload": "Recharger"
+  },
+  "actions": {
+    "continue": "Continuer",
+    "retry": "Réessayer"
+  },
+  "load": {
+    "not-found": "Ce brouillon est introuvable ou n'est plus modifiable ici.",
+    "error": "Impossible de charger votre brouillon. Vérifiez votre connexion.",
+    "new": "Déposer une nouvelle annonce"
+  },
+  "category": {
+    "title": "Que proposez-vous ?",
+    "families": "Famille",
+    "load-error": "Impossible de charger les catégories.",
+    "creating": "Création du brouillon…",
+    "warnings": {
+      "attributes-removed": "Les informations propres à l'ancienne catégorie ont été retirées.",
+      "price-mode-reset": "« Sur devis » n'est pas possible dans cette catégorie : indiquez un prix."
+    },
+    "errors": {
+      "draft-limit-reached": "Vous avez déjà 20 brouillons. Publiez ou supprimez-en un avant d'en commencer un autre.",
+      "unexpected": "La catégorie n'a pas pu être enregistrée. Réessayez."
+    }
+  },
+  "photos": {
+    "title": "Ajoutez vos photos",
+    "intro": "Jusqu'à 10 photos. La première sera la photo de couverture.",
+    "add": "Ajouter",
+    "add-label": "Ajouter des photos",
+    "count": "Photos : {{ count }} sur 10",
+    "move-hint": "Appui long sur une photo pour la déplacer, ou flèches au clavier.",
+    "cover": "Couverture",
+    "alt": "Photo {{ number }} sur {{ count }}",
+    "alt-cover": "Photo {{ number }} sur {{ count }}, couverture",
+    "remove": "Supprimer la photo {{ number }}",
+    "move-before": "Déplacer la photo {{ number }} avant",
+    "move-after": "Déplacer la photo {{ number }} après",
+    "moved": "Photo déplacée en position {{ number }}.",
+    "uploading": "Envoi de « {{ name }} »",
+    "failed": "Échec de l'envoi",
+    "retry": "Réessayer",
+    "need-one": "Ajoutez au moins une photo pour continuer.",
+    "wait": "Patientez jusqu'à la fin de l'envoi des photos.",
+    "errors": {
+      "photo": {
+        "unsupported-format": "Ce fichier n'est pas une image. Formats acceptés : JPEG, PNG, WebP.",
+        "too-large": "Cette photo est trop lourde (5 Mo au maximum).",
+        "too-small": "Cette photo est trop petite.",
+        "too-many-pixels": "Cette photo a trop de pixels.",
+        "processing-failed": "Cette photo n'a pas pu être traitée. Essayez-en une autre.",
+        "not-uploaded": "L'envoi n'a pas abouti. Ajoutez la photo à nouveau.",
+        "invalid-size": "Ce fichier est vide."
+      },
+      "limit": "Une annonce compte 10 photos au maximum : cette photo n'a pas été ajoutée.",
+      "remove": "La photo n'a pas pu être supprimée. Réessayez.",
+      "order": "L'ordre des photos n'a pas pu être enregistré. Réessayez.",
+      "unexpected": "Cette photo n'a pas pu être envoyée."
+    }
+  },
+  "details": {
+    "title": "Décrivez votre annonce",
+    "title-label": "Titre",
+    "title-hint": "Entre 5 et 80 caractères",
+    "description-label": "Description",
+    "description-count": "{{ count }} / {{ max }} caractères",
+    "optional": "(facultatif)",
+    "choose": "Choisir",
+    "load-error": "Impossible de charger les champs de cette catégorie."
+  },
+  "errors": {
+    "title": {
+      "required": "Indiquez un titre.",
+      "too-short": "Le titre doit compter au moins 5 caractères.",
+      "too-long": "Le titre doit compter au plus 80 caractères.",
+      "invalid": "Ce titre contient des caractères non autorisés."
+    },
+    "description": {
+      "required": "Décrivez votre annonce.",
+      "too-short": "La description doit compter au moins 20 caractères.",
+      "too-long": "La description doit compter au plus 4000 caractères.",
+      "invalid": "Cette description contient des caractères non autorisés."
+    },
+    "attribute": {
+      "required": "Ce champ est obligatoire.",
+      "too-short": "Au moins {{ min }} caractères.",
+      "too-long": "Au plus {{ max }} caractères.",
+      "out-of-range": "Valeur attendue entre {{ min }} et {{ max }}.",
+      "invalid-type": "Saisissez un nombre entier.",
+      "invalid-value": "Cette valeur n'est pas valide.",
+      "unknown": "Ce champ n'existe pas dans cette catégorie."
+    },
+    "unexpected": "Cette valeur n'a pas été acceptée."
   }
 }

@@ -4,6 +4,7 @@ import { AlertsSection } from './sections/alerts/alerts-section';
 import { ButtonsSection } from './sections/buttons/buttons-section';
 import { FieldsSection } from './sections/fields/fields-section';
 import { ListingCardsSection } from './sections/listing-cards/listing-cards-section';
+import { PublishingSection } from './sections/publishing/publishing-section';
 import { SkeletonsSection } from './sections/skeletons/skeletons-section';
 import { ToastsSection } from './sections/toasts/toasts-section';
 
@@ -19,6 +20,7 @@ import { ToastsSection } from './sections/toasts/toasts-section';
     ButtonsSection,
     FieldsSection,
     ListingCardsSection,
+    PublishingSection,
     SkeletonsSection,
     ToastsSection,
   ],
@@ -29,6 +31,7 @@ import { ToastsSection } from './sections/toasts/toasts-section';
       <app-fields-section />
       <app-alerts-section />
       <app-listing-cards-section />
+      <app-publishing-section />
       <app-skeletons-section />
       <app-toasts-section />
     </main>

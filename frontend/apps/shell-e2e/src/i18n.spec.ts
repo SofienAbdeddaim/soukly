@@ -57,7 +57,7 @@ test.describe('languages', () => {
     await page.goto('/de/publish/new');
 
     await expect(page).toHaveURL('/fr/publish/new');
-    await expect(page.getByTestId('coming-soon-mfe-publish')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Catégorie' })).toBeVisible();
   });
 
   test('a path without prefix gets one, with its query parameters', async ({ page }) => {
@@ -130,9 +130,7 @@ test.describe('languages', () => {
     await page.getByRole('banner').getByRole('link', { name: 'أضف إعلانًا' }).click();
 
     await expect(page).toHaveURL('/ar/publish/new');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'نشر الإعلانات في سوقلي، قريبًا',
-    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('الصنف');
     expect(publishFiles).toContain('http://localhost:4203/i18n/publish/ar.json');
   });
 

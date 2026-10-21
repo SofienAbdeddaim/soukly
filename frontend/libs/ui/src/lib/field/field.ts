@@ -55,6 +55,8 @@ export class UiField {
   readonly hint = input<string>();
   readonly error = input<string | null>();
   readonly required = input(false, { transform: booleanAttribute });
+  /** Shown after the label of an optional field, for example "(optional)". */
+  readonly optionalLabel = input<string | null>(null);
   /** Keeps the control and its addons left-to-right in RTL pages (phone numbers, emails). */
   readonly ltr = input(false, { transform: booleanAttribute });
   /** Id of the control; generated when not set. */

@@ -14,6 +14,8 @@
   --soukly-indigo-900: #2a2140;
   --soukly-indigo-600: #6a5f7e;
   --soukly-indigo-400: #8a7f9c;
+  --soukly-indigo-700: #4a3f66;
+  --soukly-lavender-100: #e6dcf5;
   --soukly-cream-50: #fff8ec;
   --soukly-cream-100: #fff3dd;
   --soukly-cream-200: #f0e3cc;
@@ -39,6 +41,8 @@
   --color-text-muted: var(--soukly-indigo-600);
   --color-brand: var(--soukly-indigo-900);
   --color-on-brand: var(--soukly-cream-50);
+  --color-on-brand-muted: var(--soukly-lavender-100);
+  --color-brand-track: var(--soukly-indigo-700);
   --color-accent: var(--soukly-saffron-400);
   --color-on-accent: var(--soukly-indigo-900);
   --color-primary: var(--soukly-terracotta-700);

@@ -21,7 +21,7 @@ test.describe('remote loading', () => {
     await page.unroute(publishOrigin);
     await page.getByRole('button', { name: 'Réessayer' }).click();
 
-    await expect(page.getByTestId('coming-soon-mfe-publish')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Catégorie' })).toBeVisible();
     await expect(page).toHaveURL('/fr/publish/new');
   });
 
