@@ -115,6 +115,71 @@
     "results-title-what": "{{what}} en Tunisie · Soukly",
     "results-title-where": "Annonces à {{where}} · Soukly",
     "results-title-all": "Toutes les annonces en Tunisie · Soukly",
-    "results-description": "Parcourez les petites annonces de Soukly et filtrez-les par catégorie, lieu, prix et caractéristiques."
+    "results-description": "Parcourez les petites annonces de Soukly et filtrez-les par catégorie, lieu, prix et caractéristiques.",
+    "listing-title": "{{title}} · {{price}} · {{place}} · Soukly",
+    "listing-title-no-price": "{{title}} · {{place}} · Soukly",
+    "listing-description": "{{description}}",
+    "gone-title": "Annonce indisponible · Soukly",
+    "not-found-title": "Annonce introuvable · Soukly",
+    "gone-description": "Parcourez les petites annonces de Soukly partout en Tunisie."
+  },
+  "detail": {
+    "loading": "Chargement de l'annonce…",
+    "photos": "Photos de l'annonce",
+    "thumbnails": "Miniatures des photos",
+    "open-photo": "Agrandir la photo {{n}} sur {{count}}",
+    "show-photo": "Afficher la photo {{n}} sur {{count}}",
+    "photo-alt": "Photo {{n}} sur {{count}} : {{title}}",
+    "no-photo": "Pas de photo",
+    "previous-photo": "Photo précédente",
+    "next-photo": "Photo suivante",
+    "back": "Retour",
+    "share": "Partager",
+    "link-copied": "Lien copié",
+    "link-copy-failed": "Le lien n'a pas pu être copié.",
+    "negotiable": "Négociable",
+    "published": "publiée {{when}}",
+    "facts": "Caractéristiques",
+    "yes": "Oui",
+    "no": "Non",
+    "description": "Description",
+    "read-more": "Lire la suite",
+    "read-less": "Réduire",
+    "seller": "Vendeur",
+    "member-since": "Membre depuis {{since}}",
+    "contact-area": "Prix et contact du vendeur"
+  },
+  "contact": {
+    "show": "Afficher le numéro",
+    "login-required": "Connexion requise pour voir le numéro du vendeur",
+    "title": "Contacter {{name}}",
+    "call": "Appeler",
+    "whatsapp": "WhatsApp",
+    "whatsapp-message": "Bonjour, votre annonce « {{title}} » sur Soukly m'intéresse : {{url}}",
+    "copy": "Copier le numéro",
+    "copied": "Numéro copié",
+    "copy-failed": "Le numéro n'a pas pu être copié.",
+    "safety-title": "Conseil de sécurité :",
+    "safety": "voyez l'article avant de payer et n'envoyez jamais d'argent d'avance.",
+    "limit": "Vous avez affiché beaucoup de numéros aujourd'hui, réessayez plus tard.",
+    "error": "Le numéro n'a pas pu être affiché. Vérifiez votre réseau, puis réessayez."
+  },
+  "owner": {
+    "title": "C'est votre annonce",
+    "expired": "Elle a expiré : elle n'est plus visible dans les résultats.",
+    "draft": "C'est un brouillon : personne d'autre ne peut la voir.",
+    "my-listings": "Voir mes annonces"
+  },
+  "gone": {
+    "title": "Cette annonce n'est plus disponible",
+    "text": "Elle a expiré ou a été retirée par son vendeur.",
+    "see-all-place": "Voir les {{category}} à {{place}}",
+    "see-all": "Voir les {{category}}",
+    "similar": "Annonces similaires"
+  },
+  "not-found": {
+    "title": "Annonce introuvable",
+    "text": "Le lien est peut-être incomplet, ou cette annonce n'a jamais été publiée.",
+    "home": "Retour à l'accueil"
   }
 }

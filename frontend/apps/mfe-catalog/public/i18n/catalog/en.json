@@ -115,6 +115,71 @@
     "results-title-what": "{{what}} in Tunisia · Soukly",
     "results-title-where": "Listings in {{where}} · Soukly",
     "results-title-all": "All listings in Tunisia · Soukly",
-    "results-description": "Browse the classified ads of Soukly and filter them by category, place, price and features."
+    "results-description": "Browse the classified ads of Soukly and filter them by category, place, price and features.",
+    "listing-title": "{{title}} · {{price}} · {{place}} · Soukly",
+    "listing-title-no-price": "{{title}} · {{place}} · Soukly",
+    "listing-description": "{{description}}",
+    "gone-title": "Listing unavailable · Soukly",
+    "not-found-title": "Listing not found · Soukly",
+    "gone-description": "Browse the classified ads of Soukly all over Tunisia."
+  },
+  "detail": {
+    "loading": "Loading the listing…",
+    "photos": "Photos of the listing",
+    "thumbnails": "Photo thumbnails",
+    "open-photo": "Enlarge photo {{n}} of {{count}}",
+    "show-photo": "Show photo {{n}} of {{count}}",
+    "photo-alt": "Photo {{n}} of {{count}}: {{title}}",
+    "no-photo": "No photo",
+    "previous-photo": "Previous photo",
+    "next-photo": "Next photo",
+    "back": "Back",
+    "share": "Share",
+    "link-copied": "Link copied",
+    "link-copy-failed": "The link could not be copied.",
+    "negotiable": "Negotiable",
+    "published": "posted {{when}}",
+    "facts": "Details",
+    "yes": "Yes",
+    "no": "No",
+    "description": "Description",
+    "read-more": "Read more",
+    "read-less": "Show less",
+    "seller": "Seller",
+    "member-since": "Member since {{since}}",
+    "contact-area": "Price and seller contact"
+  },
+  "contact": {
+    "show": "Show the number",
+    "login-required": "Sign in to see the seller's number",
+    "title": "Contact {{name}}",
+    "call": "Call",
+    "whatsapp": "WhatsApp",
+    "whatsapp-message": "Hello, I'm interested in your listing \"{{title}}\" on Soukly: {{url}}",
+    "copy": "Copy the number",
+    "copied": "Number copied",
+    "copy-failed": "The number could not be copied.",
+    "safety-title": "Safety tip:",
+    "safety": "see the item before paying and never send money in advance.",
+    "limit": "You have shown many numbers today, try again later.",
+    "error": "The number could not be shown. Check your connection, then try again."
+  },
+  "owner": {
+    "title": "This is your listing",
+    "expired": "It has expired: it no longer appears in the results.",
+    "draft": "It is a draft: nobody else can see it.",
+    "my-listings": "See my listings"
+  },
+  "gone": {
+    "title": "This listing is no longer available",
+    "text": "It has expired or was withdrawn by its seller.",
+    "see-all-place": "See {{category}} in {{place}}",
+    "see-all": "See {{category}}",
+    "similar": "Similar listings"
+  },
+  "not-found": {
+    "title": "Listing not found",
+    "text": "The link may be incomplete, or this listing was never published.",
+    "home": "Back to the home page"
   }
 }

@@ -8,6 +8,7 @@ describe('catalogPaths', () => {
     expect(catalogPaths(segments())).toEqual({ consumed: [] });
     expect(catalogPaths(segments('search'))).toEqual({ consumed: [] });
     expect(catalogPaths(segments('c', 'vehicles.cars'))).toEqual({ consumed: [] });
+    expect(catalogPaths(segments('listings', 'abc'))).toEqual({ consumed: [] });
   });
 
   it('leaves the other pages to their own routes', () => {

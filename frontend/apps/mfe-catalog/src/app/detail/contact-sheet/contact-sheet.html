@@ -1,0 +1,50 @@
+<div class="sheet__handle" aria-hidden="true"></div>
+<div class="sheet__header">
+  <span class="sheet__initial" aria-hidden="true">{{ data.sellerInitial }}</span>
+  <div class="sheet__who">
+    <h2 id="contact-sheet-title" class="sheet__title">
+      {{ 'catalog.contact.title' | transloco: { name: data.sellerName } }}
+    </h2>
+    <p class="sheet__listing" dir="auto">{{ data.title }}</p>
+  </div>
+  <button
+    type="button"
+    class="sheet__close"
+    [attr.aria-label]="'catalog.actions.close' | transloco"
+    (click)="dialogRef.close()"
+  >
+    <svg lucideX [size]="20" aria-hidden="true"></svg>
+  </button>
+</div>
+
+<p class="sheet__phone" data-testid="contact-phone"><bdi dir="ltr">{{ display }}</bdi></p>
+
+<div class="sheet__actions">
+  <a class="sheet__action sheet__action--call" data-testid="contact-call" [href]="callHref">
+    <svg lucidePhone [size]="18" aria-hidden="true"></svg>
+    {{ 'catalog.contact.call' | transloco }}
+  </a>
+  <a
+    class="sheet__action sheet__action--whatsapp"
+    data-testid="contact-whatsapp"
+    target="_blank"
+    rel="noopener noreferrer"
+    [href]="
+      whatsappHref('catalog.contact.whatsapp-message' | transloco: { title: data.title, url: data.url })
+    "
+  >
+    <svg lucideMessageCircle [size]="18" aria-hidden="true"></svg>
+    {{ 'catalog.contact.whatsapp' | transloco }}
+  </a>
+</div>
+<button type="button" class="sheet__copy" data-testid="contact-copy" (click)="copy()">
+  {{ 'catalog.contact.copy' | transloco }}
+</button>
+
+<p class="sheet__safety" data-testid="contact-safety">
+  <svg lucideShieldCheck [size]="18" aria-hidden="true"></svg>
+  <span
+    ><strong>{{ 'catalog.contact.safety-title' | transloco }}</strong> {{ 'catalog.contact.safety' |
+    transloco }}</span
+  >
+</p>

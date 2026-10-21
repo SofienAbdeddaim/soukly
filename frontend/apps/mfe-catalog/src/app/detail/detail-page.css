@@ -1,0 +1,246 @@
+:host {
+  display: block;
+}
+
+.detail {
+  /* Room for the fixed contact bar on mobile */
+  padding-block-end: 112px;
+}
+
+.detail__layout {
+  max-inline-size: 72rem;
+  margin-inline: auto;
+}
+
+.detail__media {
+  position: relative;
+}
+
+.detail__tools {
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline: 12px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.detail__tool {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.detail__tool:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.detail__content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-block: 14px 24px;
+  padding-inline: 16px;
+}
+
+.detail__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail__price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.detail__chip {
+  padding-block: 2px;
+  padding-inline: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.detail__title {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 1.1875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.detail__meta {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.detail__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail__heading {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.detail__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.detail__fact {
+  padding-block: 8px;
+  padding-inline: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+}
+
+.detail__fact dt {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+.detail__fact dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+.detail__seller {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-block: 10px;
+  padding-inline: 12px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface-muted);
+}
+
+.detail__initial {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-brand);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.detail__seller-name {
+  margin: 0;
+  font-weight: 500;
+}
+
+.detail__seller-since {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+/* Kept above the mobile bar of the shell (3.5rem and its border, below 768px). */
+.detail__bar {
+  position: fixed;
+  z-index: 10;
+  inset-block-end: calc(3.5rem + 1px);
+  inset-inline: 0;
+  padding-block: 10px 12px;
+  padding-inline: 16px;
+  border-block-start: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.detail__state,
+.detail__gone {
+  max-inline-size: 72rem;
+  margin-inline: auto;
+  padding-block: 24px 32px;
+  padding-inline: 16px;
+}
+
+.detail__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.detail__state-title,
+.detail__state-text {
+  margin: 0;
+}
+
+.detail__state-text {
+  color: var(--color-text-muted);
+}
+
+.detail__state-heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+@media (min-width: 768px) {
+  .detail {
+    padding-block: 24px 40px;
+    padding-inline: 16px;
+  }
+
+  .detail__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    align-items: start;
+    gap: 32px;
+  }
+
+  .detail__content {
+    padding-inline: 0;
+  }
+
+  .detail__aside {
+    position: sticky;
+    inset-block-start: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  .detail--loading .detail__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
