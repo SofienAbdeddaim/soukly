@@ -488,6 +488,48 @@ French and Arabic titles; every governorate; 1 to 4 photo rows each) owned by th
 `00000000-0000-4000-8000-00000000cafe`. Remove them with
 `DELETE FROM listing_photos WHERE listing_id IN (SELECT id FROM listings WHERE owner_id = '00000000-0000-4000-8000-00000000cafe'); DELETE FROM listings WHERE owner_id = '00000000-0000-4000-8000-00000000cafe';`.
 
+## Listing page and seller contact (CATA-03)
+
+`GET /api/listings/{id}` is public at the gateway; a token, when sent, is validated and says whether the reader owns
+the listing.
+
+| Listing | Anyone else | Its owner |
+| --- | --- | --- |
+| `PUBLISHED` | `200` public view | `200` full view |
+| `EXPIRED`, or `PUBLISHED` past its expiry, or seller's account no longer active | `410` `listing-gone` | `200` full view (with `status`) |
+| `DRAFT` or unknown | `404` `listing-not-found` | `200` full view (ANN-01) |
+
+ANN-05 adds `INACTIVE` (`410`, owner `200`) and deleted listings (`410` for everyone).
+
+- **Public view** (`Cache-Control: no-cache, private`, no `ETag`): `id`, `status`, `kind`, `categoryCode`, `title`,
+  `description`, `priceMode`, `price`, `currency`, `negotiable`, `governorateCode`, `delegationCode`, `attributes` (in
+  the display order of the subcategory), `photos` (cover first, `url` 1600 px and `thumbnailUrl` 400 px WebP),
+  `publishedAt` and `seller` `{ id, displayName, memberSince }`. Never the phone number or the email of the seller.
+- **Full view** of the owner: the body of ANN-01 (`ETag`, `Cache-Control: no-store`) plus `seller` once the listing
+  is not a draft (null for a draft, which never calls user-service).
+- **`410`**: a `listing-gone` problem with only `categoryCode` and `governorateCode`, so the page can suggest similar
+  listings (`GET /api/listings?category=…&governorate=…&limit=4`).
+- **Seller**: `GET /internal/users/{id}/public-profile` of user-service with `X-Internal-Token`, kept 5 minutes in
+  memory (Caffeine, also the answer "no active account"). user-service down or answering an error: `503`.
+
+`POST /api/listings/{id}/contact` (JWT required at the gateway and validated again) gives the phone number:
+
+| Case | Answer |
+| --- | --- |
+| member, published listing of another account | `200` `{ "phone": "+21620123456" }`, `Cache-Control: no-store` |
+| no or invalid token | `401` |
+| the owner | `409` `own-listing` (the page never offers it) |
+| draft or unknown / expired or seller no longer active | `404` / `410` `listing-gone` |
+| numbers of 30 other listings already shown in the last 24 hours | `429` `contact-limit-reached` with `Retry-After` (seconds until one of them leaves the window) |
+| user-service down | `503` |
+
+- Every reveal is a row of `contact_reveals` (`listing_id`, `viewer_id`, `revealed_at`; never the number), also when
+  the same number is shown again. The limit counts the **distinct** listings of the member over a sliding 24-hour
+  window (`count(DISTINCT listing_id)`), so seeing a number again never counts; the reveals of one member are
+  serialized by an advisory lock. Limit and window: `soukly.listing.contact.*` (`CONTACT_MAX_LISTINGS_PER_DAY`, an
+  assumption of V1).
+- The number is read from `GET /internal/users/{id}/contact` at every request: never cached, stored or logged.
+
 ## Data
 
 Flyway migrations in `src/main/resources/db/migration`:
@@ -503,6 +545,7 @@ Flyway migrations in `src/main/resources/db/migration`:
 | `V7__create_listing_photos.sql` | table `listing_photos` (ANN-02): status, position, size of the 1600 version, bytes, rejection code |
 | `V8__publish_listings.sql` | ANN-03: `listings.expires_at` and `reminder_sent_at`, statuses `PUBLISHED` and `EXPIRED`, table `outbox_events` |
 | `V9__search_listings.sql` | CATA-01: extensions `unaccent` and `pg_trgm`, function `soukly_normalize`, generated column `search_vector`, search indexes |
+| `V10__create_contact_reveals.sql` | CATA-03: table `contact_reveals`, index `(viewer_id, revealed_at)` for the daily limit |
 
 Places come from the official INS "Code géographique tunisien" (December 2012, division at 31 December 2012); the
 source, its checksum and the few display fixes are in the header of `V5`. Never invent a place: a delegation created
@@ -552,6 +595,9 @@ Write a **new** migration (`V5__…`, never edit a released one: Flyway checks t
 | `LISTING_CHECK_INTERVAL` | `PT1H` | period of the expiry and reminder task |
 | `LISTING_CLOCK_OFFSET` | `PT0S` | local manual tests only: moves the business clock forward (`P58D`) |
 | `SEARCH_CURSOR_SECRET` | empty (random key per start) | signs the search cursors |
+| `USER_SERVICE_URL` | `http://localhost:8081` | user-service as this service reaches it (internal endpoints, CATA-03) |
+| `INTERNAL_API_TOKEN` | empty | shared token sent in `X-Internal-Token` to user-service |
+| `CONTACT_MAX_LISTINGS_PER_DAY` | `30` | distinct listings whose number a member may see per 24 hours |
 
 Photo limits and timings are under `soukly.listing.photos.*` in `application.yml` (10 photos, 5 MB, 50 megapixels,
 400 × 300, URL valid 10 minutes, cleanup every hour after 1 hour, WebP quality 80, 30 s per conversion, 2 conversions
@@ -578,6 +624,13 @@ listing) and insert published listings straight into the table with chosen dates
 plus every sort paged through with equal keys, refused cursors, error codes and the SQL normalization compared with
 its Java mirror (`SearchText`). `SearchTextTest` (Arabic and Latin normalization) and `SearchCursorCodecTest` (round
 trip, tampering, wrong sort or key) run without the database.
+
+Listing page and contact tests (`listing/ListingDetailApiTests`, `contact/ContactApiTests`) read the sellers from a
+simulated user-service (`support/TestUserService`, a local JDK HTTP server like the JWKS one, which checks
+`X-Internal-Token`; no WireMock needed): every status × reader of the table above, the exact members of the public
+view (no phone number, no email), the `410` body, the profile read once then cached, `503`, and for the contact
+`no-store`, the `contact_reveals` row, `401`, `409`, `404`/`410`, and the limit (29 reveals 23 hours old plus one now:
+the 31st listing gets `429` with `Retry-After: 3600`, a listing already seen still answers, then the window moves).
 
 Photo tests (`photo/PhotoApiTests`) also start Garage v2.4.1 (`support/TestGarage`, set up through its admin API with
 random secrets) and need the libvips tools on the machine, like the CI. The images are generated by the tests

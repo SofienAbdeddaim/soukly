@@ -20,8 +20,9 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
  * Access policy of listing-service, the same as the gateway's (defense in depth): the referentials (CAT-01), the
  * search (CATA-01), the reading of a listing and the health check are public; everything else needs a valid access token. Stateless.
  *
- * <p>Unlike the gateway, a token sent on {@code GET /listings/{id}} is validated: it identifies the owner of a
- * draft, and an invalid one is answered with {@code 401} so that the front end refreshes it.
+ * <p>Unlike the gateway, a token sent on {@code GET /listings/{id}} is validated: it identifies the owner of the
+ * listing (full view, CATA-03), and an invalid one is answered with {@code 401} so that the front end refreshes it.
+ * {@code POST /listings/{id}/contact} needs a token, like every path not listed here.
  */
 @Configuration(proxyBeanMethods = false)
 class SecurityConfig {

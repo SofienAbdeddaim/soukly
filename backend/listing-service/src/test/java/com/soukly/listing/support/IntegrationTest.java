@@ -17,7 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * Base of the integration tests: one Spring context for every class, a PostgreSQL container (Testcontainers)
  * migrated by Flyway, a Garage container for the photos ({@link TestGarage}) and a Redpanda container for the events
  * ({@link TestRedpanda}). The referential data is read-only, so no state is reset between tests; listing tests use a
- * new account id each time instead. Access tokens are validated against the simulated JWKS of {@link TestJwks}.
+ * new account id each time instead. Access tokens are validated against the simulated JWKS of {@link TestJwks}, and
+ * sellers are read from the simulated user-service of {@link TestUserService}.
  *
  * <p>The scheduled tasks (outbox relay, expiry, photo cleanup) never run on their own: tests call them, with a clock
  * they can move ({@link MutableClock}, back to the real time before each test).
@@ -53,6 +54,8 @@ public abstract class IntegrationTest {
         registry.add("soukly.listing.photos.public-base-url", () -> "https://photos.example.test");
         registry.add("spring.kafka.bootstrap-servers", TestRedpanda::bootstrapServers);
         registry.add("soukly.listing.publication.public-base-url", () -> "https://soukly.example.test");
+        registry.add("soukly.listing.user-service.base-url", TestUserService::baseUrl);
+        registry.add("soukly.listing.user-service.internal-api-token", () -> TestUserService.TOKEN);
         // Run by the tests only
         registry.add("soukly.listing.outbox.relay-initial-delay", () -> "P1D");
         registry.add("soukly.listing.outbox.purge-interval", () -> "P1D");

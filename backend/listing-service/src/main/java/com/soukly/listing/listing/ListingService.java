@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.soukly.listing.outbox.Outbox;
+import com.soukly.listing.seller.SellerDirectory;
+import com.soukly.listing.seller.SellerProfile;
+import com.soukly.listing.seller.SellerUnavailableException;
 
 import tools.jackson.databind.JsonNode;
 
@@ -31,10 +34,12 @@ public class ListingService {
     private final Outbox outbox;
     private final DraftProperties properties;
     private final PublicationProperties publication;
+    private final SellerDirectory sellers;
     private final Clock clock;
 
     ListingService(ListingRepository repository, DraftEditor editor, ListingViews views, ListingEventFactory events,
-            Outbox outbox, DraftProperties properties, PublicationProperties publication, Clock clock) {
+            Outbox outbox, DraftProperties properties, PublicationProperties publication, SellerDirectory sellers,
+            Clock clock) {
         this.repository = repository;
         this.editor = editor;
         this.views = views;
@@ -42,6 +47,7 @@ public class ListingService {
         this.outbox = outbox;
         this.properties = properties;
         this.publication = publication;
+        this.sellers = sellers;
         this.clock = clock;
     }
 
@@ -140,16 +146,57 @@ public class ListingService {
     }
 
     /**
+     * Reads a listing (ANN-01, CATA-03): its owner reads it in any status; anyone else reads a published listing
+     * whose seller is active.
+     *
      * @param viewerId the account reading it, or null without a token
-     * @throws ListingNotFoundException unknown listing, or a listing that {@code viewerId} does not own
+     * @throws ListingNotFoundException   unknown listing, or a draft of another account
+     * @throws ListingGoneException       a listing that is not online any more, for anyone but its owner
+     * @throws SellerUnavailableException user-service did not answer
      */
     @Transactional(readOnly = true)
-    public ListingView get(UUID viewerId, UUID id) {
-        // The public reading of published listings is CATA-03.
-        return repository.find(id)
-                .filter(found -> viewerId != null && found.isOwnedBy(viewerId))
-                .map(found -> views.view(found, List.of()))
-                .orElseThrow(ListingNotFoundException::new);
+    public ListingReading read(UUID viewerId, UUID id) {
+        Listing listing = repository.find(id).orElseThrow(ListingNotFoundException::new);
+        ListingView view = views.view(listing, List.of());
+        if (viewerId != null && listing.isOwnedBy(viewerId)) {
+            SellerProfile seller = listing.status() == ListingStatus.DRAFT ? null
+                    : sellers.profile(listing.ownerId()).orElse(null);
+            return new ListingReading(view, true, seller);
+        }
+        requireOnline(listing);
+        SellerProfile seller = sellers.profile(listing.ownerId()).orElseThrow(() -> new ListingGoneException(listing));
+        return new ListingReading(view, false, seller);
+    }
+
+    /**
+     * A listing whose seller {@code viewerId} may contact (CATA-03).
+     *
+     * @throws ListingNotFoundException unknown listing, or a draft of another account
+     * @throws OwnListingException      a listing of {@code viewerId}
+     * @throws ListingGoneException     a listing that is not online any more
+     */
+    @Transactional(readOnly = true)
+    public Listing contactable(UUID viewerId, UUID id) {
+        Listing listing = repository.find(id).orElseThrow(ListingNotFoundException::new);
+        if (listing.isOwnedBy(viewerId)) {
+            throw new OwnListingException();
+        }
+        requireOnline(listing);
+        return listing;
+    }
+
+    /** Hides a draft ({@code 404}) and a listing that is not online any more ({@code 410}). */
+    private void requireOnline(Listing listing) {
+        switch (listing.status()) {
+            case DRAFT -> throw new ListingNotFoundException();
+            case EXPIRED -> throw new ListingGoneException(listing);
+            // The expiry task runs every hour: a listing past its expiry is already gone, as in the search
+            case PUBLISHED -> {
+                if (!listing.expiresAt().isAfter(clock.instant())) {
+                    throw new ListingGoneException(listing);
+                }
+            }
+        }
     }
 
     /**

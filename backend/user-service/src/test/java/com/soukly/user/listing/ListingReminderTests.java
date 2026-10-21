@@ -72,7 +72,8 @@ class ListingReminderTests extends IntegrationTest {
                 // The title alone in its box, and the subject in <title>
                 .contains("dir=\"auto\">" + TITLE + "</p>")
                 .contains("<title>" + subject + "</title>");
-        assertThat(processed(eventId)).isEqualTo(1);
+        // The email leaves before the transaction commits
+        awaitProcessed(eventId);
     }
 
     @Test

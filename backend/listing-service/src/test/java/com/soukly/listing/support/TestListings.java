@@ -26,6 +26,15 @@ public final class TestListings {
               "priceMode": "FIXED", "price": 1200, "negotiable": true,
               "governorateCode": "sfax", "delegationCode": "sfax.sfax-ville" }""";
 
+    /** A car with every required attribute, and an optional one (model). */
+    public static final String COMPLETE_CAR = """
+            { "categoryCode": "vehicles.cars", "title": "Peugeot 208 diesel",
+              "description": "Première main, carnet d'entretien.\\nPneus neufs. <script>alert(1)</script>",
+              "priceMode": "FIXED", "price": 32000, "negotiable": true,
+              "governorateCode": "sousse", "delegationCode": "sousse.sousse-riadh",
+              "attributes": { "brand": "Peugeot", "model": "208", "year": 2019, "mileage-km": 62000,
+                              "fuel": "diesel", "gearbox": "manual" } }""";
+
     private TestListings() {
     }
 
@@ -62,6 +71,15 @@ public final class TestListings {
     public static UUID completeDraft(MockMvc mockMvc, JdbcTemplate jdbc, UUID owner, int photos) throws Exception {
         UUID id = draft(mockMvc, owner, COMPLETE_FURNITURE);
         readyPhotos(jdbc, id, photos);
+        return id;
+    }
+
+    /** A published listing of {@code owner}, created from {@code body} with {@code photos} READY photos. */
+    public static UUID published(MockMvc mockMvc, JdbcTemplate jdbc, UUID owner, String body, int photos)
+            throws Exception {
+        UUID id = draft(mockMvc, owner, body);
+        readyPhotos(jdbc, id, photos);
+        publish(mockMvc, owner, id);
         return id;
     }
 

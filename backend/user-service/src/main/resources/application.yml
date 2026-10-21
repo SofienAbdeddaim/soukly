@@ -52,6 +52,10 @@ soukly:
     listing-events:
       retries: 3
       retry-interval: 2s
+    # Service-to-service endpoints /internal/** (CATA-03), never routed by the gateway: callers send this shared
+    # token in X-Internal-Token. Empty = every internal request is refused.
+    internal-api:
+      token: ${INTERNAL_API_TOKEN:}
     # Access tokens (AUTH-02): JWT RS256. The default key path is the one of scripts/gen-jwt-key.sh, seen from
     # backend/user-service (the working directory of spring-boot:run).
     jwt:

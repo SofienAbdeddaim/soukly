@@ -21,12 +21,15 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
+import com.soukly.listing.contact.ContactLimitReachedException;
 import com.soukly.listing.listing.AlreadyPublishedException;
 import com.soukly.listing.listing.DraftLimitReachedException;
 import com.soukly.listing.listing.IfMatchRequiredException;
 import com.soukly.listing.listing.InvalidListingException;
+import com.soukly.listing.listing.ListingGoneException;
 import com.soukly.listing.listing.ListingIncompleteException;
 import com.soukly.listing.listing.ListingNotFoundException;
+import com.soukly.listing.listing.OwnListingException;
 import com.soukly.listing.listing.RenewNotAllowedException;
 import com.soukly.listing.listing.VersionConflictException;
 import com.soukly.listing.photo.PhotoLimitReachedException;
@@ -35,6 +38,7 @@ import com.soukly.listing.photo.PhotoRejectedException;
 import com.soukly.listing.referential.CategoryNotFoundException;
 import com.soukly.listing.referential.GovernorateNotFoundException;
 import com.soukly.listing.search.InvalidSearchException;
+import com.soukly.listing.seller.SellerUnavailableException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -59,6 +63,10 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
      */
     static final String CODE = "code";
 
+    /** Members of a {@code listing-gone} problem (CATA-03). */
+    static final String CATEGORY_CODE = "categoryCode";
+    static final String GOVERNORATE_CODE = "governorateCode";
+
     @ExceptionHandler
     ResponseEntity<Object> invalidListing(InvalidListingException e, NativeWebRequest request) {
         ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("validation-failed"),
@@ -82,6 +90,40 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(ProblemDetails.create(ProblemDetails.type("listing-not-found"), HttpStatus.NOT_FOUND,
                 "Listing not found", "No listing with this id is visible to you.", instance(request),
                 requestId(request)));
+    }
+
+    /** Only the subcategory and the governorate, for similar listings (CATA-03); nothing else of the listing. */
+    @ExceptionHandler
+    ResponseEntity<Object> listingGone(ListingGoneException e, NativeWebRequest request) {
+        ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("listing-gone"), HttpStatus.GONE,
+                "Listing gone", "This listing is not online any more.", instance(request), requestId(request));
+        problem.setProperty(CATEGORY_CODE, e.categoryCode());
+        problem.setProperty(GOVERNORATE_CODE, e.governorateCode());
+        return problem(problem);
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> ownListing(OwnListingException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("own-listing"), HttpStatus.CONFLICT, "Own listing",
+                "This listing is yours: its contact is your own.", instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> contactLimitReached(ContactLimitReachedException e, NativeWebRequest request) {
+        ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("contact-limit-reached"),
+                HttpStatus.TOO_MANY_REQUESTS, "Contact limit reached",
+                "You were shown the numbers of many listings today. Try again later.", instance(request),
+                requestId(request));
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(e.retryAfter().toSeconds()))
+                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .body(problem);
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> sellerUnavailable(SellerUnavailableException e, NativeWebRequest request) {
+        return problem(ProblemDetails.forStatus(HttpStatus.SERVICE_UNAVAILABLE,
+                "The seller cannot be read right now. Try again.", instance(request), requestId(request)));
     }
 
     @ExceptionHandler

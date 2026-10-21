@@ -85,6 +85,39 @@ class RoutingTests extends GatewayIntegrationTest {
     }
 
     @Test
+    void theContactOfAListingRequiresATokenThenIsForwarded() {
+        client.post().uri("/api/listings/42/contact")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectHeader().contentType(MediaType.APPLICATION_PROBLEM_JSON);
+        assertThat(LISTING_SERVICE.received()).isEmpty();
+
+        client.post().uri("/api/listings/42/contact")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken())
+                .exchange()
+                .expectStatus().isOk();
+        assertThat(LISTING_SERVICE.received()).singleElement().satisfies(received -> {
+            assertThat(received.method()).isEqualTo("POST");
+            assertThat(received.uri()).isEqualTo("/listings/42/contact");
+        });
+    }
+
+    @Test
+    void internalEndpointsAreNeverRouted() {
+        for (String path : new String[] { "/internal/users/42/contact", "/api/internal/users/42/contact",
+                "/internal/users/42/public-profile", "/api/internal/users/42/public-profile" }) {
+            client.get().uri(path)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + validToken())
+                    .header("X-Internal-Token", "guessed")
+                    .exchange()
+                    .expectStatus().isNotFound();
+        }
+
+        assertThat(USER_SERVICE.received()).isEmpty();
+        assertThat(LISTING_SERVICE.received()).isEmpty();
+    }
+
+    @Test
     void invalidTokenOnPublicPathIsForwardedUnchanged() {
         client.get().uri("/api/listings/42")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt")
