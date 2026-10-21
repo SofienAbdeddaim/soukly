@@ -1,0 +1,412 @@
+import { Page, Route } from '@playwright/test';
+import { problem } from './fake-api';
+
+/**
+ * Fakes listing-service in the browser (the CI has no back end): referentials (a part of CAT-01),
+ * drafts with their versions (ANN-01), photos with presigned uploads (ANN-02). The storage of
+ * the uploads is `http://storage.test`, the photos are served from `http://photos.test`.
+ * Register it after `fakeAccountApi`: what it does not answer falls back to the account API.
+ */
+const STORAGE = 'http://storage.test';
+const PHOTOS = 'http://photos.test';
+
+type Labels = { fr: string; ar: string; en: string };
+const l = (fr: string, ar: string, en: string): Labels => ({ fr, ar, en });
+
+const FAMILIES = [
+  {
+    code: 'vehicles',
+    label: l('Véhicules', 'المركبات', 'Vehicles'),
+    subcategories: [
+      { code: 'vehicles.cars', familyCode: 'vehicles', label: l('Voitures', 'سيارات', 'Cars') },
+      {
+        code: 'vehicles.motorcycles',
+        familyCode: 'vehicles',
+        label: l('Motos et scooters', 'دراجات نارية وسكوترات', 'Motorcycles and scooters'),
+      },
+    ],
+  },
+  {
+    code: 'real-estate',
+    label: l('Immobilier', 'العقارات', 'Real estate'),
+    subcategories: [
+      {
+        code: 'real-estate.apartments',
+        familyCode: 'real-estate',
+        label: l('Appartements', 'شقق', 'Apartments'),
+      },
+    ],
+  },
+  ...(
+    [
+      ['jobs', l('Emploi', 'الشغل', 'Jobs')],
+      ['services', l('Services', 'الخدمات', 'Services')],
+      ['home', l('Maison', 'المنزل', 'Home')],
+      ['multimedia', l('Multimédia', 'الإلكترونيات', 'Multimedia')],
+      ['fashion', l('Mode', 'الموضة', 'Fashion')],
+      ['leisure', l('Loisirs', 'الترفيه', 'Leisure')],
+      ['animals', l('Animaux', 'الحيوانات', 'Animals')],
+      ['misc', l('Divers', 'متفرقات', 'Miscellaneous')],
+    ] as const
+  ).map(([code, label]) => ({
+    code,
+    label,
+    subcategories: [
+      { code: `${code}.other`, familyCode: code, label: l('Autres', 'أخرى', 'Other') },
+    ],
+  })),
+];
+
+const enumValues = (...values: [string, Labels][]) =>
+  values.map(([code, label]) => ({ code, label }));
+
+const ATTRIBUTES: Record<string, Record<string, unknown>[]> = {
+  'vehicles.cars': [
+    {
+      code: 'brand',
+      type: 'TEXT',
+      required: true,
+      minLength: 2,
+      maxLength: 40,
+      filterable: true,
+      label: l('Marque', 'الماركة', 'Brand'),
+    },
+    {
+      code: 'model',
+      type: 'TEXT',
+      required: false,
+      minLength: 1,
+      maxLength: 40,
+      filterable: false,
+      label: l('Modèle', 'الطراز', 'Model'),
+    },
+    {
+      code: 'year',
+      type: 'INTEGER',
+      required: true,
+      minValue: 1950,
+      maxValue: 2027,
+      filterable: true,
+      label: l('Année', 'سنة الصنع', 'Year'),
+    },
+    {
+      code: 'mileage-km',
+      type: 'INTEGER',
+      required: true,
+      minValue: 0,
+      maxValue: 2000000,
+      filterable: true,
+      label: l('Kilométrage (km)', 'عدد الكيلومترات (كم)', 'Mileage (km)'),
+    },
+    {
+      code: 'fuel',
+      type: 'ENUM',
+      required: true,
+      filterable: true,
+      label: l('Carburant', 'الوقود', 'Fuel'),
+      values: enumValues(
+        ['petrol', l('Essence', 'بنزين', 'Petrol')],
+        ['diesel', l('Diesel', 'ديزل', 'Diesel')],
+        ['hybrid', l('Hybride', 'هجين', 'Hybrid')],
+        ['electric', l('Électrique', 'كهربائي', 'Electric')],
+        ['lpg', l('GPL', 'غاز (GPL)', 'LPG')],
+      ),
+    },
+    {
+      code: 'gearbox',
+      type: 'ENUM',
+      required: true,
+      filterable: true,
+      label: l('Boîte de vitesses', 'علبة السرعات', 'Gearbox'),
+      values: enumValues(
+        ['manual', l('Manuelle', 'يدوية', 'Manual')],
+        ['automatic', l('Automatique', 'أوتوماتيكية', 'Automatic')],
+      ),
+    },
+  ],
+  'real-estate.apartments': [
+    {
+      code: 'transaction',
+      type: 'ENUM',
+      required: true,
+      filterable: true,
+      label: l("Type d'offre", 'نوع العرض', 'Offer type'),
+      values: enumValues(
+        ['sale', l('Vente', 'بيع', 'Sale')],
+        ['rent', l('Location', 'كراء', 'Rent')],
+      ),
+    },
+    {
+      code: 'surface-m2',
+      type: 'INTEGER',
+      required: true,
+      minValue: 1,
+      maxValue: 100000,
+      filterable: true,
+      label: l('Surface (m²)', 'المساحة (م²)', 'Area (m²)'),
+    },
+    {
+      code: 'rooms',
+      type: 'INTEGER',
+      required: true,
+      minValue: 0,
+      maxValue: 20,
+      filterable: true,
+      label: l('Nombre de chambres', 'عدد الغرف', 'Bedrooms'),
+    },
+    {
+      code: 'furnished',
+      type: 'BOOLEAN',
+      required: false,
+      filterable: true,
+      label: l('Meublé', 'مفروش', 'Furnished'),
+    },
+  ],
+};
+
+export interface FakePhoto {
+  id: string;
+  url: string;
+  thumbnailUrl: string;
+  width: number;
+  height: number;
+  position: number;
+}
+
+export interface FakeListing {
+  id: string;
+  version: number;
+  categoryCode: string;
+  title: string | null;
+  description: string | null;
+  priceMode: string | null;
+  price: number | null;
+  negotiable: boolean;
+  governorateCode: string | null;
+  delegationCode: string | null;
+  attributes: Record<string, unknown>;
+  photos: FakePhoto[];
+}
+
+export interface FakeListingApi {
+  listings: Map<string, FakeListing>;
+  /** Bodies of the PATCH requests received. */
+  patches: Record<string, unknown>[];
+  /** Files received by the storage, by photo id. */
+  uploads: Map<string, Buffer>;
+  /** Changes the draft "in another tab": its version goes up. */
+  changeElsewhere(id: string, changes: Partial<FakeListing>): void;
+}
+
+export const LISTING_ID = '0b9d6c3e-6a43-4c5e-9f0e-2d7a1b8c4e51';
+
+export function draft(changes: Partial<FakeListing> = {}): FakeListing {
+  return {
+    id: LISTING_ID,
+    version: 0,
+    categoryCode: 'vehicles.cars',
+    title: null,
+    description: null,
+    priceMode: null,
+    price: null,
+    negotiable: false,
+    governorateCode: null,
+    delegationCode: null,
+    attributes: {},
+    photos: [],
+    ...changes,
+  };
+}
+
+export function fakePhoto(id: string, position: number): FakePhoto {
+  return {
+    id,
+    url: `${PHOTOS}/${id}.png`,
+    thumbnailUrl: `${PHOTOS}/${id}-400.png`,
+    width: 1600,
+    height: 1200,
+    position,
+  };
+}
+
+function view(listing: FakeListing, warnings: string[] = []) {
+  const missing: string[] = [];
+  if (!listing.photos.length) missing.push('photos');
+  if (!listing.title) missing.push('title');
+  if (!listing.description) missing.push('description');
+  if (!listing.priceMode) missing.push('priceMode');
+  if (!listing.governorateCode) missing.push('governorateCode');
+  for (const attribute of ATTRIBUTES[listing.categoryCode] ?? []) {
+    if (attribute['required'] && !(String(attribute['code']) in listing.attributes)) {
+      missing.push(`attributes.${attribute['code']}`);
+    }
+  }
+  const family = listing.categoryCode.split('.')[0];
+  return {
+    ...listing,
+    status: 'DRAFT',
+    kind: family === 'services' || family === 'jobs' ? 'SERVICE' : 'SALE',
+    missingFields: missing,
+    warnings,
+    createdAt: '2026-10-21T08:00:00Z',
+    updatedAt: '2026-10-21T08:00:00Z',
+    publishedAt: null,
+    expiresAt: null,
+  };
+}
+
+/** One pixel PNG, for the thumbnails. */
+const PIXEL = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
+export async function fakeListingApi(
+  page: Page,
+  initial: FakeListing[] = [],
+): Promise<FakeListingApi> {
+  const api: FakeListingApi = {
+    listings: new Map(initial.map((listing) => [listing.id, structuredClone(listing)])),
+    patches: [],
+    uploads: new Map(),
+    changeElsewhere: (id, changes) => {
+      const listing = api.listings.get(id);
+      if (listing) {
+        Object.assign(listing, changes, { version: listing.version + 1 });
+      }
+    },
+  };
+  let nextPhoto = 1;
+  const json = (
+    route: Route,
+    status: number,
+    body: unknown,
+    headers: Record<string, string> = {},
+  ) =>
+    route.fulfill({
+      status,
+      headers,
+      contentType: status >= 400 ? 'application/problem+json' : 'application/json',
+      body: JSON.stringify(body),
+    });
+  const answer = (route: Route, listing: FakeListing, status = 200, warnings: string[] = []) =>
+    json(route, status, view(listing, warnings), { ETag: `"${listing.version}"` });
+
+  await page.route(`${STORAGE}/**`, async (route) => {
+    const cors = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'PUT',
+      'Access-Control-Allow-Headers': '*',
+    };
+    if (route.request().method() === 'OPTIONS') {
+      return route.fulfill({ status: 204, headers: cors });
+    }
+    const id = new URL(route.request().url()).pathname.slice(1);
+    api.uploads.set(id, route.request().postDataBuffer() ?? Buffer.alloc(0));
+    return route.fulfill({ status: 200, headers: cors });
+  });
+  await page.route(`${PHOTOS}/**`, (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL }),
+  );
+
+  await page.route('**/api/**', async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    const method = request.method();
+
+    if (path === '/api/categories') {
+      return json(route, 200, FAMILIES);
+    }
+    const attributes = path.match(/^\/api\/categories\/([^/]+)\/attributes$/);
+    if (attributes) {
+      return json(route, 200, ATTRIBUTES[decodeURIComponent(attributes[1])] ?? []);
+    }
+    if (path === '/api/listings' && method === 'POST') {
+      const body = request.postDataJSON() as { categoryCode: string };
+      const listing = draft({ categoryCode: body.categoryCode });
+      api.listings.set(listing.id, listing);
+      return answer(route, listing, 201);
+    }
+    const match = path.match(/^\/api\/listings\/([^/]+)(\/.*)?$/);
+    const listing = match ? api.listings.get(match[1]) : undefined;
+    if (!match) {
+      return route.fallback();
+    }
+    if (!listing) {
+      return json(route, 404, problem('listing-not-found', 404));
+    }
+    const rest = match[2] ?? '';
+    if (rest === '' && method === 'GET') {
+      return answer(route, listing);
+    }
+    if (rest === '' && method === 'PATCH') {
+      if (request.headers()['if-match'] !== `"${listing.version}"`) {
+        return json(route, 412, problem('version-conflict', 412));
+      }
+      const patch = request.postDataJSON() as Record<string, unknown>;
+      api.patches.push(patch);
+      const warnings: string[] = [];
+      for (const [key, value] of Object.entries(patch)) {
+        if (key === 'attributes') {
+          for (const [code, attribute] of Object.entries(
+            (value ?? {}) as Record<string, unknown>,
+          )) {
+            if (attribute === null) delete listing.attributes[code];
+            else listing.attributes[code] = attribute;
+          }
+        } else if (key === 'categoryCode' && value !== listing.categoryCode) {
+          listing.categoryCode = String(value);
+          const codes = (ATTRIBUTES[listing.categoryCode] ?? []).map((a) => a['code']);
+          const before = Object.keys(listing.attributes).length;
+          listing.attributes = Object.fromEntries(
+            Object.entries(listing.attributes).filter(([code]) => codes.includes(code)),
+          );
+          if (Object.keys(listing.attributes).length < before) warnings.push('attributes-removed');
+        } else {
+          (listing as unknown as Record<string, unknown>)[key] = value;
+        }
+      }
+      listing.version++;
+      return answer(route, listing, 200, warnings);
+    }
+    if (rest === '/photos' && method === 'POST') {
+      const photoId = `photo-${nextPhoto++}`;
+      return json(route, 201, {
+        photoId,
+        uploadUrl: `${STORAGE}/${photoId}`,
+        method: 'PUT',
+        headers: {
+          'Content-Type': (request.postDataJSON() as { contentType: string }).contentType,
+        },
+        expiresAt: '2999-01-01T00:00:00Z',
+      });
+    }
+    const complete = rest.match(/^\/photos\/([^/]+)\/complete$/);
+    if (complete && method === 'POST') {
+      const photo = fakePhoto(complete[1], listing.photos.length);
+      listing.photos.push(photo);
+      return json(route, 200, { ...photo, status: 'READY' });
+    }
+    if (rest === '/photos/order' && method === 'PUT') {
+      const { photoIds } = request.postDataJSON() as { photoIds: string[] };
+      listing.photos = photoIds.map((id, position) => ({
+        ...(listing.photos.find((photo) => photo.id === id) as FakePhoto),
+        position,
+      }));
+      return json(
+        route,
+        200,
+        listing.photos.map((photo) => ({ ...photo, status: 'READY' })),
+      );
+    }
+    const remove = rest.match(/^\/photos\/([^/]+)$/);
+    if (remove && method === 'DELETE') {
+      listing.photos = listing.photos
+        .filter((photo) => photo.id !== remove[1])
+        .map((photo, position) => ({ ...photo, position }));
+      return route.fulfill({ status: 204 });
+    }
+    return route.fallback();
+  });
+  return api;
+}

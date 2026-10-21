@@ -1,0 +1,144 @@
+:host {
+  display: block;
+}
+
+.ui-photo-tile__media {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+}
+
+.ui-photo-tile__image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  user-select: none;
+}
+
+:host(.ui-photo-tile--uploading) .ui-photo-tile__image,
+:host(.ui-photo-tile--failed) .ui-photo-tile__image {
+  opacity: 0.45;
+}
+
+.ui-photo-tile__placeholder {
+  display: grid;
+  place-items: center;
+  block-size: 100%;
+  color: var(--color-text-muted);
+}
+
+.ui-photo-tile__badge {
+  /* At the bottom: the remove button takes the top end, and a narrow tile has no room for both. */
+  position: absolute;
+  inset-block-end: 6px;
+  inset-inline-start: 6px;
+  padding-block: 2px;
+  padding-inline: 6px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ui-photo-tile__progress {
+  position: absolute;
+  inset-block-end: 8px;
+  inset-inline: 8px;
+}
+
+.ui-photo-tile__failure {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px;
+  text-align: center;
+}
+
+.ui-photo-tile__error {
+  margin: 0;
+  padding-block: 2px;
+  padding-inline: 6px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-danger-surface);
+  color: var(--color-danger);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ui-photo-tile__remove,
+.ui-photo-tile__move,
+.ui-photo-tile__retry {
+  display: grid;
+  place-items: center;
+  min-inline-size: var(--control-height);
+  min-block-size: var(--control-height);
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.ui-photo-tile__retry {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-inline: 8px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* 44px target, 32px visible disc in the corner, as on the mockup. */
+.ui-photo-tile__remove {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  isolation: isolate;
+}
+
+.ui-photo-tile__remove::before {
+  position: absolute;
+  inset: 6px;
+  z-index: -1;
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg);
+  content: '';
+}
+
+.ui-photo-tile__moves {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: 0;
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--color-bg);
+  clip-path: inset(50%);
+}
+
+:host(:focus-within) .ui-photo-tile__moves,
+:host(:hover) .ui-photo-tile__moves {
+  clip-path: none;
+}
+
+.ui-photo-tile__move:disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.ui-photo-tile__remove:focus-visible,
+.ui-photo-tile__move:focus-visible,
+.ui-photo-tile__retry:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 2px var(--color-text);
+}

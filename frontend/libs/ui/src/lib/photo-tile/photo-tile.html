@@ -1,0 +1,54 @@
+<div class="ui-photo-tile__media">
+  @if (src(); as url) {
+  <img class="ui-photo-tile__image" [src]="url" [alt]="alt()" decoding="async" draggable="false" />
+  } @else {
+  <div class="ui-photo-tile__placeholder" role="img" [attr.aria-label]="alt()">
+    <svg lucideImage [size]="32" [strokeWidth]="1.5" aria-hidden="true"></svg>
+  </div>
+  } @if (cover() && state() === 'ready') {
+  <span class="ui-photo-tile__badge">{{ coverLabel() }}</span>
+  } @if (state() === 'uploading') {
+  <ui-progress class="ui-photo-tile__progress" [value]="progress()" [label]="progressLabel()" />
+  } @if (state() === 'failed') {
+  <div class="ui-photo-tile__failure">
+    @if (errorText()) {
+    <p class="ui-photo-tile__error">{{ errorText() }}</p>
+    } @if (retryable()) {
+    <button type="button" class="ui-photo-tile__retry" (click)="retry.emit()">
+      <svg lucideRotateCw [size]="16" aria-hidden="true"></svg>
+      {{ retryLabel() }}
+    </button>
+    }
+  </div>
+  } @if (removable() && state() !== 'uploading') {
+  <button
+    type="button"
+    class="ui-photo-tile__remove"
+    [attr.aria-label]="removeLabel()"
+    (click)="remove.emit()"
+  >
+    <svg lucideX [size]="18" [strokeWidth]="2.4" aria-hidden="true"></svg>
+  </button>
+  } @if (state() === 'ready' && (canMoveBefore() || canMoveAfter())) {
+  <div class="ui-photo-tile__moves">
+    <button
+      type="button"
+      class="ui-photo-tile__move"
+      [attr.aria-label]="moveBeforeLabel()"
+      [disabled]="!canMoveBefore()"
+      (click)="moveBefore.emit()"
+    >
+      <svg lucideChevronLeft class="ui-flip-rtl" [size]="20" aria-hidden="true"></svg>
+    </button>
+    <button
+      type="button"
+      class="ui-photo-tile__move"
+      [attr.aria-label]="moveAfterLabel()"
+      [disabled]="!canMoveAfter()"
+      (click)="moveAfter.emit()"
+    >
+      <svg lucideChevronRight class="ui-flip-rtl" [size]="20" aria-hidden="true"></svg>
+    </button>
+  </div>
+  }
+</div>

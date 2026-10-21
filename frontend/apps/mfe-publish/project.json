@@ -101,7 +101,8 @@
       "executor": "@angular/build:dev-server",
       "defaultConfiguration": "development",
       "options": {
-        "port": 4203
+        "port": 4203,
+        "proxyConfig": "apps/mfe-publish/proxy.conf.json"
       },
       "configurations": {
         "production": {

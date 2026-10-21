@@ -1,0 +1,121 @@
+<app-step-layout step="details">
+  <h2 class="step__title">{{ 'publish.details.title' | transloco }}</h2>
+
+  <form class="details" novalidate [formGroup]="form" (submit)="$event.preventDefault(); next()">
+    <ui-field
+      [label]="'publish.details.title-label' | transloco"
+      [hint]="'publish.details.title-hint' | transloco"
+      [error]="errorKey(form.controls.title) | transloco"
+      controlId="details-title"
+      required
+    >
+      <input uiControl type="text" autocomplete="off" formControlName="title" />
+    </ui-field>
+
+    <ui-field
+      [label]="'publish.details.description-label' | transloco"
+      [hint]="
+        'publish.details.description-count'
+          | transloco: { count: descriptionLength(), max: descriptionMax }
+      "
+      [error]="errorKey(form.controls.description) | transloco"
+      controlId="details-description"
+      required
+    >
+      <textarea uiControl rows="5" formControlName="description"></textarea>
+    </ui-field>
+
+    @switch (attributesState()) { @case ('loading') {
+    <div class="details__loading" aria-busy="true" data-testid="attributes-loading">
+      <ui-skeleton variant="block" blockSize="72px" />
+      <ui-skeleton variant="block" blockSize="72px" />
+    </div>
+    } @case ('error') {
+    <ui-alert type="error">{{ 'publish.details.load-error' | transloco }}</ui-alert>
+    <button ui-button variant="secondary" type="button" (click)="loadAttributes()">
+      {{ 'publish.actions.retry' | transloco }}
+    </button>
+    } @default { @if (attributes().length) {
+    <div class="details__attributes" data-testid="attributes">
+      @for (view of attributes(); track view.definition.code) { @switch (view.kind) { @case
+      ('toggles') {
+      <ui-toggle-group
+        class="details__wide"
+        [legend]="view.label"
+        [options]="view.options"
+        [value]="$any(view.control.value)"
+        [required]="view.definition.required"
+        [optionalLabel]="view.definition.required ? null : ('publish.details.optional' | transloco)"
+        [error]="errorKey(view.control) | transloco: errorParams(view.definition)"
+        [attr.data-attribute]="view.definition.code"
+        (valueChange)="choose(view, $event)"
+      />
+      } @case ('select') {
+      <ui-field
+        class="details__wide"
+        [label]="view.label"
+        [optionalLabel]="view.definition.required ? null : ('publish.details.optional' | transloco)"
+        [required]="view.definition.required"
+        [error]="errorKey(view.control) | transloco: errorParams(view.definition)"
+        [controlId]="'attribute-' + view.definition.code"
+        [attr.data-attribute]="view.definition.code"
+      >
+        <select uiControl [formControl]="view.control">
+          <option [ngValue]="null">{{ 'publish.details.choose' | transloco }}</option>
+          @for (option of view.options; track option.value) {
+          <option [ngValue]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </ui-field>
+      } @case ('checkbox') {
+      <ui-checkbox
+        class="details__wide"
+        [controlId]="'attribute-' + view.definition.code"
+        [attr.data-attribute]="view.definition.code"
+      >
+        <input uiCheckboxControl type="checkbox" [formControl]="view.control" />
+        {{ view.label }}
+      </ui-checkbox>
+      } @default {
+      <ui-field
+        [label]="view.label"
+        [optionalLabel]="view.definition.required ? null : ('publish.details.optional' | transloco)"
+        [required]="view.definition.required"
+        [error]="errorKey(view.control) | transloco: errorParams(view.definition)"
+        [controlId]="'attribute-' + view.definition.code"
+        [attr.data-attribute]="view.definition.code"
+        [ltr]="view.kind === 'integer'"
+      >
+        @if (view.prefix) {
+        <span uiFieldPrefix>{{ view.prefix }}</span>
+        } @if (view.kind === 'integer') {
+        <input
+          uiControl
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          [formControl]="view.control"
+          (blur)="formatOnBlur(view)"
+        />
+        } @else {
+        <input uiControl type="text" autocomplete="off" [formControl]="view.control" />
+        }
+      </ui-field>
+      } } }
+    </div>
+    } } }
+  </form>
+
+  <button
+    ui-button
+    stepActions
+    type="button"
+    size="lg"
+    class="step__primary"
+    data-testid="continue"
+    [loading]="saving()"
+    (click)="next()"
+  >
+    {{ 'publish.actions.continue' | transloco }}
+  </button>
+</app-step-layout>

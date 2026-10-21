@@ -213,7 +213,7 @@ test.describe('login', () => {
     await page.getByRole('button', { name: 'Se connecter' }).click();
 
     await expect(page).toHaveURL('/fr/publish/new');
-    await expect(page.getByTestId('coming-soon-mfe-publish')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Catégorie' })).toBeVisible();
   });
 
   test('an external returnUrl is ignored', async ({ page }) => {

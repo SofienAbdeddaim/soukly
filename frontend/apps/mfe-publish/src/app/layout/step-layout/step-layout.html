@@ -1,0 +1,53 @@
+<div class="flow">
+  <header class="flow__header">
+    <div class="flow__bar">
+      <a
+        class="flow__back"
+        [routerLink]="backCommands()"
+        [attr.aria-label]="'publish.header.back' | transloco"
+        data-testid="step-back"
+      >
+        <svg lucideArrowLeft class="ui-flip-rtl" [size]="22" aria-hidden="true"></svg>
+      </a>
+      <div class="flow__titles">
+        <p class="flow__step">
+          {{ 'publish.header.step' | transloco: { number: number(), total } }}
+        </p>
+        <h1 class="flow__title" tabindex="-1" #heading>
+          {{ 'publish.steps.' + step() | transloco }}
+        </h1>
+      </div>
+    </div>
+    <ui-progress
+      tone="on-brand"
+      [value]="(100 * number()) / total"
+      [label]="'publish.header.progress' | transloco"
+      [valueText]="
+        'publish.header.progress-text'
+          | transloco: { number: number(), total, title: ('publish.steps.' + step() | transloco) }
+      "
+    />
+  </header>
+
+  @if (store?.saveState() === 'conflict') {
+  <ui-alert type="error" class="flow__conflict" data-testid="conflict">
+    <p class="flow__conflict-text">{{ 'publish.conflict.message' | transloco }}</p>
+    <button ui-button variant="secondary" type="button" (click)="reload()">
+      {{ 'publish.conflict.reload' | transloco }}
+    </button>
+  </ui-alert>
+  }
+
+  <div class="flow__content">
+    <ng-content />
+  </div>
+
+  <footer class="flow__footer">
+    @if (store) {
+    <app-save-status />
+    }
+    <div class="flow__actions">
+      <ng-content select="[stepActions]" />
+    </div>
+  </footer>
+</div>

@@ -8,7 +8,7 @@ import { UiField, UiFieldControl, UiFieldPrefix, UiFieldSuffix } from './field';
     <ui-field label="Prix" [hint]="hint()" [error]="error()" [required]="required()">
       <input uiControl type="text" />
     </ui-field>
-    <ui-field label="Catégorie" controlId="category">
+    <ui-field label="Catégorie" controlId="category" optionalLabel="(facultatif)">
       <select uiControl>
         <option>Services</option>
       </select>
@@ -78,6 +78,11 @@ describe('UiField', () => {
     const select = element.querySelector('select') as HTMLSelectElement;
     expect(select.id).toBe('category');
     expect(element.querySelector('label[for=category]')?.textContent).toContain('Catégorie');
+  });
+
+  it('names an optional field as such in its label', async () => {
+    const { element } = await setup();
+    expect(element.querySelector('label[for=category]')?.textContent).toContain('(facultatif)');
   });
 
   it('projects a prefix before the control and a suffix button after it, left-to-right on demand', async () => {

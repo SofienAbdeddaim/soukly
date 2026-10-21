@@ -60,6 +60,22 @@ export interface ShowcaseLabels {
   successMessage: string;
   errorMessage: string;
   close: string;
+  publishing: string;
+  fuelLabel: string;
+  fuels: string[];
+  familiesLabel: string;
+  families: string[];
+  optional: string;
+  progressLabel: string;
+  progressText: string;
+  photoAlt: string;
+  cover: string;
+  removePhoto: string;
+  moveBefore: string;
+  moveAfter: string;
+  uploading: string;
+  uploadFailed: string;
+  retry: string;
 }
 
 export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
@@ -135,6 +151,22 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     successMessage: 'Annonce publiée.',
     errorMessage: 'La publication a échoué. Réessayez dans un instant.',
     close: 'Fermer',
+    publishing: "Dépôt d'annonce",
+    fuelLabel: 'Carburant',
+    fuels: ['Essence', 'Diesel', 'Hybride', 'Électrique', 'GPL'],
+    familiesLabel: 'Famille',
+    families: ['Véhicules', 'Immobilier', 'Emploi', 'Services'],
+    optional: '(facultatif)',
+    progressLabel: 'Progression du dépôt',
+    progressText: 'Étape 2 sur 5 : Photos',
+    photoAlt: 'Photo 1 sur 3, couverture',
+    cover: 'Couverture',
+    removePhoto: 'Supprimer la photo',
+    moveBefore: 'Déplacer avant',
+    moveAfter: 'Déplacer après',
+    uploading: 'Envoi de la photo',
+    uploadFailed: "Échec de l'envoi",
+    retry: 'Réessayer',
   },
   ar: {
     title: 'سوقلي، نظام التصميم',
@@ -208,5 +240,21 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     successMessage: 'تم نشر الإعلان.',
     errorMessage: 'تعذّر النشر. أعد المحاولة بعد قليل.',
     close: 'إغلاق',
+    publishing: 'إضافة إعلان',
+    fuelLabel: 'الوقود',
+    fuels: ['بنزين', 'ديزل', 'هجين', 'كهربائي', 'غاز (GPL)'],
+    familiesLabel: 'المجموعة',
+    families: ['المركبات', 'العقارات', 'الشغل', 'الخدمات'],
+    optional: '(اختياري)',
+    progressLabel: 'تقدّم إضافة الإعلان',
+    progressText: 'الخطوة 2 من 5: الصور',
+    photoAlt: 'الصورة 1 من 3، صورة الغلاف',
+    cover: 'الغلاف',
+    removePhoto: 'حذف الصورة',
+    moveBefore: 'نقل إلى الأمام',
+    moveAfter: 'نقل إلى الخلف',
+    uploading: 'جارٍ إرسال الصورة',
+    uploadFailed: 'فشل الإرسال',
+    retry: 'إعادة المحاولة',
   },
 };
