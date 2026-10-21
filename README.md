@@ -156,6 +156,20 @@ curl keeps the `Secure` cookie on `http://localhost` like Chrome and Firefox do.
 
 The verification email appears in Mailpit (http://localhost:8025); its link targets `FRONT_BASE_URL/{lang}/account/verify-email?token=…` (the page arrives with AUTH-03). The tests use Testcontainers (Docker required) and an in-memory SMTP server.
 
+## listing-service
+
+Listings of Soukly (package `com.soukly.listing`, database `soukly_listing`): the read-only referentials (CAT-01) and the drafts of listings (ANN-01). Details, rules and error codes: [`backend/listing-service/README.md`](backend/listing-service/README.md).
+
+| Endpoint (through the gateway)                                 | Answers                                                              |
+| -------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `GET /api/categories`, `GET /api/categories/{code}/attributes` | `200`, `404` `category-not-found`                                    |
+| `GET /api/locations/governorates[/{code}/delegations]`         | `200`, `404` `governorate-not-found`                                 |
+| `POST /api/listings` (JWT)                                     | `201` draft + `ETag`, `400`, `401`, `409` `draft-limit-reached`      |
+| `PATCH /api/listings/{id}` (JWT, JSON Merge Patch, `If-Match`) | `200` + `ETag`, `400`, `401`, `404`, `412` `version-conflict`, `428` |
+| `GET /api/listings/{id}` (owner's JWT)                         | `200` + `ETag`, `404` (a draft is never visible to another account)  |
+
+listing-service validates the access tokens again with the rules of the gateway, from the same `USER_SERVICE_JWKS_URI` and `JWT_ISSUER`.
+
 ## Gateway
 
 The front end only calls the gateway (`http://localhost:8080`, Spring Cloud Gateway on WebFlux). It routes to the services, applies CORS, checks the JWT, adds `X-Request-Id`, limits the authentication endpoints and answers its own errors in `application/problem+json`.
