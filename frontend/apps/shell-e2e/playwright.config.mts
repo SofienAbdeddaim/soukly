@@ -13,6 +13,8 @@ const apps = [
 
 export default defineConfig({
   testDir: './src',
+  // Tests against the real back end: playwright.stack.config.mts.
+  testIgnore: ['stack/**'],
   outputDir: '../../dist/.playwright/apps/shell-e2e/test-output',
   reporter: [
     ['list'],

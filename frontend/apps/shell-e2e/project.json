@@ -15,6 +15,13 @@
     },
     "lint": {
       "executor": "@nx/eslint:lint"
+    },
+    "e2e-stack": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/shell-e2e",
+        "command": "playwright test -c playwright.stack.config.mts"
+      }
     }
   }
 }

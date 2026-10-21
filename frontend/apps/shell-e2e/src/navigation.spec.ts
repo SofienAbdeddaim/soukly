@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { fakeAccountApi } from './support/fake-api';
 
 test.describe('shell navigation', () => {
   test('shows the layout and the waiting page of mfe-catalog on /fr', async ({ page }) => {
@@ -21,11 +22,12 @@ test.describe('shell navigation', () => {
     await page.getByRole('banner').getByRole('link', { name: 'Se connecter' }).click();
 
     await expect(page).toHaveURL('/fr/account/login');
-    await expect(page.getByTestId('coming-soon-mfe-account')).toBeVisible();
+    await expect(page.getByTestId('login-form')).toBeVisible();
     expect(documentLoads).toBe(0);
   });
 
-  test('"Déposer une annonce" opens mfe-publish', async ({ page }) => {
+  test('"Déposer une annonce" opens mfe-publish for a member', async ({ page }) => {
+    await fakeAccountApi(page, { signedIn: true });
     await page.goto('/');
 
     await page.getByRole('banner').getByRole('link', { name: 'Déposer une annonce' }).click();
