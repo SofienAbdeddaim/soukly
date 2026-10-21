@@ -46,6 +46,8 @@ soukly:
       max-age: 1h
     rate-limit:
       auth-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:10}
+      # GET /api/listings (CATA-01); an assumption of V1, to adjust to the real traffic
+      search-per-minute: ${RATE_LIMIT_SEARCH_PER_MINUTE:120}
     # Comma-separated IPs or CIDR ranges of the reverse proxy; empty = X-Forwarded-For is never trusted
     trusted-proxies: ${GATEWAY_TRUSTED_PROXIES:}
 

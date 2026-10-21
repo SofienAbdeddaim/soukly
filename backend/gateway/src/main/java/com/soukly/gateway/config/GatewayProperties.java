@@ -13,7 +13,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  *
  * @param jwt            validation of the access tokens issued by user-service
  * @param cors           browser origins allowed to call the API
- * @param rateLimit      in-memory rate limit of the authentication endpoints
+ * @param rateLimit      in-memory rate limits of the authentication endpoints and of the search
  * @param trustedProxies IP addresses or CIDR ranges of the reverse proxy whose {@code X-Forwarded-For} is trusted
  */
 @ConfigurationProperties("soukly.gateway")
@@ -36,8 +36,9 @@ public record GatewayProperties(Jwt jwt, Cors cors, RateLimit rateLimit,
     }
 
     /**
-     * @param authPerMinute requests per minute and per client IP on login, register and verification resend
+     * @param authPerMinute   requests per minute and per client IP on login, register and verification resend
+     * @param searchPerMinute searches ({@code GET /api/listings}) per minute and per client IP
      */
-    public record RateLimit(@DefaultValue("10") int authPerMinute) {
+    public record RateLimit(@DefaultValue("10") int authPerMinute, @DefaultValue("120") int searchPerMinute) {
     }
 }
