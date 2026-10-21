@@ -1,7 +1,4 @@
 {
-  "coming-soon": {
-    "text": "Le dépôt et la gestion de vos annonces arrivent bientôt ici."
-  },
   "steps": {
     "category": "Catégorie",
     "photos": "Photos",
@@ -116,6 +113,78 @@
       "invalid-value": "Cette valeur n'est pas valide.",
       "unknown": "Ce champ n'existe pas dans cette catégorie."
     },
-    "unexpected": "Cette valeur n'a pas été acceptée."
+    "unexpected": "Cette valeur n'a pas été acceptée.",
+    "price-mode": {
+      "required": "Choisissez un prix ou « Sur devis ».",
+      "not-allowed": "« Sur devis » n'est pas possible dans cette catégorie."
+    },
+    "price": {
+      "required": "Indiquez un prix.",
+      "invalid": "Indiquez un nombre entier de dinars.",
+      "out-of-range": "Le prix doit être compris entre {{ min }} et {{ max }} dinars.",
+      "not-allowed": "Une annonce « Sur devis » n'a pas de prix."
+    },
+    "governorate": {
+      "required": "Choisissez un gouvernorat.",
+      "unknown": "Ce gouvernorat n'existe pas."
+    },
+    "delegation": {
+      "unknown": "Cette délégation n'existe pas.",
+      "not-in-governorate": "Cette délégation n'appartient pas au gouvernorat choisi."
+    }
+  },
+  "price-location": {
+    "title": "Votre prix et votre lieu",
+    "mode": "Tarif",
+    "fixed": "Prix",
+    "on-quote": "Sur devis",
+    "price": "Prix",
+    "price-hint": "En dinars, sans millimes",
+    "negotiable": "Prix négociable",
+    "place": "Lieu",
+    "governorate": "Gouvernorat",
+    "delegation": "Délégation",
+    "choose-governorate": "Choisissez un gouvernorat",
+    "choose-delegation": "Choisissez une délégation",
+    "load-error": "Impossible de charger les gouvernorats.",
+    "delegations-error": "Impossible de charger les délégations. Vous pouvez continuer sans."
+  },
+  "preview": {
+    "title": "Vérifiez votre annonce",
+    "missing": "Il manque encore :",
+    "fields": {
+      "categoryCode": "Catégorie",
+      "photos": "Au moins une photo",
+      "title": "Titre",
+      "description": "Description",
+      "priceMode": "Prix ou « Sur devis »",
+      "price": "Prix",
+      "governorateCode": "Gouvernorat",
+      "attribute": "Un champ des détails"
+    },
+    "error": "La publication a échoué. Vérifiez votre connexion et réessayez.",
+    "photo-count": "1 / {{ count }}",
+    "no-title": "Sans titre",
+    "on-quote": "Sur devis",
+    "negotiable": "négociable",
+    "yes": "Oui",
+    "no": "Non",
+    "edit-photos": "Modifier les photos",
+    "edit-details": "Modifier les détails",
+    "edit-price-location": "Modifier le prix et le lieu",
+    "online": "En ligne pendant 60 jours",
+    "reminder": "Rappel 3 jours avant",
+    "rules-before": "En publiant, vous confirmez que votre annonce respecte les",
+    "rules-link": "règles de publication",
+    "rules-after": ".",
+    "edit": "Modifier",
+    "publish": "Publier",
+    "place": "{{ delegation }}, {{ governorate }}"
+  },
+  "done": {
+    "title": "Votre annonce est en ligne",
+    "text": "Elle restera visible pendant 60 jours. Nous vous préviendrons 3 jours avant la fin.",
+    "view": "Voir l'annonce",
+    "another": "Déposer une autre annonce"
   }
 }

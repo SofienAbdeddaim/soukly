@@ -24,12 +24,17 @@ let nextFieldId = 0;
  * The field links the label to the control and points `aria-describedby` to the hint and the
  * error; `aria-invalid` is set while an error is shown. All texts come from inputs.
  *
- * Optional addons: a prefix glued before the control and an icon button inside its end.
+ * Optional addons: a prefix glued before the control, a unit glued after it, and an icon button
+ * inside its end.
  *
  * ```html
  * <ui-field label="Phone" ltr>
  *   <span uiFieldPrefix>+216</span>
  *   <input uiControl type="tel" />
+ * </ui-field>
+ * <ui-field label="Price">
+ *   <input uiControl type="text" inputmode="numeric" dir="ltr" />
+ *   <span uiFieldUnit>DT</span>
  * </ui-field>
  * <ui-field label="Password">
  *   <input uiControl type="password" />
@@ -89,6 +94,10 @@ export class UiFieldControl {
 /** Addon shown before the control of a `ui-field`, for example a fixed `+216`. */
 @Directive({ selector: '[uiFieldPrefix]', host: { class: 'ui-field__prefix' } })
 export class UiFieldPrefix {}
+
+/** Text addon glued after the control of a `ui-field`: a unit or a currency (`DT`, `m²`). */
+@Directive({ selector: '[uiFieldUnit]', host: { class: 'ui-field__unit' } })
+export class UiFieldUnit {}
 
 /** Icon button inside the end of the control of a `ui-field`; it needs an `aria-label`. */
 @Directive({ selector: 'button[uiFieldSuffix]', host: { class: 'ui-field__suffix' } })

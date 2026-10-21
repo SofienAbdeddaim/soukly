@@ -9,7 +9,7 @@ Front-end access to listing-service, shared by the remotes that read or write li
 | `ReferentialsApi`                                        | categories, attributes of a subcategory, governorates and delegations (CAT-01), cached in memory for the session; a failed request is not cached                                                       |
 | `resizeForUpload`                                        | reduces a photo in the browser before its upload: longest side 1600 px, JPEG 0.85, orientation of the camera applied; a photo that already fits and weighs less than 5 MB is sent as is                |
 | `labelOf`, `familyOf`, `attributePrefix`, `usesGrouping` | display helpers: label in the current language, family of a subcategory, `S+` before the number of rooms, thousands separators only for large numbers (not for a year)                                 |
-| `testing`                                                | fixtures for unit tests (`draftListing`, `TEST_FAMILIES`, `CAR_ATTRIBUTES`, `APARTMENT_ATTRIBUTES`), copied from the referentials of listing-service                                                   |
+| `testing`                                                | fixtures for unit tests (`draftListing`, `TEST_FAMILIES`, `CAR_ATTRIBUTES`, `APARTMENT_ATTRIBUTES`, `TEST_GOVERNORATES`, `SFAX_DELEGATIONS`), copied from the referentials of listing-service          |
 
 Every request goes through the `API_PREFIX` of [`@soukly/auth`](../auth/README.md), so `authInterceptor` adds the access token.
 

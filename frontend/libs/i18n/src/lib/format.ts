@@ -45,6 +45,29 @@ export function formatPrice(dinars: number, locale: string): string {
   ).format(dinars);
 }
 
+/** Symbol of the dinar in the language, for a price field: "DT", "د.ت.", "TND". */
+export function currencySymbol(locale: string): string {
+  const formatter = cached(
+    `price|${locale}`,
+    () =>
+      new Intl.NumberFormat(withLatinDigits(locale), {
+        style: 'currency',
+        currency: 'TND',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }),
+  );
+  return formatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? 'TND';
+}
+
+/** Whole number with the thousands separators of the language: "32 000", "32.000", "32,000". */
+export function formatNumber(value: number, locale: string): string {
+  return cached(
+    `number|${locale}`,
+    () => new Intl.NumberFormat(withLatinDigits(locale), { maximumFractionDigits: 0 }),
+  ).format(value);
+}
+
 /** Date with `dateStyle: 'medium'`: "12 oct. 2026", "12/10/2026", "Oct 12, 2026". */
 export function formatLocalDate(value: DateInput, locale: string): string {
   return cached(

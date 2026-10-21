@@ -1,0 +1,117 @@
+<app-step-layout step="preview">
+  <h2 class="step__title">{{ 'publish.preview.title' | transloco }}</h2>
+
+  @if (missing().length) {
+  <ui-alert type="info" #missingAlert data-testid="missing-fields">
+    <p class="preview__missing-title">{{ 'publish.preview.missing' | transloco }}</p>
+    <ul class="preview__missing">
+      @for (item of missing(); track item.field) {
+      <li>
+        <a [routerLink]="stepLink(item.step)" [attr.data-field]="item.field">
+          {{ item.label ?? (fieldKey(item.field) | transloco) }}
+        </a>
+      </li>
+      }
+    </ul>
+  </ui-alert>
+  } @if (failed()) {
+  <ui-alert type="error" data-testid="publish-error">
+    {{ 'publish.preview.error' | transloco }}
+  </ui-alert>
+  } @if (listing(); as listing) {
+  <article class="preview__card" data-testid="preview-card">
+    <div class="preview__media">
+      @if (cover(); as cover) {
+      <img class="preview__image" [src]="cover.url" alt="" />
+      <span class="preview__count" dir="ltr">
+        {{ 'publish.preview.photo-count' | transloco: { count: listing.photos.length } }}
+      </span>
+      } @else {
+      <div class="preview__placeholder">
+        <svg lucideImage [size]="48" [strokeWidth]="1.5" aria-hidden="true"></svg>
+      </div>
+      }
+    </div>
+    <div class="preview__body">
+      <h3 class="preview__title">
+        {{ listing.title ?? ('publish.preview.no-title' | transloco) }}
+      </h3>
+      <p class="preview__price">
+        @if (listing.priceMode === 'ON_QUOTE') { {{ 'publish.preview.on-quote' | transloco }} }
+        @else if (price(); as price) {
+        <bdi>{{ price }}</bdi>
+        } @if (listing.negotiable && listing.priceMode !== 'ON_QUOTE') {
+        <span class="preview__negotiable"
+          >&ngsp;· {{ 'publish.preview.negotiable' | transloco }}</span
+        >
+        }
+      </p>
+      @if (place(); as place) {
+      <p class="preview__meta">
+        @if (place.delegation) { {{ 'publish.preview.place' | transloco: place }} } @else { {{
+        place.governorate }} }
+      </p>
+      }
+    </div>
+  </article>
+
+  @if (attributes().length) {
+  <dl class="preview__attributes" data-testid="preview-attributes">
+    @for (line of attributes(); track line.code) {
+    <div class="preview__attribute">
+      <dt>{{ line.label }}</dt>
+      <dd>
+        <bdi
+          >{{ line.value ?? ((line.checked ? 'publish.preview.yes' : 'publish.preview.no') |
+          transloco) }}</bdi
+        >
+      </dd>
+    </div>
+    }
+  </dl>
+  } @if (listing.description) {
+  <p class="preview__description">{{ listing.description }}</p>
+  }
+
+  <ul class="preview__edit">
+    <li>
+      <a [routerLink]="stepLink('photos')">{{ 'publish.preview.edit-photos' | transloco }}</a>
+    </li>
+    <li>
+      <a [routerLink]="stepLink('details')">{{ 'publish.preview.edit-details' | transloco }}</a>
+    </li>
+    <li>
+      <a [routerLink]="stepLink('price-location')">
+        {{ 'publish.preview.edit-price-location' | transloco }}
+      </a>
+    </li>
+  </ul>
+
+  <p class="preview__online">
+    <span>{{ 'publish.preview.online' | transloco }}</span>
+    <span class="step__muted">{{ 'publish.preview.reminder' | transloco }}</span>
+  </p>
+  <p class="step__muted">
+    {{ 'publish.preview.rules-before' | transloco }}
+    <a [routerLink]="'/terms' | localePath">{{ 'publish.preview.rules-link' | transloco }}</a>{{
+    'publish.preview.rules-after' | transloco }}
+  </p>
+  }
+
+  <a ui-button variant="ghost" size="lg" stepActions [routerLink]="stepLink('price-location')">
+    {{ 'publish.preview.edit' | transloco }}
+  </a>
+  <button
+    ui-button
+    stepActions
+    type="button"
+    size="lg"
+    class="step__primary"
+    data-testid="publish"
+    [disabled]="missing().length > 0"
+    [loading]="publishing()"
+    (click)="publish()"
+  >
+    {{ 'publish.preview.publish' | transloco }}
+  </button>
+</app-step-layout>

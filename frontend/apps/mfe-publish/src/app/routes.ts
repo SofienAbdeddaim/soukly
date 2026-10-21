@@ -6,8 +6,10 @@ import { NewListingPage } from './category/new-listing-page';
 import { DetailsStep } from './details/details-step';
 import { DraftPage } from './draft/draft-page';
 import { ResumeStep } from './draft/resume-step';
-import { PendingStep } from './pending-step/pending-step';
+import { DonePage } from './done/done-page';
 import { PhotosStep } from './photos/photos-step';
+import { PreviewStep } from './preview/preview-step';
+import { PriceLocationStep } from './price-location/price-location-step';
 
 /**
  * Routes exposed to the shell as "./routes" (federation.config.mjs), relative to the path the
@@ -17,7 +19,8 @@ import { PhotosStep } from './photos/photos-step';
  *
  * - `new`: step 1 without a draft; the draft is created when the subcategory is chosen;
  * - `{id}`: the first incomplete step of the draft (resumed from "My listings", ANN-05);
- * - `{id}/{step}`: a step of the draft, read again from the API when the URL is reloaded.
+ * - `{id}/{step}`: a step of the draft, read again from the API when the URL is reloaded;
+ * - `{id}/done`: confirmation after the publication.
  */
 export const routes: Routes = [
   {
@@ -27,6 +30,8 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'new' },
       { path: 'new', component: NewListingPage },
+      // Before `:id`: once published, the listing is no longer a draft the draft page can read.
+      { path: ':id/done', component: DonePage },
       {
         path: ':id',
         component: DraftPage,
@@ -35,9 +40,8 @@ export const routes: Routes = [
           { path: 'category', component: CategoryStep },
           { path: 'photos', component: PhotosStep },
           { path: 'details', component: DetailsStep },
-          // Steps 4 and 5, then the confirmation page: second part of ANN-04.
-          { path: 'price-location', component: PendingStep, data: { step: 'price-location' } },
-          { path: 'preview', component: PendingStep, data: { step: 'preview' } },
+          { path: 'price-location', component: PriceLocationStep },
+          { path: 'preview', component: PreviewStep },
           { path: '**', redirectTo: '' },
         ],
       },
