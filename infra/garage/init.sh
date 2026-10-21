@@ -2,8 +2,8 @@
 # One-shot, idempotent Garage setup for local development (SETUP-02).
 # Runs in the amazon/aws-cli image (bash, curl, jq, aws) and talks to:
 #   - the Garage admin API v2 (layout, key import, bucket, permissions);
-#   - the S3 API (PutBucketCors).
-# GARAGE_WEBSITE=true also enables website access on the bucket (dev stack on the VM, DEP-02).
+#   - the S3 API (PutBucketCors, PutBucketWebsite).
+# GARAGE_WEBSITE=true also enables website access on the bucket (local stack, dev stack on the VM).
 # Every step checks the current state first, so running it twice changes nothing.
 set -euo pipefail
 
@@ -77,32 +77,39 @@ admin POST AllowBucketKey \
   "$(jq -nc --arg bucket "$bucket_id" --arg key "$S3_ACCESS_KEY_ID" \
     '{bucketId: $bucket, accessKeyId: $key, permissions: {read: true, write: true, owner: false}}')" >/dev/null
 
-# 5. CORS rule for direct uploads from the front. Garage only lets a bucket owner call
-# PutBucketCors, so the key is made owner for this call and the owner flag is removed
-# right after: the application key keeps read and write only. PutBucketCors replaces the
-# whole configuration, so applying it again is a no-op.
+# 5. CORS rule for direct uploads from the front and, with GARAGE_WEBSITE=true, website access for
+# public reads of the photos. Garage only lets a bucket owner call PutBucketCors and
+# PutBucketWebsite, so the key is made owner for these calls and the owner flag is removed right
+# after: the application key keeps read and write only. Both calls replace the whole
+# configuration, so applying them again is a no-op.
 set_owner() {
   admin POST "$1" \
     "$(jq -nc --arg bucket "$bucket_id" --arg key "$S3_ACCESS_KEY_ID" \
       '{bucketId: $bucket, accessKeyId: $key, permissions: {read: false, write: false, owner: true}}')" >/dev/null
 }
-log "Applying CORS rule for ${CORS_ORIGIN}"
+s3api() {
+  AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
+    aws --endpoint-url "$S3_URL" --region "$S3_REGION" s3api "$@"
+}
 set_owner AllowBucketKey
 trap 'set_owner DenyBucketKey' EXIT
-AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY" \
-  aws --endpoint-url "$S3_URL" --region "$S3_REGION" s3api put-bucket-cors \
-  --bucket "$S3_BUCKET" \
+log "Applying CORS rule for ${CORS_ORIGIN}"
+s3api put-bucket-cors --bucket "$S3_BUCKET" \
   --cors-configuration "$(jq -nc --arg origin "$CORS_ORIGIN" \
     '{CORSRules: [{AllowedOrigins: [$origin], AllowedMethods: ["GET", "PUT", "HEAD"], AllowedHeaders: ["*"], MaxAgeSeconds: 3600}]}')"
+
+# 6. Optional website access, for public reads of the photos (local stack, dev stack on the VM).
+# The originals uploaded under incoming/ are never public (ANN-02): a routing rule answers 404 for
+# that prefix (Garage turns a non-3xx HttpRedirectCode into that status, on a key that never
+# exists). The edge Caddy of the VM also only forwards listings/.
+if [[ "${GARAGE_WEBSITE:-false}" == "true" ]]; then
+  log "Enabling website access on ${S3_BUCKET}, incoming/ hidden"
+  s3api put-bucket-website --bucket "$S3_BUCKET" --website-configuration '{
+    "IndexDocument": {"Suffix": "index.html"},
+    "RoutingRules": [{"Condition": {"KeyPrefixEquals": "incoming/"},
+                      "Redirect": {"HttpRedirectCode": "404", "ReplaceKeyWith": "not-public"}}]}'
+fi
 set_owner DenyBucketKey
 trap - EXIT
-
-# 6. Optional website access, for public reads of the photos (dev stack on the VM, DEP-02).
-# The edge Caddy only forwards listings/ to the website endpoint.
-if [[ "${GARAGE_WEBSITE:-false}" == "true" ]]; then
-  log "Enabling website access on ${S3_BUCKET}"
-  admin POST "UpdateBucket?id=${bucket_id}" \
-    '{"websiteAccess": {"enabled": true, "indexDocument": "index.html", "errorDocument": null}}' >/dev/null
-fi
 
 log "Done"

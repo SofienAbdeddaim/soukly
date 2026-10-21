@@ -95,6 +95,13 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: backend/**/pom.xml
+      # libvips command-line tools for the photo conversion of listing-service (ANN-02); the version is the
+      # one of the runner's Ubuntu release, the same as the base image of backend/Dockerfile (Ubuntu 24.04).
+      - name: Install libvips
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libvips-tools
+          vips --version
       # Integration tests use Testcontainers with the Docker engine of the runner.
       - run: ./mvnw -B verify
 

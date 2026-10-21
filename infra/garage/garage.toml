@@ -15,5 +15,12 @@ rpc_public_addr = "127.0.0.1:3901"
 s3_region = "garage"
 api_bind_addr = "0.0.0.0:3900"
 
+# Website endpoint, for public reads of the photos (ANN-02). The bucket is taken from the Host header:
+# http://soukly-listings.web.localhost:3902/listings/<key> (browsers and curl resolve *.localhost to
+# the loopback address). garage-init hides incoming/ from it with a routing rule.
+[s3_web]
+bind_addr = "0.0.0.0:3902"
+root_domain = ".web.localhost"
+
 [admin]
 api_bind_addr = "0.0.0.0:3903"

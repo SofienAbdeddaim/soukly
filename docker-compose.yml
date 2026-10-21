@@ -67,6 +67,8 @@ services:
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?GARAGE_ADMIN_TOKEN is not set, copy .env.example to .env}
     ports:
       - "3900:3900"
+      # Website endpoint: public read of the photos under listings/ (ANN-02)
+      - "3902:3902"
       - "3903:3903"
     volumes:
       - ./infra/garage/garage.toml:/etc/garage.toml:ro
@@ -81,7 +83,7 @@ services:
       start_period: 5s
     mem_limit: 256m
 
-  # One-shot: layout, application key, bucket, permissions and CORS. Idempotent.
+  # One-shot: layout, application key, bucket, permissions, CORS and website access. Idempotent.
   garage-init:
     image: amazon/aws-cli:2.38.0
     restart: "no"
@@ -95,6 +97,7 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is not set, copy .env.example to .env}
       S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is not set, copy .env.example to .env}
       S3_REGION: ${S3_REGION:?S3_REGION is not set, copy .env.example to .env}
+      GARAGE_WEBSITE: "true"
     volumes:
       - ./infra/garage/init.sh:/init.sh:ro
 
