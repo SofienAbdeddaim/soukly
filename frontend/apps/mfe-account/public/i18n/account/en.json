@@ -2,5 +2,107 @@
   "coming-soon": {
     "title": "Soukly account area, coming soon",
     "text": "Sign-up, login and profile are coming here soon."
+  },
+  "common": {
+    "email": "Email",
+    "password": "Password",
+    "show-password": "Show password"
+  },
+  "errors": {
+    "displayName": {
+      "required": "Enter the name to display.",
+      "length": "The name must be 2 to 50 characters long."
+    },
+    "email": {
+      "required": "Enter your email address.",
+      "invalid": "Invalid email address, for example name@example.tn."
+    },
+    "phone": {
+      "required": "Enter your phone number.",
+      "invalid": "An 8-digit Tunisian number is expected."
+    },
+    "password": {
+      "required": "Enter your password.",
+      "length": "The password must be 8 to 128 characters long.",
+      "too-common": "This password is too common. Choose another one.",
+      "same-as-email": "The password must not be your email address."
+    },
+    "terms": {
+      "required": "Accept the terms to create your account."
+    },
+    "too-many-requests": "Too many requests in a short time. Wait a moment, then try again.",
+    "unexpected": "Something went wrong. Check your connection, then try again."
+  },
+  "register": {
+    "title": "Create an account",
+    "subtitle": "Free, and it only takes a minute.",
+    "display-name": "Display name",
+    "display-name-hint": "Shown on your ads.",
+    "phone": "Phone",
+    "phone-hint": "8 digits, after the +216 code.",
+    "password-hint": "At least 8 characters.",
+    "terms-before": "I accept the ",
+    "terms-link": "terms of use",
+    "terms-middle": " and the ",
+    "privacy-link": "privacy policy",
+    "terms-after": ".",
+    "submit": "Create my account",
+    "has-account": "Already have an account?",
+    "login-link": "Log in"
+  },
+  "check-email": {
+    "title": "Check your email",
+    "sent-to": "We sent an activation link to",
+    "validity": "Click it to activate your account. The link is valid for 24 hours.",
+    "spam": "Nothing received? Look in your spam folder.",
+    "change-email": "Change the email address",
+    "no-address": "Open the link we emailed you to activate your account. It is valid for 24 hours."
+  },
+  "resend": {
+    "button": "Resend the email",
+    "countdown": "{{label}} ({{seconds}} s)",
+    "sent": "Email sent again. Remember to check your spam folder."
+  },
+  "verify": {
+    "checking": "Activating your account…",
+    "activated-title": "Your account is active",
+    "activated-text": "You can now log in and post your ads.",
+    "login": "Log in",
+    "invalid-title": "This link is no longer valid",
+    "invalid-text": "It may have expired or already been used. Enter your email address to get a new link.",
+    "resend": "Get a new link",
+    "resend-sent": "If an account with this address is waiting for activation, a new link has just been sent to it.",
+    "error-title": "The link cannot be checked right now",
+    "retry": "Try again"
+  },
+  "login": {
+    "title": "Log in",
+    "subtitle": "Welcome back to Soukly.",
+    "forgot-password": "Forgot your password?",
+    "submit": "Log in",
+    "no-account": "No account yet?",
+    "register-link": "Create an account",
+    "invalid-credentials": "Incorrect email or password.",
+    "email-not-verified": "Your email address is not verified yet. Open the link we emailed you, or ask for a new one.",
+    "resend-verification": "Resend the verification email",
+    "throttled-seconds": "Too many attempts. Try again in {{count}} s.",
+    "throttled-minutes": "Too many attempts. Try again in {{count}} min."
+  },
+  "welcome": {
+    "later": "Later",
+    "hello": "Welcome, {{name}}",
+    "title": "One ad, posted everywhere",
+    "text": "Link your Facebook Page and your Instagram account. For each ad, you choose whether to share it automatically or not.",
+    "facebook": {
+      "name": "Facebook Page",
+      "hint": "Business or shop Page"
+    },
+    "instagram": {
+      "name": "Instagram",
+      "hint": "Business or creator account"
+    },
+    "connect": "Link",
+    "note": "You can link or remove your networks at any time from your profile. Soukly never posts without your consent.",
+    "continue": "Continue to Soukly"
   }
 }

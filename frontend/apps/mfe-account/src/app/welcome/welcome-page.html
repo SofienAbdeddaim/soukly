@@ -1,0 +1,38 @@
+<section class="welcome" aria-labelledby="welcome-title" data-testid="welcome-page">
+  <div class="welcome__inner">
+    <a class="welcome__later" [routerLink]="next" data-testid="welcome-later">
+      {{ 'account.welcome.later' | transloco }}
+    </a>
+    <p class="welcome__hello">
+      {{ 'account.welcome.hello' | transloco: { name: auth.user()?.displayName } }}
+    </p>
+    <h1 id="welcome-title" class="welcome__title">{{ 'account.welcome.title' | transloco }}</h1>
+    <p class="welcome__text">{{ 'account.welcome.text' | transloco }}</p>
+
+    <ul class="welcome__networks">
+      @for (network of networks; track network.id) {
+      <li class="network">
+        <span class="network__logo" aria-hidden="true">{{ network.initials }}</span>
+        <div class="network__text">
+          <p class="network__name" [id]="'network-' + network.id">
+            {{ 'account.welcome.' + network.id + '.name' | transloco }}
+          </p>
+          <p class="network__hint">{{ 'account.welcome.' + network.id + '.hint' | transloco }}</p>
+        </div>
+        <a
+          ui-button
+          [routerLink]="'/account/networks/' + network.id | localePath"
+          [attr.aria-describedby]="'network-' + network.id"
+        >
+          {{ 'account.welcome.connect' | transloco }}
+        </a>
+      </li>
+      }
+    </ul>
+
+    <p class="welcome__note">{{ 'account.welcome.note' | transloco }}</p>
+    <a ui-button variant="secondary" size="lg" [routerLink]="next" data-testid="welcome-continue">
+      {{ 'account.welcome.continue' | transloco }}
+    </a>
+  </div>
+</section>
