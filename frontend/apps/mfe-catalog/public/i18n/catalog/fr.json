@@ -1,6 +1,120 @@
 {
-  "coming-soon": {
-    "title": "Catalogue Soukly, bientôt disponible",
-    "text": "Accueil, recherche et détail des annonces arrivent bientôt ici."
+  "search": {
+    "label": "Rechercher une annonce",
+    "placeholder": "Que cherchez-vous ?",
+    "submit": "Rechercher"
+  },
+  "home": {
+    "title": "Tout le souk, au coin de chez vous",
+    "tagline": "Achetez, vendez et trouvez un service près de chez vous, partout en Tunisie.",
+    "families": "Catégories",
+    "latest": "Dernières annonces",
+    "place-label": "Lieu des dernières annonces",
+    "see-all": "Voir toutes les annonces",
+    "no-listing": "Aucune annonce publiée ici pour le moment."
+  },
+  "place": {
+    "everywhere": "Toute la Tunisie"
+  },
+  "card": {
+    "on-quote": "Sur devis",
+    "per-month": " / mois",
+    "per-night": " / nuit",
+    "photos": {
+      "zero": "{{count}} photos",
+      "one": "{{count}} photo",
+      "two": "{{count}} photos",
+      "few": "{{count}} photos",
+      "many": "{{count}} photos",
+      "other": "{{count}} photos"
+    }
+  },
+  "filters": {
+    "button": "Filtres",
+    "title": "Filtres",
+    "clear": "Tout effacer",
+    "category": "Catégorie",
+    "all-categories": "Toutes les catégories",
+    "subcategory": "Sous-catégorie",
+    "whole-family": "Toute la catégorie",
+    "governorate": "Gouvernorat",
+    "delegation": "Délégation",
+    "all-delegations": "Toutes",
+    "price": "Prix ({{currency}})",
+    "min": "Min",
+    "max": "Max",
+    "show": {
+      "zero": "Voir {{count}} annonces",
+      "one": "Voir {{count}} annonce",
+      "two": "Voir {{count}} annonces",
+      "few": "Voir {{count}} annonces",
+      "many": "Voir {{count}} annonces",
+      "other": "Voir {{count}} annonces"
+    },
+    "show-none": "Aucune annonce",
+    "show-unknown": "Voir les annonces"
+  },
+  "sort": {
+    "label": "Trier par",
+    "recent": "Plus récentes",
+    "relevance": "Pertinence",
+    "price-asc": "Prix croissant",
+    "price-desc": "Prix décroissant"
+  },
+  "chips": {
+    "remove": "Retirer le filtre {{label}}",
+    "price-between": "{{min}} – {{max}}",
+    "price-from": "Dès {{min}}",
+    "price-up-to": "Jusqu'à {{max}}",
+    "range-between": "{{label}} : {{min}} – {{max}}",
+    "range-from": "{{label}} : dès {{min}}",
+    "range-up-to": "{{label}} : jusqu'à {{max}}",
+    "not": "{{label}} : non",
+    "text": "{{label}} : {{value}}"
+  },
+  "results": {
+    "title": "Résultats de recherche",
+    "list": "Annonces",
+    "count": {
+      "zero": "{{count}} annonces",
+      "one": "{{count}} annonce",
+      "two": "{{count}} annonces",
+      "few": "{{count}} annonces",
+      "many": "{{count}} annonces",
+      "other": "{{count}} annonces"
+    },
+    "query": "« {{q}} »",
+    "in-category-place": "en {{category}}, {{place}}",
+    "in-category": "en {{category}}, dans toute la Tunisie",
+    "in-place": "à {{place}}",
+    "everywhere": "dans toute la Tunisie",
+    "more": "Afficher plus"
+  },
+  "empty": {
+    "title": "Aucune annonce ne correspond",
+    "suggestions": "Essayez plutôt :",
+    "remove-price": "Retirer le filtre Prix",
+    "everywhere": "Chercher dans toute la Tunisie",
+    "remove-specific": "Retirer les filtres spécifiques",
+    "remove-query": "Ne plus chercher « {{q}} »"
+  },
+  "errors": {
+    "network": "La connexion a échoué. Vérifiez votre réseau, puis réessayez.",
+    "more": "Les annonces suivantes n'ont pas pu être chargées.",
+    "invalid": "Cette recherche n'est pas valide : le lien a peut-être été modifié."
+  },
+  "actions": {
+    "retry": "Réessayer",
+    "close": "Fermer",
+    "new-search": "Nouvelle recherche"
+  },
+  "seo": {
+    "home-title": "Soukly · Petites annonces en Tunisie",
+    "home-description": "Achetez, vendez et trouvez un service près de chez vous : voitures, immobilier, emploi et bonnes affaires dans les 24 gouvernorats de Tunisie.",
+    "results-title-what-where": "{{what}} à {{where}} · Soukly",
+    "results-title-what": "{{what}} en Tunisie · Soukly",
+    "results-title-where": "Annonces à {{where}} · Soukly",
+    "results-title-all": "Toutes les annonces en Tunisie · Soukly",
+    "results-description": "Parcourez les petites annonces de Soukly et filtrez-les par catégorie, lieu, prix et caractéristiques."
   }
 }

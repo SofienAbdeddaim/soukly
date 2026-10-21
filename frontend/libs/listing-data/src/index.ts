@@ -4,5 +4,7 @@ export * from './lib/labels';
 export * from './lib/listings-api';
 export * from './lib/models';
 export * from './lib/photos-api';
+export * from './lib/price-unit';
 export * from './lib/referentials-api';
+export * from './lib/search-api';
 export * from './lib/testing';

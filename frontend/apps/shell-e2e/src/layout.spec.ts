@@ -17,7 +17,7 @@ test.describe('layout', () => {
     page,
   }) => {
     await page.goto('/fr');
-    await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+    await expect(page.getByTestId('catalog-home')).toBeVisible();
 
     await page.keyboard.press('Tab');
     const skipLink = page.getByRole('link', { name: 'Aller au contenu' });
@@ -30,7 +30,7 @@ test.describe('layout', () => {
 
   test('desktop: no bottom bar, header actions visible, mirrored in RTL', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+    await expect(page.getByTestId('catalog-home')).toBeVisible();
 
     await expect(page.getByTestId('bottom-nav')).toBeHidden();
     await expect(page.getByTestId('header-actions')).toBeVisible();
@@ -47,7 +47,7 @@ test.describe('layout', () => {
 
     test('shows the bottom bar with "Déposer" highlighted, without "Favoris"', async ({ page }) => {
       await page.goto('/');
-      await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+      await expect(page.getByTestId('catalog-home')).toBeVisible();
 
       const bottomNav = page.getByTestId('bottom-nav');
       await expect(bottomNav).toBeVisible();
@@ -66,7 +66,7 @@ test.describe('layout', () => {
 
     test('has no horizontal overflow in RTL', async ({ page }) => {
       await page.goto('/');
-      await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+      await expect(page.getByTestId('catalog-home')).toBeVisible();
 
       await forceRtl(page);
 

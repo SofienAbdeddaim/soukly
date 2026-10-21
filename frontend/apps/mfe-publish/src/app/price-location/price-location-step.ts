@@ -21,6 +21,7 @@ import {
   Governorate,
   labelOf,
   ListingPatch,
+  parseInteger,
   PriceMode,
   ReferentialsApi,
 } from '@soukly/listing-data';
@@ -35,7 +36,7 @@ import {
   UiToggleGroup,
 } from '@soukly/ui';
 import { debounceTime } from 'rxjs';
-import { ERROR_KEY, fieldError, parseInteger } from '../details/details-form';
+import { ERROR_KEY, fieldError } from '../details/details-form';
 import { AUTOSAVE_DELAY_MS } from '../details/details-step';
 import { DraftStore } from '../draft/draft-store';
 import { StepLayout } from '../layout/step-layout/step-layout';

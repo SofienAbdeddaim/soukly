@@ -20,13 +20,13 @@ import {
   AttributeDefinition,
   AttributeValue,
   Delegation,
+  formatInteger,
   Governorate,
   labelOf,
   ListingsApi,
   ReferentialsApi,
 } from '@soukly/listing-data';
 import { UiAlert, UiButton } from '@soukly/ui';
-import { formatInteger } from '../details/details-form';
 import { DraftStore } from '../draft/draft-store';
 import { StepLayout } from '../layout/step-layout/step-layout';
 import { PublishStep, stepCommands, stepOfField } from '../shared/publish-steps';

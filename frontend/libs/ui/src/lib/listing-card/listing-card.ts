@@ -4,7 +4,8 @@ import { LucideHeart, LucideImage } from '@lucide/angular';
 /**
  * Listing card of the catalogue. Every text arrives already formatted and translated
  * (price, city, date, labels): the card only lays them out. Without `imageUrl` it shows
- * a placeholder. The favourite button only reflects `favorite` and emits `favoriteToggle`.
+ * a placeholder. The favourite button only reflects `favorite` and emits `favoriteToggle`; it is
+ * shown only with a `favoriteLabel` (favourites are not part of V1, CATA-02).
  */
 @Component({
   selector: 'ui-listing-card',
@@ -30,8 +31,8 @@ export class UiListingCard {
   readonly href = input<string>();
   readonly imageUrl = input<string | null>();
   readonly favorite = input(false, { transform: booleanAttribute });
-  /** Accessible name of the favourite button, for example "Add to favourites". */
-  readonly favoriteLabel = input.required<string>();
+  /** Accessible name of the favourite button, for example "Add to favourites"; no button without it. */
+  readonly favoriteLabel = input<string | null>(null);
 
   readonly favoriteToggle = output<boolean>();
 

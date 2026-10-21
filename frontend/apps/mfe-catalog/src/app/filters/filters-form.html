@@ -1,0 +1,166 @@
+<div class="filters">
+  <ui-field [label]="'catalog.filters.category' | transloco" [controlId]="id('family')">
+    <select
+      uiControl
+      data-testid="filter-family"
+      (change)="chooseFamily($any($event.target).value)"
+    >
+      <option value="" [selected]="!family()">
+        {{ 'catalog.filters.all-categories' | transloco }}
+      </option>
+      @for (item of families(); track item.code) {
+      <option [value]="item.code" [selected]="item.code === family()">{{ item.label }}</option>
+      }
+    </select>
+  </ui-field>
+
+  @if (family()) {
+  <ui-field [label]="'catalog.filters.subcategory' | transloco" [controlId]="id('subcategory')">
+    <select
+      uiControl
+      data-testid="filter-subcategory"
+      (change)="chooseSubcategory($any($event.target).value)"
+    >
+      <option value="" [selected]="criteria().category === family()">
+        {{ 'catalog.filters.whole-family' | transloco }}
+      </option>
+      @for (item of subcategories(); track item.code) {
+      <option [value]="item.code" [selected]="item.code === criteria().category">
+        {{ item.label }}
+      </option>
+      }
+    </select>
+  </ui-field>
+  }
+
+  <div class="filters__pair">
+    <ui-field [label]="'catalog.filters.governorate' | transloco" [controlId]="id('governorate')">
+      <select
+        uiControl
+        data-testid="filter-governorate"
+        (change)="chooseGovernorate($any($event.target).value)"
+      >
+        <option value="" [selected]="!criteria().governorate">
+          {{ 'catalog.place.everywhere' | transloco }}
+        </option>
+        @for (item of governorates(); track item.code) {
+        <option [value]="item.code" [selected]="item.code === criteria().governorate">
+          {{ item.label }}
+        </option>
+        }
+      </select>
+    </ui-field>
+
+    @if (criteria().governorate) {
+    <ui-field [label]="'catalog.filters.delegation' | transloco" [controlId]="id('delegation')">
+      <select
+        uiControl
+        data-testid="filter-delegation"
+        (change)="chooseDelegation($any($event.target).value)"
+      >
+        <option value="" [selected]="!criteria().delegation">
+          {{ 'catalog.filters.all-delegations' | transloco }}
+        </option>
+        @for (item of delegations(); track item.code) {
+        <option [value]="item.code" [selected]="item.code === criteria().delegation">
+          {{ item.label }}
+        </option>
+        }
+      </select>
+    </ui-field>
+    }
+  </div>
+
+  <fieldset class="filters__range">
+    <legend class="filters__legend">
+      {{ 'catalog.filters.price' | transloco: { currency: currency() } }}
+    </legend>
+    <div class="filters__pair">
+      <ui-field [label]="'catalog.filters.min' | transloco" [controlId]="id('price-min')" ltr>
+        <input
+          uiControl
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          [value]="priceText(criteria().priceMin)"
+          (change)="setPrice('priceMin', $event)"
+        />
+      </ui-field>
+      <ui-field [label]="'catalog.filters.max' | transloco" [controlId]="id('price-max')" ltr>
+        <input
+          uiControl
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          [value]="priceText(criteria().priceMax)"
+          (change)="setPrice('priceMax', $event)"
+        />
+      </ui-field>
+    </div>
+  </fieldset>
+
+  @for (view of attributes(); track view.code) { @switch (view.kind) { @case ('range') {
+  <fieldset class="filters__range" [attr.data-attribute]="view.code">
+    <legend class="filters__legend">{{ view.label }} @if (view.unit) { ({{ view.unit }}) }</legend>
+    <div class="filters__pair">
+      <ui-field
+        [label]="'catalog.filters.min' | transloco"
+        [controlId]="id(view.code + '-min')"
+        ltr
+      >
+        <input
+          uiControl
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          [value]="rangeText(view.code + '.min')"
+          (change)="setRange(view.code + '.min', $event)"
+        />
+      </ui-field>
+      <ui-field
+        [label]="'catalog.filters.max' | transloco"
+        [controlId]="id(view.code + '-max')"
+        ltr
+      >
+        <input
+          uiControl
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          [value]="rangeText(view.code + '.max')"
+          (change)="setRange(view.code + '.max', $event)"
+        />
+      </ui-field>
+    </div>
+  </fieldset>
+  } @case ('toggles') {
+  <ui-toggle-group
+    multiple
+    [legend]="view.label"
+    [options]="view.options"
+    [values]="enumValues(view.code)"
+    [attr.data-attribute]="view.code"
+    (valuesChange)="setEnum(view.code, $event)"
+  />
+  } @case ('checkbox') {
+  <ui-checkbox [controlId]="id(view.code)" [attr.data-attribute]="view.code">
+    <input
+      uiCheckboxControl
+      type="checkbox"
+      [checked]="attribute(view.code) === 'true'"
+      (change)="setFlag(view.code, $event)"
+    />
+    {{ view.label }}
+  </ui-checkbox>
+  } @default {
+  <ui-field [label]="view.label" [controlId]="id(view.code)" [attr.data-attribute]="view.code">
+    <input
+      uiControl
+      type="text"
+      autocomplete="off"
+      [value]="attribute(view.code) ?? ''"
+      (change)="setText(view.code, $event)"
+    />
+  </ui-field>
+  } } }
+</div>

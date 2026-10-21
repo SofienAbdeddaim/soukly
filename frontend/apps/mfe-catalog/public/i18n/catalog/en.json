@@ -1,6 +1,120 @@
 {
-  "coming-soon": {
-    "title": "Soukly catalogue, coming soon",
-    "text": "Home, search and listing details are coming here soon."
+  "search": {
+    "label": "Search for a listing",
+    "placeholder": "What are you looking for?",
+    "submit": "Search"
+  },
+  "home": {
+    "title": "The whole souk, around the corner",
+    "tagline": "Buy, sell and find a service near you, everywhere in Tunisia.",
+    "families": "Categories",
+    "latest": "Latest listings",
+    "place-label": "Place of the latest listings",
+    "see-all": "See all listings",
+    "no-listing": "No listing published here yet."
+  },
+  "place": {
+    "everywhere": "All of Tunisia"
+  },
+  "card": {
+    "on-quote": "On quote",
+    "per-month": " / month",
+    "per-night": " / night",
+    "photos": {
+      "zero": "{{count}} photos",
+      "one": "{{count}} photo",
+      "two": "{{count}} photos",
+      "few": "{{count}} photos",
+      "many": "{{count}} photos",
+      "other": "{{count}} photos"
+    }
+  },
+  "filters": {
+    "button": "Filters",
+    "title": "Filters",
+    "clear": "Clear all",
+    "category": "Category",
+    "all-categories": "All categories",
+    "subcategory": "Subcategory",
+    "whole-family": "Whole category",
+    "governorate": "Governorate",
+    "delegation": "Delegation",
+    "all-delegations": "All",
+    "price": "Price ({{currency}})",
+    "min": "Min",
+    "max": "Max",
+    "show": {
+      "zero": "Show {{count}} listings",
+      "one": "Show {{count}} listing",
+      "two": "Show {{count}} listings",
+      "few": "Show {{count}} listings",
+      "many": "Show {{count}} listings",
+      "other": "Show {{count}} listings"
+    },
+    "show-none": "No listing",
+    "show-unknown": "Show listings"
+  },
+  "sort": {
+    "label": "Sort by",
+    "recent": "Most recent",
+    "relevance": "Relevance",
+    "price-asc": "Price: low to high",
+    "price-desc": "Price: high to low"
+  },
+  "chips": {
+    "remove": "Remove the filter {{label}}",
+    "price-between": "{{min}} – {{max}}",
+    "price-from": "From {{min}}",
+    "price-up-to": "Up to {{max}}",
+    "range-between": "{{label}}: {{min}} – {{max}}",
+    "range-from": "{{label}}: from {{min}}",
+    "range-up-to": "{{label}}: up to {{max}}",
+    "not": "{{label}}: no",
+    "text": "{{label}}: {{value}}"
+  },
+  "results": {
+    "title": "Search results",
+    "list": "Listings",
+    "count": {
+      "zero": "{{count}} listings",
+      "one": "{{count}} listing",
+      "two": "{{count}} listings",
+      "few": "{{count}} listings",
+      "many": "{{count}} listings",
+      "other": "{{count}} listings"
+    },
+    "query": "“{{q}}”",
+    "in-category-place": "in {{category}}, {{place}}",
+    "in-category": "in {{category}}, all of Tunisia",
+    "in-place": "in {{place}}",
+    "everywhere": "in all of Tunisia",
+    "more": "Show more"
+  },
+  "empty": {
+    "title": "No listing matches",
+    "suggestions": "Try instead:",
+    "remove-price": "Remove the Price filter",
+    "everywhere": "Search all of Tunisia",
+    "remove-specific": "Remove the specific filters",
+    "remove-query": "Stop searching “{{q}}”"
+  },
+  "errors": {
+    "network": "The connection failed. Check your network, then try again.",
+    "more": "The next listings could not be loaded.",
+    "invalid": "This search is not valid: the link may have been changed."
+  },
+  "actions": {
+    "retry": "Try again",
+    "close": "Close",
+    "new-search": "New search"
+  },
+  "seo": {
+    "home-title": "Soukly · Classified ads in Tunisia",
+    "home-description": "Buy, sell and find a service near you: cars, real estate, jobs and good deals in the 24 governorates of Tunisia.",
+    "results-title-what-where": "{{what}} in {{where}} · Soukly",
+    "results-title-what": "{{what}} in Tunisia · Soukly",
+    "results-title-where": "Listings in {{where}} · Soukly",
+    "results-title-all": "All listings in Tunisia · Soukly",
+    "results-description": "Browse the classified ads of Soukly and filter them by category, place, price and features."
   }
 }

@@ -1,0 +1,35 @@
+<article class="row">
+  <div class="row__media">
+    @if (imageUrl(); as url) {
+    <img class="row__image" [src]="url" alt="" loading="lazy" decoding="async" />
+    } @else {
+    <div class="row__placeholder" data-testid="listing-row-placeholder">
+      <svg lucideImage [size]="28" [strokeWidth]="1.5" aria-hidden="true"></svg>
+    </div>
+    } @if (photoCount()) {
+    <span class="row__count">
+      <svg lucideCamera [size]="12" aria-hidden="true"></svg>
+      <span aria-hidden="true">{{ photoCount() }}</span>
+      @if (photoCountLabel()) {
+      <span class="ui-visually-hidden">{{ photoCountLabel() }}</span>
+      }
+    </span>
+    }
+  </div>
+  <div class="row__body">
+    <h3 class="row__title">
+      @if (href()) {
+      <a class="row__link" [href]="href()">{{ title() }}</a>
+      } @else { {{ title() }} }
+    </h3>
+    <p class="row__price"><bdi>{{ price() }}</bdi></p>
+    @if (summary()) {
+    <p class="row__summary">{{ summary() }}</p>
+    }
+    <p class="row__meta">
+      <span>{{ place() }}</span>
+      <span aria-hidden="true"> · </span>
+      <time [attr.datetime]="dateTime() ?? null">{{ dateLabel() }}</time>
+    </p>
+  </div>
+</article>

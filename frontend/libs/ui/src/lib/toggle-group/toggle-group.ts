@@ -18,7 +18,8 @@ export interface UiToggleOption {
 export type UiToggleGroupLayout = 'pills' | 'tiles';
 
 /**
- * Single choice among a few options, shown as toggle buttons in a `fieldset`:
+ * Single choice (or, with `multiple`, several choices) among a few options, shown as toggle
+ * buttons in a `fieldset`:
  *
  * ```html
  * <ui-toggle-group legend="Fuel" [options]="fuels" [value]="fuel()" (valueChange)="fuel.set($event)" />
@@ -26,7 +27,9 @@ export type UiToggleGroupLayout = 'pills' | 'tiles';
  *
  * Each option is a `button` with `aria-pressed`. `pills` wrap on one line (enumerations);
  * `tiles` are a grid of two columns (category families). A pressed option is unselected by a
- * second press unless `required` is set (`valueChange` then emits null). All texts come from inputs.
+ * second press unless `required` is set (`valueChange` then emits null). With `multiple`, each press
+ * adds or removes its option: the group reads `values` and emits `valuesChange` instead, in the order
+ * of the options (search filters, CATA-02). All texts come from inputs.
  */
 @Component({
   selector: 'ui-toggle-group',
@@ -51,7 +54,7 @@ export type UiToggleGroupLayout = 'pills' | 'tiles';
             type="button"
             class="ui-toggle-group__option"
             [class.ui-toggle-group__option--tile]="layout() === 'tiles'"
-            [attr.aria-pressed]="option.value === value()"
+            [attr.aria-pressed]="isPressed(option.value)"
             [disabled]="disabled()"
             (click)="press(option.value)"
           >
@@ -74,6 +77,9 @@ export class UiToggleGroup {
   readonly legend = input.required<string>();
   readonly options = input.required<readonly UiToggleOption[]>();
   readonly value = input<string | null>(null);
+  readonly multiple = input(false, { transform: booleanAttribute });
+  /** Pressed options of a `multiple` group. */
+  readonly values = input<readonly string[]>([]);
   readonly layout = input<UiToggleGroupLayout>('pills');
   readonly required = input(false, { transform: booleanAttribute });
   readonly disabled = input(false, { transform: booleanAttribute });
@@ -84,11 +90,30 @@ export class UiToggleGroup {
   readonly error = input<string | null>();
 
   readonly valueChange = output<string | null>();
+  readonly valuesChange = output<string[]>();
 
   protected readonly errorId = `ui-toggle-group-${nextToggleGroupId++}-error`;
   protected readonly invalid = computed(() => !!this.error());
 
+  protected isPressed(value: string): boolean {
+    return this.multiple() ? this.values().includes(value) : value === this.value();
+  }
+
   protected press(value: string): void {
+    if (this.multiple()) {
+      const pressed = new Set(this.values());
+      if (pressed.has(value)) {
+        pressed.delete(value);
+      } else {
+        pressed.add(value);
+      }
+      this.valuesChange.emit(
+        this.options()
+          .map((option) => option.value)
+          .filter((option) => pressed.has(option)),
+      );
+      return;
+    }
     if (value !== this.value()) {
       this.valueChange.emit(value);
     } else if (!this.required()) {

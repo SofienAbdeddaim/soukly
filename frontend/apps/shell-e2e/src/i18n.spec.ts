@@ -25,7 +25,7 @@ test.describe('languages', () => {
       await expect(
         page.getByRole('contentinfo').getByRole('link', { name: 'الخصوصية' }),
       ).toBeVisible();
-      await expect(page.getByRole('heading', { level: 1 })).toHaveText('كتالوج سوقلي، قريبًا');
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('السوق كلّه، قريب منك');
       expect(await hasHorizontalOverflow(page)).toBe(false);
     });
 
@@ -124,7 +124,7 @@ test.describe('languages', () => {
     });
     await fakeAccountApi(page, { signedIn: true });
     await page.goto('/ar');
-    await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+    await expect(page.getByTestId('catalog-home')).toBeVisible();
     expect(publishFiles).toEqual([]);
 
     await page.getByRole('banner').getByRole('link', { name: 'أضف إعلانًا' }).click();

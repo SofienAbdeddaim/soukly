@@ -1,0 +1,30 @@
+:host {
+  display: block;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-block-size: var(--control-height);
+  padding-inline: 12px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.chips__chip:hover {
+  border-color: var(--color-border-strong);
+}
