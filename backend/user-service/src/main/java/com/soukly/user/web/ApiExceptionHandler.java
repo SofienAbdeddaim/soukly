@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
+import com.soukly.user.internal.UserNotFoundException;
 import com.soukly.user.registration.InvalidRequestException;
 import com.soukly.user.registration.InvalidVerificationTokenException;
 import com.soukly.user.session.ForbiddenOriginException;
@@ -99,12 +100,24 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     /** Missing or invalid access token (resource server); the reason is never echoed, it may describe the token. */
     @ExceptionHandler
     ResponseEntity<Object> unauthenticated(AuthenticationException e, NativeWebRequest request) {
+        URI instance = instance(request);
+        if (instance != null && instance.getPath().startsWith("/internal/")) {
+            // Service-to-service call (CATA-03): no bearer challenge, the token is X-Internal-Token
+            return problem(ProblemDetails.forStatus(HttpStatus.UNAUTHORIZED, "A valid internal token is required.",
+                    instance, requestId(request)));
+        }
         String challenge = e instanceof InvalidBearerTokenException ? "Bearer error=\"invalid_token\"" : "Bearer";
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .header(HttpHeaders.WWW_AUTHENTICATE, challenge)
                 .contentType(MediaType.APPLICATION_PROBLEM_JSON)
                 .body(ProblemDetails.forStatus(HttpStatus.UNAUTHORIZED, "A valid bearer token is required.",
-                        instance(request), requestId(request)));
+                        instance, requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> userNotFound(UserNotFoundException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("user-not-found"), HttpStatus.NOT_FOUND,
+                "User not found", "No active account has this id.", instance(request), requestId(request)));
     }
 
     @ExceptionHandler

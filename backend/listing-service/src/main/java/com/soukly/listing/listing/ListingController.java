@@ -70,11 +70,23 @@ class ListingController {
         return answer(ResponseEntity.ok(), listings.renew(ownerId(jwt), listingId));
     }
 
-    /** Public at the gateway: the token, when there is one, says whether the reader owns the draft. */
+    /**
+     * Public at the gateway: the token, when there is one, says whether the reader owns the listing. The owner gets
+     * the full view in any status; anyone else the public view of a published listing (CATA-03), never stored by a
+     * shared cache and revalidated, since it disappears with the listing.
+     */
     @GetMapping("/{id}")
-    ResponseEntity<ListingResponse> get(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
+    ResponseEntity<?> get(@AuthenticationPrincipal Jwt jwt, @PathVariable String id) {
         UUID listingId = listingId(id).orElseThrow(ListingNotFoundException::new);
-        return answer(ResponseEntity.ok(), listings.get(jwt == null ? null : ownerId(jwt), listingId));
+        ListingReading reading = listings.read(jwt == null ? null : ownerId(jwt), listingId);
+        if (reading.owner()) {
+            return ResponseEntity.ok()
+                    .eTag(Versions.etag(reading.view().listing().version()))
+                    .cacheControl(CacheControl.noStore())
+                    .body(ListingResponse.of(reading));
+        }
+        return ResponseEntity.ok().cacheControl(CacheControl.noCache().cachePrivate())
+                .body(PublicListingResponse.of(reading));
     }
 
     /** The owner's view is private: never stored by a cache. */

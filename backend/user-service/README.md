@@ -22,6 +22,19 @@ validates it itself with its own keys, with the gateway's rules (RS256 only, `is
 as defense in depth. On a public path the `Authorization` header is ignored, so an expired token sent along with a
 refresh does not fail it.
 
+### Internal endpoints (CATA-03)
+
+Read by listing-service for the listing page, never routed by the gateway (it only routes `/api/**`). They have
+their own security chain: the caller sends the shared token `INTERNAL_API_TOKEN` in `X-Internal-Token`, compared in
+constant time; a user's access token does not open them. A missing or wrong token, or an empty `INTERNAL_API_TOKEN`,
+gives `401`. Only `ACTIVE` accounts are answered; any other id is `404` `user-not-found`. An assumption of V1: mTLS or
+service JWTs in V2.
+
+| Endpoint | Answers |
+| --- | --- |
+| `GET /internal/users/{id}/public-profile` | `200` `{ displayName, memberSince }` (`memberSince` = month of the registration in Tunis, `2026-03`), `401`, `404` |
+| `GET /internal/users/{id}/contact` | `200` `{ phone }` (E.164) with `Cache-Control: no-store`, `401`, `404` |
+
 ### Registration rules
 
 | Field         | Rule                                                                                                                                                                                    | Error codes                                                                             |
@@ -182,6 +195,7 @@ only** and ignores every other type, known or not.
 | `REFRESH_COOKIE_SECURE`                               | `true`                                               | `Secure` attribute of the cookie, see below                  |
 | `ALLOWED_ORIGINS`                                     | `CORS_ALLOWED_ORIGINS`, else `http://localhost:4200` | origins allowed on `refresh` and `logout`                    |
 | `KAFKA_BOOTSTRAP_SERVERS`                             | `localhost:19092`                                    | Kafka API of Redpanda (listing events)                       |
+| `INTERNAL_API_TOKEN`                                  | empty (internal endpoints refused)                   | shared token of `/internal/**` (CATA-03)                     |
 
 `REFRESH_COOKIE_SECURE` stays `true` everywhere, including locally: Chrome (89+) and Firefox (75+) accept a
 `Secure` cookie on `http://localhost`. Safari does not, so a developer testing in Safari over plain HTTP sets it to

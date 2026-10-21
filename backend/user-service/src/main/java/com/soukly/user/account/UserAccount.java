@@ -142,6 +142,10 @@ public class UserAccount implements Persistable<UUID> {
         return emailVerifiedAt;
     }
 
+    public Instant createdAt() {
+        return createdAt;
+    }
+
     @Override
     public UUID getId() {
         return id;

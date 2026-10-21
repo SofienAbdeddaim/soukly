@@ -77,6 +77,17 @@ soukly:
       # Signs the pagination cursors; empty = a random key per start (one instance in V1)
       cursor-secret: ${SEARCH_CURSOR_SECRET:}
       cache-max-age: 30s
+    # Internal endpoints of user-service (CATA-03): seller profile and phone number, with the shared X-Internal-Token
+    user-service:
+      base-url: ${USER_SERVICE_URL:http://localhost:8081}
+      internal-api-token: ${INTERNAL_API_TOKEN:}
+      connect-timeout: 2s
+      read-timeout: 3s
+      profile-cache-ttl: 5m
+    # "Show the number" (CATA-03): distinct listings per member over a sliding window; an assumption of V1
+    contact:
+      max-listings: ${CONTACT_MAX_LISTINGS_PER_DAY:30}
+      window: 24h
     # Local manual tests only: moves the business clock forward (for example P58D to reach the reminder). Never set
     # in dev or prod.
     clock-offset: ${LISTING_CLOCK_OFFSET:PT0S}

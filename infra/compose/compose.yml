@@ -168,6 +168,8 @@ services:
       # Signs the search cursors (CATA-01); empty = a random key at each start
       SEARCH_CURSOR_SECRET: ${SEARCH_CURSOR_SECRET:-}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is not set}
+      # Seller profiles and phone numbers (CATA-03): internal endpoints of user-service, with INTERNAL_API_TOKEN
+      USER_SERVICE_URL: http://user-service:8081
       # Access tokens validated again by the service (ANN-01), with the same JWKS and issuer as the gateway.
       USER_SERVICE_JWKS_URI: http://user-service:8081/.well-known/jwks.json
       JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}

@@ -35,6 +35,8 @@ public abstract class IntegrationTest {
 
     protected static final TestSmtpServer SMTP = new TestSmtpServer();
     protected static final String FRONT_ORIGIN = "http://localhost:4200";
+    /** Shared token of the service-to-service calls (CATA-03), generated for the run. */
+    protected static final String INTERNAL_TOKEN = "test-" + UUID.randomUUID();
 
     @Autowired
     protected MockMvc mockMvc;
@@ -59,6 +61,7 @@ public abstract class IntegrationTest {
         registry.add("soukly.user.session.allowed-origins", () -> FRONT_ORIGIN);
         registry.add("spring.kafka.bootstrap-servers", TestRedpanda::bootstrapServers);
         registry.add("soukly.user.listing-events.retry-interval", () -> "100ms");
+        registry.add("soukly.user.internal-api.token", () -> INTERNAL_TOKEN);
     }
 
     @BeforeEach
