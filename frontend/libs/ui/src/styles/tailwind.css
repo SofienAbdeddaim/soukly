@@ -33,6 +33,7 @@
   --color-danger-surface: var(--color-danger-surface);
   --color-success: var(--color-success);
   --color-success-surface: var(--color-success-surface);
+  --color-warning-surface: var(--color-warning-surface);
   --color-transparent: transparent;
   --color-current: currentcolor;
 

@@ -8,7 +8,7 @@ import { ListingsApi, MERGE_PATCH_JSON } from './listings-api';
 import { PhotosApi } from './photos-api';
 import { ReferentialsApi } from './referentials-api';
 import { SearchApi } from './search-api';
-import { draftListing, TEST_FAMILIES, TEST_ID } from './testing';
+import { draftListing, OWN_COUNTS, ownListingCard, TEST_FAMILIES, TEST_ID } from './testing';
 
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -57,6 +57,46 @@ describe('listing-data APIs', () => {
 
       // No ETag header readable: the one listing-service derives from the version.
       expect((await updated).etag).toBe('"4"');
+    });
+  });
+
+  describe('ListingsApi, My listings (ANN-05)', () => {
+    it('reads one status of the own listings, then the next page with its cursor', async () => {
+      const api = TestBed.inject(ListingsApi);
+      const first = api.mine('EXPIRED');
+      const request = http.expectOne(
+        (candidate) => candidate.url === '/api/listings/mine' && !candidate.params.has('cursor'),
+      );
+      expect(request.request.params.get('status')).toBe('EXPIRED');
+      expect(request.request.params.get('limit')).toBe('20');
+      expect(request.request.headers.get('Authorization')).toBe('Bearer token-1');
+      request.flush({ items: [ownListingCard()], nextCursor: 'c1', counts: OWN_COUNTS });
+      expect((await first).counts).toEqual(OWN_COUNTS);
+
+      const next = api.mine('EXPIRED', 'c1');
+      http.expectOne((candidate) => candidate.params.get('cursor') === 'c1').flush({ items: [] });
+      expect((await next).items).toEqual([]);
+    });
+
+    it('deactivates, renews and deletes a listing', async () => {
+      const api = TestBed.inject(ListingsApi);
+      const deactivated = api.deactivate(TEST_ID);
+      const deactivate = http.expectOne(`/api/listings/${TEST_ID}/deactivate`);
+      expect(deactivate.request.method).toBe('POST');
+      deactivate.flush(draftListing({ status: 'INACTIVE', version: 4 }), {
+        headers: { ETag: '"4"' },
+      });
+      expect((await deactivated).etag).toBe('"4"');
+
+      const renewed = api.renew(TEST_ID);
+      http.expectOne(`/api/listings/${TEST_ID}/renew`).flush(draftListing({ status: 'PUBLISHED' }));
+      expect((await renewed).listing.status).toBe('PUBLISHED');
+
+      const deleted = api.delete(TEST_ID);
+      const remove = http.expectOne(`/api/listings/${TEST_ID}`);
+      expect(remove.request.method).toBe('DELETE');
+      remove.flush(null, { status: 204, statusText: 'No Content' });
+      await deleted;
     });
   });
 

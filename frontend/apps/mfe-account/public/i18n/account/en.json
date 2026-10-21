@@ -104,5 +104,105 @@
     "connect": "Link",
     "note": "You can link or remove your networks at any time from your profile. Soukly never posts without your consent.",
     "continue": "Continue to Soukly"
+  },
+  "listings": {
+    "title": "My listings",
+    "back": "Back to home",
+    "post": "Post",
+    "tabs": {
+      "label": "Listings by status",
+      "online": "Online",
+      "drafts": "Drafts",
+      "expired": "Expired",
+      "inactive": "Deactivated"
+    },
+    "badge": {
+      "online": {
+        "zero": "Online · {{ count }} days left",
+        "one": "Online · {{ count }} day left",
+        "two": "Online · {{ count }} days left",
+        "few": "Online · {{ count }} days left",
+        "many": "Online · {{ count }} days left",
+        "other": "Online · {{ count }} days left"
+      },
+      "expires": {
+        "zero": "Expires in {{ count }} days",
+        "one": "Expires in {{ count }} day",
+        "two": "Expires in {{ count }} days",
+        "few": "Expires in {{ count }} days",
+        "many": "Expires in {{ count }} days",
+        "other": "Expires in {{ count }} days"
+      },
+      "expired": "Expired on {{ date }}",
+      "inactive": "Deactivated",
+      "draft": {
+        "zero": "Draft · {{ count }} missing fields",
+        "one": "Draft · {{ count }} missing field",
+        "two": "Draft · {{ count }} missing fields",
+        "few": "Draft · {{ count }} missing fields",
+        "many": "Draft · {{ count }} missing fields",
+        "other": "Draft · {{ count }} missing fields"
+      },
+      "draft-ready": "Draft · ready to publish"
+    },
+    "reveals": {
+      "zero": "No number shown yet",
+      "one": "{{ count }} number shown",
+      "two": "{{ count }} numbers shown",
+      "few": "{{ count }} numbers shown",
+      "many": "{{ count }} numbers shown",
+      "other": "{{ count }} numbers shown"
+    },
+    "reveals-none": "No number shown yet",
+    "untitled": "Untitled listing",
+    "on-quote": "On quote",
+    "no-price": "No price yet",
+    "actions": {
+      "edit": "Edit",
+      "extend": "Extend by 60 days",
+      "renew": "Put back online",
+      "continue": "Continue"
+    },
+    "menu": {
+      "label": "More actions for “{{ title }}”",
+      "view": "View the listing",
+      "share": "Share the link",
+      "edit": "Edit",
+      "deactivate": "Deactivate",
+      "delete": "Delete"
+    },
+    "expired-note": "A listing put back online stays visible for 60 more days.",
+    "empty": {
+      "online": "No listing online",
+      "drafts": "No draft",
+      "expired": "No expired listing",
+      "inactive": "No deactivated listing",
+      "post": "Post a listing"
+    },
+    "error": "Your listings could not be loaded. Check your connection.",
+    "retry": "Try again",
+    "more": "See more",
+    "more-error": "The next listings could not be loaded.",
+    "delete": {
+      "title": "Delete this listing?",
+      "text-before": "“",
+      "text-after": "” will disappear from Soukly.",
+      "final": "This action is final.",
+      "tip": "Just sold or taking a break? Deactivate it instead: you can put it back online later.",
+      "confirm": "Delete for good",
+      "deactivate": "Deactivate instead",
+      "cancel": "Cancel"
+    },
+    "toasts": {
+      "renewed": "Listing online for 60 days",
+      "deactivated": "Listing deactivated",
+      "reactivated": "Listing back online",
+      "deleted": "Listing deleted",
+      "undo": "Undo",
+      "failed": "This action failed. Try again.",
+      "link-copied": "Link copied",
+      "link-failed": "The link could not be copied.",
+      "close": "Close"
+    }
   }
 }

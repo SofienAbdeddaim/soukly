@@ -4,8 +4,7 @@ import { problem } from './fake-api';
 /**
  * Fakes listing-service in the browser (the CI has no back end): referentials (a part of CAT-01),
  * drafts with their versions (ANN-01), photos with presigned uploads (ANN-02), publication
- * (ANN-03). The storage of
- * the uploads is `http://storage.test`, the photos are served from `http://photos.test`.
+ * (ANN-03), "My listings" with its actions (ANN-05). The storage of the uploads is `http://storage.test`, the photos are served from `http://photos.test`.
  * Register it after `fakeAccountApi`: what it does not answer falls back to the account API.
  */
 const STORAGE = 'http://storage.test';
@@ -201,7 +200,19 @@ export interface FakeListing {
   delegationCode: string | null;
   attributes: Record<string, unknown>;
   photos: FakePhoto[];
-  status?: 'DRAFT' | 'PUBLISHED';
+  status?: FakeStatus;
+  /** End of visibility; 60 days after the publication when absent. */
+  expiresAt?: string;
+  contactRevealsCount?: number;
+}
+
+export type FakeStatus = 'DRAFT' | 'PUBLISHED' | 'EXPIRED' | 'INACTIVE' | 'DELETED';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** An instant `days` from now (negative: in the past), as the API writes it. */
+export function inDays(days: number): string {
+  return new Date(Date.now() + days * DAY_MS).toISOString();
 }
 
 export interface FakeListingApi {
@@ -210,6 +221,8 @@ export interface FakeListingApi {
   patches: Record<string, unknown>[];
   /** Files received by the storage, by photo id. */
   uploads: Map<string, Buffer>;
+  /** Actions received: `deactivate {id}`, `renew {id}`, `delete {id}`. */
+  actions: string[];
   /** Changes the draft "in another tab": its version goes up. */
   changeElsewhere(id: string, changes: Partial<FakeListing>): void;
 }
@@ -245,7 +258,7 @@ export function fakePhoto(id: string, position: number): FakePhoto {
   };
 }
 
-function view(listing: FakeListing, warnings: string[] = []) {
+function missingFields(listing: FakeListing): string[] {
   const missing: string[] = [];
   if (!listing.photos.length) missing.push('photos');
   if (!listing.title) missing.push('title');
@@ -258,17 +271,50 @@ function view(listing: FakeListing, warnings: string[] = []) {
       missing.push(`attributes.${attribute['code']}`);
     }
   }
+  return missing;
+}
+
+function kindOf(listing: FakeListing): string {
   const family = listing.categoryCode.split('.')[0];
+  return family === 'services' || family === 'jobs' ? 'SERVICE' : 'SALE';
+}
+
+function view(listing: FakeListing, warnings: string[] = []) {
+  const published = (listing.status ?? 'DRAFT') !== 'DRAFT';
+  const fields: Partial<FakeListing> = { ...listing };
+  delete fields.contactRevealsCount;
   return {
-    ...listing,
+    ...fields,
     status: listing.status ?? 'DRAFT',
-    kind: family === 'services' || family === 'jobs' ? 'SERVICE' : 'SALE',
-    missingFields: missing,
+    kind: kindOf(listing),
+    missingFields: missingFields(listing),
     warnings,
     createdAt: '2026-10-21T08:00:00Z',
     updatedAt: '2026-10-21T08:00:00Z',
-    publishedAt: listing.status === 'PUBLISHED' ? '2026-10-21T09:00:00Z' : null,
-    expiresAt: listing.status === 'PUBLISHED' ? '2026-12-20T09:00:00Z' : null,
+    publishedAt: published ? '2026-10-21T09:00:00Z' : null,
+    expiresAt: published ? (listing.expiresAt ?? '2026-12-20T09:00:00Z') : null,
+  };
+}
+
+/** Card of "My listings" (`GET /listings/mine`, ANN-05). */
+function card(listing: FakeListing) {
+  const { id, status, title, categoryCode, priceMode, price, photos } = view(listing);
+  const missing = missingFields(listing);
+  return {
+    id,
+    status,
+    title,
+    kind: kindOf(listing),
+    categoryCode,
+    priceMode,
+    price,
+    currency: 'TND',
+    coverThumbnailUrl: photos[0]?.thumbnailUrl ?? null,
+    updatedAt: '2026-10-21T08:00:00Z',
+    publishedAt: status === 'DRAFT' ? null : '2026-10-21T09:00:00Z',
+    expiresAt: view(listing).expiresAt,
+    contactRevealsCount: listing.contactRevealsCount ?? 0,
+    ...(status === 'DRAFT' ? { missingFields: missing, missingFieldsCount: missing.length } : {}),
   };
 }
 
@@ -286,6 +332,7 @@ export async function fakeListingApi(
     listings: new Map(initial.map((listing) => [listing.id, structuredClone(listing)])),
     patches: [],
     uploads: new Map(),
+    actions: [],
     changeElsewhere: (id, changes) => {
       const listing = api.listings.get(id);
       if (listing) {
@@ -351,12 +398,27 @@ export async function fakeListingApi(
       api.listings.set(listing.id, listing);
       return answer(route, listing, 201);
     }
+    if (path === '/api/listings/mine' && method === 'GET') {
+      const status = new URL(request.url()).searchParams.get('status') ?? 'PUBLISHED';
+      const own = [...api.listings.values()];
+      const statusOf = (listing: FakeListing) => listing.status ?? 'DRAFT';
+      const counts = Object.fromEntries(
+        ['PUBLISHED', 'DRAFT', 'EXPIRED', 'INACTIVE'].map((value) => [
+          value,
+          own.filter((listing) => statusOf(listing) === value).length,
+        ]),
+      );
+      return json(route, 200, {
+        items: own.filter((listing) => statusOf(listing) === status).map(card),
+        counts,
+      });
+    }
     const match = path.match(/^\/api\/listings\/([^/]+)(\/.*)?$/);
     const listing = match ? api.listings.get(match[1]) : undefined;
     if (!match) {
       return route.fallback();
     }
-    if (!listing) {
+    if (!listing || listing.status === 'DELETED') {
       return json(route, 404, problem('listing-not-found', 404));
     }
     const rest = match[2] ?? '';
@@ -369,6 +431,23 @@ export async function fakeListingApi(
       }
       const patch = request.postDataJSON() as Record<string, unknown>;
       api.patches.push(patch);
+      const wasPublished = (listing.status ?? 'DRAFT') !== 'DRAFT';
+      if (
+        wasPublished &&
+        'categoryCode' in patch &&
+        patch['categoryCode'] !== listing.categoryCode
+      ) {
+        return json(route, 409, problem('category-locked', 409));
+      }
+      if (wasPublished) {
+        const missing = missingFields({ ...listing, ...patch } as FakeListing);
+        if (missing.length) {
+          return json(route, 422, {
+            ...problem('listing-incomplete', 422),
+            missingFields: missing,
+          });
+        }
+      }
       const warnings: string[] = [];
       for (const [key, value] of Object.entries(patch)) {
         if (key === 'attributes') {
@@ -400,6 +479,31 @@ export async function fakeListingApi(
       }
       listing.status = 'PUBLISHED';
       return answer(route, listing);
+    }
+    if (rest === '/deactivate' && method === 'POST') {
+      if (listing.status !== 'PUBLISHED') {
+        return json(route, 409, problem('transition-not-allowed', 409));
+      }
+      api.actions.push(`deactivate ${listing.id}`);
+      listing.status = 'INACTIVE';
+      listing.version++;
+      return answer(route, listing);
+    }
+    if (rest === '/renew' && method === 'POST') {
+      api.actions.push(`renew ${listing.id}`);
+      listing.status = 'PUBLISHED';
+      listing.expiresAt = inDays(60);
+      listing.version++;
+      return answer(route, listing);
+    }
+    if (rest === '' && method === 'DELETE') {
+      api.actions.push(`delete ${listing.id}`);
+      if ((listing.status ?? 'DRAFT') === 'DRAFT') {
+        api.listings.delete(listing.id);
+      } else {
+        listing.status = 'DELETED';
+      }
+      return route.fulfill({ status: 204 });
     }
     if (rest === '/photos' && method === 'POST') {
       const photoId = `photo-${nextPhoto++}`;
@@ -433,6 +537,12 @@ export async function fakeListingApi(
     }
     const remove = rest.match(/^\/photos\/([^/]+)$/);
     if (remove && method === 'DELETE') {
+      if ((listing.status ?? 'DRAFT') !== 'DRAFT' && listing.photos.length === 1) {
+        return json(route, 422, {
+          ...problem('listing-incomplete', 422),
+          missingFields: ['photos'],
+        });
+      }
       listing.photos = listing.photos
         .filter((photo) => photo.id !== remove[1])
         .map((photo, position) => ({ ...photo, position }));

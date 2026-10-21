@@ -104,5 +104,105 @@
     "connect": "Relier",
     "note": "Vous pourrez relier ou retirer vos réseaux à tout moment depuis votre profil. Soukly ne publie jamais sans votre accord.",
     "continue": "Continuer vers Soukly"
+  },
+  "listings": {
+    "title": "Mes annonces",
+    "back": "Retour à l'accueil",
+    "post": "Déposer",
+    "tabs": {
+      "label": "Annonces par état",
+      "online": "En ligne",
+      "drafts": "Brouillons",
+      "expired": "Expirées",
+      "inactive": "Désactivées"
+    },
+    "badge": {
+      "online": {
+        "zero": "En ligne · {{ count }} j",
+        "one": "En ligne · {{ count }} j",
+        "two": "En ligne · {{ count }} j",
+        "few": "En ligne · {{ count }} j",
+        "many": "En ligne · {{ count }} j",
+        "other": "En ligne · {{ count }} j"
+      },
+      "expires": {
+        "zero": "Expire dans {{ count }} j",
+        "one": "Expire dans {{ count }} j",
+        "two": "Expire dans {{ count }} j",
+        "few": "Expire dans {{ count }} j",
+        "many": "Expire dans {{ count }} j",
+        "other": "Expire dans {{ count }} j"
+      },
+      "expired": "Expirée le {{ date }}",
+      "inactive": "Désactivée",
+      "draft": {
+        "zero": "Brouillon · {{ count }} champs manquants",
+        "one": "Brouillon · {{ count }} champ manquant",
+        "two": "Brouillon · {{ count }} champs manquants",
+        "few": "Brouillon · {{ count }} champs manquants",
+        "many": "Brouillon · {{ count }} champs manquants",
+        "other": "Brouillon · {{ count }} champs manquants"
+      },
+      "draft-ready": "Brouillon · prêt à publier"
+    },
+    "reveals": {
+      "zero": "Aucun numéro affiché",
+      "one": "{{ count }} numéro affiché",
+      "two": "{{ count }} numéros affichés",
+      "few": "{{ count }} numéros affichés",
+      "many": "{{ count }} numéros affichés",
+      "other": "{{ count }} numéros affichés"
+    },
+    "reveals-none": "Aucun numéro affiché",
+    "untitled": "Annonce sans titre",
+    "on-quote": "Sur devis",
+    "no-price": "Prix à renseigner",
+    "actions": {
+      "edit": "Modifier",
+      "extend": "Prolonger de 60 jours",
+      "renew": "Remettre en ligne",
+      "continue": "Continuer"
+    },
+    "menu": {
+      "label": "Plus d’actions pour « {{ title }} »",
+      "view": "Voir l'annonce",
+      "share": "Partager le lien",
+      "edit": "Modifier",
+      "deactivate": "Désactiver",
+      "delete": "Supprimer"
+    },
+    "expired-note": "Une annonce remise en ligne reste visible 60 jours de plus.",
+    "empty": {
+      "online": "Aucune annonce en ligne",
+      "drafts": "Aucun brouillon",
+      "expired": "Aucune annonce expirée",
+      "inactive": "Aucune annonce désactivée",
+      "post": "Déposer une annonce"
+    },
+    "error": "Vos annonces n'ont pas pu être chargées. Vérifiez votre connexion.",
+    "retry": "Réessayer",
+    "more": "Voir plus",
+    "more-error": "Les annonces suivantes n'ont pas pu être chargées.",
+    "delete": {
+      "title": "Supprimer cette annonce ?",
+      "text-before": "« ",
+      "text-after": " » disparaîtra de Soukly.",
+      "final": "Cette action est définitive.",
+      "tip": "Vendu ou en pause ? Désactivez-la plutôt : vous pourrez la remettre en ligne plus tard.",
+      "confirm": "Supprimer définitivement",
+      "deactivate": "Désactiver à la place",
+      "cancel": "Annuler"
+    },
+    "toasts": {
+      "renewed": "Annonce en ligne pour 60 jours",
+      "deactivated": "Annonce désactivée",
+      "reactivated": "Annonce remise en ligne",
+      "deleted": "Annonce supprimée",
+      "undo": "Annuler",
+      "failed": "L'action a échoué. Réessayez.",
+      "link-copied": "Lien copié",
+      "link-failed": "Le lien n'a pas pu être copié.",
+      "close": "Fermer"
+    }
   }
 }

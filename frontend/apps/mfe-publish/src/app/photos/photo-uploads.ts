@@ -128,8 +128,13 @@ export class PhotoUploads {
     if (item.photo) {
       try {
         await this.photosApi.delete(this.listingId, item.photo.id);
-      } catch {
-        this.notify(key, item.name, 'remove');
+      } catch (error) {
+        // A listing that was published keeps at least one photo (ANN-05)
+        this.notify(
+          key,
+          item.name,
+          problemCode(error) === 'listing-incomplete' ? 'last-photo' : 'remove',
+        );
         return;
       }
     }

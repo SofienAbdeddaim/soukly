@@ -32,6 +32,12 @@ export function problemFieldErrors(error: unknown): ApiFieldError[] {
   );
 }
 
+/** `missingFields` of a `listing-incomplete` problem (ANN-03, ANN-05); empty for any other error. */
+export function problemMissingFields(error: unknown): string[] {
+  const fields = problemBody(error)?.['missingFields'];
+  return Array.isArray(fields) ? fields.filter((field) => typeof field === 'string') : [];
+}
+
 /** Whole seconds of the `Retry-After` header of a `429`, or null. */
 export function retryAfterSeconds(error: unknown): number | null {
   if (!(error instanceof HttpErrorResponse)) {

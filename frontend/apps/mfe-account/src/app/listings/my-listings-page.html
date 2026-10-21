@@ -1,0 +1,90 @@
+<div class="listings">
+  <header class="listings__header">
+    <a
+      class="listings__back"
+      [routerLink]="'/' | localePath"
+      [attr.aria-label]="'account.listings.back' | transloco"
+      data-testid="listings-back"
+    >
+      <svg lucideArrowLeft class="ui-flip-rtl" [size]="22" aria-hidden="true"></svg>
+    </a>
+    <h1 class="listings__title">{{ 'account.listings.title' | transloco }}</h1>
+    <a
+      ui-button
+      variant="secondary"
+      class="listings__post"
+      [routerLink]="'/publish/new' | localePath"
+      data-testid="listings-post"
+    >
+      <svg lucidePlus uiButtonIcon [size]="18" aria-hidden="true"></svg>
+      {{ 'account.listings.post' | transloco }}
+    </a>
+  </header>
+
+  <app-listing-tabs
+    [active]="tab()"
+    [counts]="store.counts()"
+    [panelId]="panelId"
+    (selected)="select($event)"
+  />
+
+  <div
+    class="listings__panel"
+    role="tabpanel"
+    tabindex="-1"
+    [id]="panelId"
+    [attr.aria-labelledby]="tabId()"
+    [attr.aria-busy]="store.state() === 'loading' ? 'true' : null"
+    data-testid="listings-panel"
+    #panel
+  >
+    @switch (store.state()) { @case ('loading') { @for (skeleton of skeletons; track skeleton) {
+    <ui-skeleton variant="block" blockSize="9.5rem" />
+    } } @case ('error') {
+    <div class="listings__state" data-testid="listings-error">
+      <ui-alert type="error">{{ 'account.listings.error' | transloco }}</ui-alert>
+      <button ui-button variant="ghost" type="button" (click)="retry()">
+        {{ 'account.listings.retry' | transloco }}
+      </button>
+    </div>
+    } @default { @if (store.items().length) { @if (tab() === 'expired') {
+    <p class="listings__note">{{ 'account.listings.expired-note' | transloco }}</p>
+    }
+    <ul class="listings__list" data-testid="listings-list">
+      @for (card of store.items(); track card.id) {
+      <li>
+        <app-own-listing-item
+          [card]="card"
+          [now]="now()"
+          [busy]="busyId() === card.id"
+          (requested)="run(card, $event)"
+        />
+      </li>
+      }
+    </ul>
+    @if (store.hasMore()) {
+    <div class="listings__more">
+      @if (store.moreFailed()) {
+      <p class="listings__note" role="status">{{ 'account.listings.more-error' | transloco }}</p>
+      }
+      <button
+        ui-button
+        variant="ghost"
+        type="button"
+        data-testid="listings-more"
+        [loading]="store.loadingMore()"
+        (click)="store.more()"
+      >
+        {{ 'account.listings.more' | transloco }}
+      </button>
+    </div>
+    } } @else {
+    <div class="listings__state listings__state--empty" data-testid="listings-empty">
+      <p class="listings__empty-title">{{ 'account.listings.empty.' + tab() | transloco }}</p>
+      <a ui-button [routerLink]="'/publish/new' | localePath">
+        {{ 'account.listings.empty.post' | transloco }}
+      </a>
+    </div>
+    } } }
+  </div>
+</div>

@@ -78,7 +78,8 @@
       "limit": "Une annonce compte 10 photos au maximum : cette photo n'a pas été ajoutée.",
       "remove": "La photo n'a pas pu être supprimée. Réessayez.",
       "order": "L'ordre des photos n'a pas pu être enregistré. Réessayez.",
-      "unexpected": "Cette photo n'a pas pu être envoyée."
+      "unexpected": "Cette photo n'a pas pu être envoyée.",
+      "last-photo": "Une annonce en ligne garde au moins une photo : ajoutez-en une autre avant de supprimer celle-ci."
     }
   },
   "details": {
@@ -186,5 +187,31 @@
     "text": "Elle restera visible pendant 60 jours. Nous vous préviendrons 3 jours avant la fin.",
     "view": "Voir l'annonce",
     "another": "Déposer une autre annonce"
+  },
+  "edit": {
+    "title": "Modifier l'annonce",
+    "back": "Retour à mes annonces",
+    "banner": {
+      "PUBLISHED": "Annonce en ligne. Vos modifications seront visibles dès que vous les enregistrez.",
+      "EXPIRED": "Cette annonce a expiré. Vos modifications sont enregistrées ; remettez-la en ligne depuis Mes annonces.",
+      "INACTIVE": "Cette annonce est désactivée. Vos modifications sont enregistrées ; remettez-la en ligne depuis Mes annonces."
+    },
+    "category": "Catégorie",
+    "category-locked": "(non modifiable après publication)",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saved": "Modifications enregistrées",
+    "close": "Fermer",
+    "offline": "Hors ligne : vos modifications n'ont pas été enregistrées. Réessayez.",
+    "error": "Vos modifications n'ont pas pu être enregistrées. Réessayez.",
+    "not-found": "Cette annonce est introuvable.",
+    "load-error": "Cette annonce n'a pas pu être chargée. Vérifiez votre connexion.",
+    "my-listings": "Mes annonces",
+    "leave": {
+      "title": "Quitter sans enregistrer ?",
+      "text": "Vos modifications seront perdues.",
+      "stay": "Continuer la modification",
+      "confirm": "Quitter sans enregistrer"
+    }
   }
 }

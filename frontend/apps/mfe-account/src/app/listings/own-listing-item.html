@@ -1,0 +1,129 @@
+<article class="item" [attr.aria-labelledby]="titleId()">
+  <div class="item__main">
+    <div class="item__media">
+      @if (card().coverThumbnailUrl; as src) {
+      <img class="item__image" [src]="src" alt="" loading="lazy" />
+      } @else {
+      <div class="item__placeholder">
+        <svg lucideImage [size]="24" aria-hidden="true"></svg>
+      </div>
+      }
+    </div>
+
+    <div class="item__body">
+      <h2 class="item__title" [id]="titleId()">
+        <a class="item__link" [routerLink]="titleCommands()" data-testid="own-listing-title">
+          {{ card().title ?? ('account.listings.untitled' | transloco) }}
+        </a>
+      </h2>
+      <p class="item__price" data-testid="own-listing-price">
+        @if (card().priceMode === 'ON_QUOTE') { {{ 'account.listings.on-quote' | transloco }} }
+        @else if (card().price !== null) {
+        <bdi>{{ card().price | price }}</bdi>
+        } @else {
+        <span class="item__muted">{{ 'account.listings.no-price' | transloco }}</span>
+        }
+      </p>
+      <ui-badge [tone]="badge().tone" data-testid="own-listing-badge">
+        {{ badgeKey() | transloco: { count: badge().count, date: (badge().date | localDate) } }}
+      </ui-badge>
+      @if (card().status !== 'DRAFT') {
+      <p class="item__muted" data-testid="own-listing-reveals">
+        {{ revealsKey() | transloco: { count: card().contactRevealsCount } }}
+      </p>
+      }
+    </div>
+  </div>
+
+  <div class="item__actions">
+    @switch (primary()) { @case ('edit') {
+    <a
+      ui-button
+      variant="ghost"
+      class="item__primary"
+      [routerLink]="editCommands()"
+      data-testid="own-listing-primary"
+    >
+      {{ 'account.listings.actions.edit' | transloco }}
+    </a>
+    } @case ('continue') {
+    <a
+      ui-button
+      class="item__primary"
+      [routerLink]="continueCommands()"
+      data-testid="own-listing-primary"
+    >
+      {{ 'account.listings.actions.continue' | transloco }}
+    </a>
+    } @default {
+    <button
+      ui-button
+      type="button"
+      class="item__primary"
+      data-testid="own-listing-primary"
+      [loading]="busy()"
+      (click)="requested.emit('renew')"
+    >
+      {{ 'account.listings.actions.' + primary() | transloco }}
+    </button>
+    } }
+
+    <button
+      type="button"
+      class="item__more"
+      [cdkMenuTriggerFor]="menu"
+      [attr.aria-label]="'account.listings.menu.label' | transloco: { title: card().title ?? ('account.listings.untitled' | transloco) }"
+      [disabled]="busy()"
+      data-testid="own-listing-menu"
+    >
+      <svg lucideEllipsis [size]="22" aria-hidden="true"></svg>
+    </button>
+  </div>
+</article>
+
+<ng-template #menu>
+  <div class="menu" cdkMenu data-testid="own-listing-menu-panel">
+    @if (card().status === 'PUBLISHED') {
+    <a class="menu__item" cdkMenuItem [routerLink]="viewCommands()" data-testid="menu-view">
+      <svg lucideEye [size]="18" aria-hidden="true"></svg>
+      {{ 'account.listings.menu.view' | transloco }}
+    </a>
+    <button
+      type="button"
+      class="menu__item"
+      cdkMenuItem
+      data-testid="menu-share"
+      (cdkMenuItemTriggered)="requested.emit('share')"
+    >
+      <svg lucideShare2 [size]="18" aria-hidden="true"></svg>
+      {{ 'account.listings.menu.share' | transloco }}
+    </button>
+    } @if (card().status !== 'DRAFT' && primary() !== 'edit') {
+    <a class="menu__item" cdkMenuItem [routerLink]="editCommands()" data-testid="menu-edit">
+      <svg lucidePencil [size]="18" aria-hidden="true"></svg>
+      {{ 'account.listings.menu.edit' | transloco }}
+    </a>
+    } @if (card().status === 'PUBLISHED') {
+    <button
+      type="button"
+      class="menu__item"
+      cdkMenuItem
+      data-testid="menu-deactivate"
+      (cdkMenuItemTriggered)="requested.emit('deactivate')"
+    >
+      <svg lucidePause [size]="18" aria-hidden="true"></svg>
+      {{ 'account.listings.menu.deactivate' | transloco }}
+    </button>
+    }
+    <button
+      type="button"
+      class="menu__item menu__item--danger"
+      cdkMenuItem
+      data-testid="menu-delete"
+      (cdkMenuItemTriggered)="requested.emit('delete')"
+    >
+      <svg lucideTrash [size]="18" aria-hidden="true"></svg>
+      {{ 'account.listings.menu.delete' | transloco }}
+    </button>
+  </div>
+</ng-template>

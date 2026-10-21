@@ -53,7 +53,7 @@ describe('UiButton', () => {
     expect(button.getAttribute('aria-busy')).toBeNull();
   });
 
-  it.each<UiButtonVariant>(['primary', 'secondary', 'ghost'])(
+  it.each<UiButtonVariant>(['primary', 'secondary', 'ghost', 'danger'])(
     'applies the %s variant',
     async (variant) => {
       const { fixture, host, button } = await setup();
