@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import tools.jackson.databind.JsonNode;
@@ -86,6 +87,19 @@ public class ListingService {
         return repository.find(id)
                 .filter(found -> viewerId != null && found.isOwnedBy(viewerId))
                 .map(found -> views.view(found, List.of()))
+                .orElseThrow(ListingNotFoundException::new);
+    }
+
+    /**
+     * Locks a listing of {@code ownerId} whose photos may change until the end of the current transaction (ANN-02):
+     * a draft, and a published listing once ANN-03 adds them.
+     *
+     * @throws ListingNotFoundException unknown listing, or a listing of another account
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Listing lockForPhotos(UUID ownerId, UUID id) {
+        return repository.findForUpdate(id)
+                .filter(found -> found.isOwnedBy(ownerId) && found.status() == ListingStatus.DRAFT)
                 .orElseThrow(ListingNotFoundException::new);
     }
 

@@ -7,20 +7,27 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
+import com.soukly.listing.photo.ListingPhotos;
+import com.soukly.listing.photo.PhotoView;
 import com.soukly.listing.referential.Attribute;
 import com.soukly.listing.referential.ReferentialService;
 
 /**
  * Completeness of a listing ({@code missingFields}) and display order of its attributes, both from the definitions
- * of its subcategory (CAT-01). Photos join {@code missingFields} with ANN-02.
+ * of its subcategory (CAT-01), and its READY photos (ANN-02).
  */
 @Component
 class ListingViews {
 
-    private final ReferentialService referentials;
+    /** Member of {@code missingFields} while the listing has no READY photo. */
+    static final String PHOTOS = "photos";
 
-    ListingViews(ReferentialService referentials) {
+    private final ReferentialService referentials;
+    private final ListingPhotos photos;
+
+    ListingViews(ReferentialService referentials, ListingPhotos photos) {
         this.referentials = referentials;
+        this.photos = photos;
     }
 
     ListingView view(Listing listing, List<String> warnings) {
@@ -28,15 +35,20 @@ class ListingViews {
         List<Attribute> definitions = definitions(content.categoryCode());
         Listing ordered = new Listing(listing.id(), listing.ownerId(), listing.status(), ordered(content, definitions),
                 listing.version(), listing.createdAt(), listing.updatedAt(), listing.publishedAt());
-        return new ListingView(ordered, missingFields(content, definitions), warnings);
+        List<PhotoView> ready = photos.ready(listing.id());
+        return new ListingView(ordered, ready, missingFields(content, definitions, ready.isEmpty()), warnings);
     }
 
     /** Required fields still empty, in the order of the form. */
-    private static List<String> missingFields(ListingContent content, List<Attribute> definitions) {
+    private static List<String> missingFields(ListingContent content, List<Attribute> definitions,
+            boolean noPhoto) {
         List<String> missing = new ArrayList<>();
         if (definitions == null) {
             // The category was deactivated since the draft was created: another one must be chosen.
             missing.add(DraftEditor.CATEGORY_CODE);
+        }
+        if (noPhoto) {
+            missing.add(PHOTOS);
         }
         if (content.title() == null) {
             missing.add(DraftEditor.TITLE);

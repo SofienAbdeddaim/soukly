@@ -80,6 +80,21 @@ cors="$(toolbox curl -fsS -o /dev/null -D - -X OPTIONS \
   http://garage:3900/soukly-listings/test.txt | tr -d '\r' | grep -i '^access-control-allow-origin:' || true)"
 [[ "${cors,,}" == "access-control-allow-origin: http://localhost:4200" ]] || fail "CORS preflight answered '${cors}'"
 pass "CORS preflight allows http://localhost:4200"
+# Website endpoint (ANN-02): listings/ is public, incoming/ never is. Host header = bucket + root_domain.
+toolbox bash -c '
+  set -euo pipefail
+  export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$S3_SECRET_ACCESS_KEY"
+  s3() { aws --endpoint-url http://garage:3900 --region "$S3_REGION" s3 "$@"; }
+  echo public > /tmp/test.txt
+  s3 cp --quiet /tmp/test.txt "s3://$S3_BUCKET/listings/infra-check/test.txt"
+  s3 cp --quiet /tmp/test.txt "s3://$S3_BUCKET/incoming/infra-check/test.txt"
+  web() { curl -sS -o /dev/null -w "%{http_code}" -H "Host: $S3_BUCKET.web.localhost" "http://garage:3902/$1"; }
+  listings="$(web listings/infra-check/test.txt)"; incoming="$(web incoming/infra-check/test.txt)"
+  s3 rm --quiet "s3://$S3_BUCKET/listings/infra-check/test.txt"
+  s3 rm --quiet "s3://$S3_BUCKET/incoming/infra-check/test.txt"
+  [[ "$listings" == "200" && "$incoming" == "404" ]] || { echo "listings/ ${listings}, incoming/ ${incoming}" >&2; exit 1; }
+' || fail "website endpoint does not serve listings/ only"
+pass "website endpoint serves listings/ and answers 404 for incoming/"
 
 step "Idempotence"
 compose --progress quiet run --rm garage-init >/dev/null || fail "second garage-init run failed"
