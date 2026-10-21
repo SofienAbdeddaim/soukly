@@ -109,7 +109,7 @@ but every answer lists what is still missing. Package `com.soukly.listing.listin
 | `attributes` | `{ "<code>": value }`, checked against the attributes of the subcategory (below) |
 
 Read-only members of the answer: `id`, `status` (`DRAFT`), `version`, `kind` (`SERVICE` for the `services` and
-`jobs` families, `SALE` otherwise, never entered), `missingFields`, `warnings`, `createdAt`, `updatedAt`. Lengths are
+`jobs` families, `SALE` otherwise, never entered), `photos` (below), `missingFields`, `warnings`, `createdAt`, `updatedAt`. Lengths are
 counted in Unicode characters. Texts are plain text: HTML is stored and returned as typed, never interpreted; control
 characters other than line breaks and tabs are refused. The seller's phone number, email and name are never copied
 into a listing.
@@ -120,6 +120,8 @@ into a listing.
   "priceMode": "FIXED", "price": 32000, "negotiable": true,
   "governorateCode": "sfax", "delegationCode": null,
   "attributes": { "brand": "Peugeot", "year": 2019, "mileage-km": 62000, "fuel": "diesel", "gearbox": "manual" },
+  "photos": [{ "id": "…", "url": "…/1600.webp", "thumbnailUrl": "…/400.webp", "width": 1600, "height": 1200,
+               "position": 0 }],
   "missingFields": [], "warnings": [],
   "createdAt": "…", "updatedAt": "…" }
 ```
@@ -141,9 +143,9 @@ automatic changes come with a **change of category**, and are reported in `warni
 
 Attributes sent with a new category are checked against the new one.
 
-**Completeness**: `missingFields` lists the required fields still empty, in form order: `title`, `description`,
-`priceMode`, `price` (with `FIXED`), `governorateCode`, then every required `attributes.<code>` of the subcategory
-(`categoryCode` first if its category was deactivated since). ANN-02 adds `photos`.
+**Completeness**: `missingFields` lists the required fields still empty, in form order: `photos` (no READY photo
+yet, ANN-02), `title`, `description`, `priceMode`, `price` (with `FIXED`), `governorateCode`, then every required
+`attributes.<code>` of the subcategory (`categoryCode` first if its category was deactivated since).
 
 **Limit**: 20 drafts per account at the same time (`soukly.listing.drafts.max-per-owner`); the 21st answers `409`
 `draft-limit-reached`. Creations of one account are serialized by a PostgreSQL advisory lock, so two requests in
@@ -197,6 +199,118 @@ curl -i -X PATCH http://localhost:8080/api/listings/$ID -H "Authorization: Beare
 curl -i http://localhost:8080/api/listings/$ID -H "Authorization: Bearer $TOKEN"     # 200
 ```
 
+## Listing photos (ANN-02)
+
+The owner of a listing adds up to **10 photos**, orders them and deletes them. The browser sends each file **straight
+to the S3 storage** with a presigned URL, never through the gateway; listing-service then checks the real file and
+converts it with **libvips** to two WebP versions without any metadata. Package `com.soukly.listing.photo`.
+
+| Endpoint (through the gateway, JWT) | Input | Answers |
+| --- | --- | --- |
+| `POST /api/listings/{id}/photos` | `{ contentType, sizeBytes }` | `201` upload ticket, `400` `validation-failed`, `404`, `409` `photo-limit-reached` |
+| `POST /api/listings/{id}/photos/{photoId}/complete` | - | `200` READY photo, `400` `photo-rejected`, `404` |
+| `PUT /api/listings/{id}/photos/order` | `{ photoIds: [...] }` | `200` READY photos in order, `400` `validation-failed`, `404` |
+| `DELETE /api/listings/{id}/photos/{photoId}` | - | `204`, `404` |
+
+1. **Upload request**: `contentType` is `image/jpeg`, `image/png` or `image/webp`, `sizeBytes` at most 5 MB. A photo is
+   created `PENDING_UPLOAD` and the answer says how to upload it, within **10 minutes**:
+   ```json
+   { "photoId": "…", "uploadUrl": "https://s3…/soukly-listings/incoming/{listingId}/{photoId}?X-Amz-…",
+     "method": "PUT", "headers": { "Content-Type": "image/jpeg" }, "expiresAt": "…" }
+   ```
+2. **Upload**: the browser sends the file with `PUT` on `uploadUrl`, with exactly `headers` (the signature covers
+   `Content-Type`). The bucket's CORS rule allows the site's origin.
+3. **Completion**: listing-service checks, from the cheapest to the most expensive and **before decoding anything**:
+   the object exists, its real size is at most 5 MB, its first bytes are a JPEG, PNG or WebP signature (the name and
+   the declared type are never trusted), its header dimensions are at most 50 megapixels and at least 400 × 300 (long
+   side ≥ 400, short side ≥ 300, so a portrait photo of 300 × 400 is accepted). Then libvips writes
+   `listings/{listingId}/{photoId}/1600.webp` (longest side ≤ 1600 px) and `…/400.webp` (≤ 400 px), never enlarged,
+   rotated according to the EXIF orientation, converted to sRGB, WebP quality 80, **every metadata removed** (EXIF with
+   the GPS position, XMP, IPTC, ICC profile). The original is deleted from `incoming/` and the photo becomes `READY`,
+   last of the listing. The conversion runs in the request (30 s at most) and outside any database transaction.
+   Completing a photo again answers it again (`READY` as is, `REJECTED` with the same code), so a retry is safe.
+
+A photo answers `{ id, status, url, thumbnailUrl, width, height, position }` (`width` and `height` of the 1600
+version). `GET /api/listings/{id}` lists the READY photos in `photos`, cover first, without `status`.
+
+- **Access**: the owner of a draft only (published listings join with ANN-03); anyone else gets `404`
+  `listing-not-found`, like for the listing. An unknown photo is `404` `photo-not-found`.
+- **Limit**: 10 photos per listing, READY photos and uploads in progress (`PENDING_UPLOAD`) counted; a rejected photo
+  frees its place. Every change locks the listing row, so two requests in parallel never pass the limit or mix the
+  positions. Photo changes do not change the `version` (ETag) of the listing: the form keeps its `If-Match`.
+- **Order**: `photoIds` lists every READY photo once; the first one is the cover (`position` 0).
+- **Deletion**: deletes the photo whatever its status and its three possible objects, then moves the next ones up.
+  `PhotoService.deleteAllPhotos(listingId)` deletes every photo of a listing, for ANN-05.
+- **Cleanup**: every hour, the uploads not completed after 1 hour are `REJECTED` (`photo.not-uploaded`) and every
+  object left in `incoming/` for more than 1 hour is deleted.
+- **Public URLs**: `PHOTO_PUBLIC_BASE_URL` + key. Keys contain two random UUIDs. Only `listings/` is publicly
+  readable: locally and in dev, Garage's website endpoint hides `incoming/` with a routing rule (and the dev Caddy only
+  forwards `listings/`); in prod, the bucket is private and a pre-authenticated request covers `listings/` only. Photos
+  of a draft are readable by whoever knows their URL (accepted in V1).
+- At most 2 conversions run at the same time (`max-concurrent-conversions`): libvips memory is outside the JVM heap.
+
+### Photo error codes
+
+| Status | Type | `code` / `errors` |
+| --- | --- | --- |
+| `400` | `photo-rejected` (completion; the photo is `REJECTED`, its original deleted) | `code`: `photo.not-uploaded`, `photo.too-large`, `photo.unsupported-format`, `photo.too-small`, `photo.too-many-pixels`, `photo.processing-failed` |
+| `400` | `validation-failed` (upload request) | `contentType`: `photo.unsupported-format`; `sizeBytes`: `photo.invalid-size` (missing or below 1), `photo.too-large` |
+| `400` | `validation-failed` (order) | `photoIds`: `photo-order.invalid` (not exactly the READY photos, each once) |
+| `404` | `listing-not-found`, `photo-not-found` | |
+| `409` | `photo-limit-reached` | |
+
+```json
+{ "type": "urn:soukly:problem:photo-rejected", "status": 400, "code": "photo.unsupported-format" }
+```
+
+### libvips
+
+The conversion calls the command-line tools of libvips with `ProcessBuilder` (`vipsheader -f width|height` for the
+dimensions, `vipsthumbnail` for the conversion), every argument separate and every path a temporary file named by the
+service, with `VIPS_BLOCK_UNTRUSTED=1`. Exact commands, checked with libvips 8.15.1:
+
+```bash
+vipsthumbnail original.jpg --size '1600x1600>' -o '/tmp/…/1600.webp[Q=80,keep=none]'
+vipsthumbnail 1600.webp --size '400x400>' -o '/tmp/…/400.webp[Q=80,keep=none]'
+```
+
+`>` only shrinks; `keep=none` (libvips 8.15, replaces the deprecated `strip`) removes every metadata; `vipsthumbnail`
+applies the EXIF orientation by default. Version 8.15.1 is the `libvips-tools` package of Ubuntu 24.04, used by the CI
+runner (`ubuntu-24.04`) and by the runtime image (`eclipse-temurin:21-jre-noble`, `EXTRA_PACKAGES=libvips-tools` in
+`backend/Dockerfile`, DEP-01), on amd64 and arm64. On a development machine: `sudo apt install libvips-tools`
+(Debian/Ubuntu) or `brew install vips` (macOS); `soukly.listing.photos.vips-bin-directory` points to another
+directory if needed.
+
+### Storage
+
+AWS SDK for Java v2 (`software.amazon.awssdk:s3` 2.55.14, its presigner included; Apache HTTP client, no Netty), with
+path-style access and checksums only when an operation requires them (the default CRC32 checksums of recent SDK
+versions are not supported by every S3-compatible storage). The presigner signs for `S3_PUBLIC_ENDPOINT`, the address
+the browsers reach; the service itself uses `S3_ENDPOINT`.
+
+- **Garage** (local and dev): presigned `PUT`, CORS and website access checked by the tests and by hand.
+- **Oracle Object Storage** (prod), **to be confirmed on the real bucket before prod opens**. Oracle documents
+  presigned URLs on its [Amazon S3 Compatibility API](https://docs.oracle.com/iaas/Content/Object/Tasks/s3compatibleapi.htm)
+  ([announcement](https://blogs.oracle.com/cloud-infrastructure/s3-compat-objectstorage-post-virthost)), with
+  path-style endpoints `https://<namespace>.compat.objectstorage.<region>.oraclecloud.com`. What is not confirmed is
+  CORS: the compatibility API documents no `PutBucketCors`, so the browser `PUT` from `https://soukly.tn` may be
+  refused by its preflight (also listed as an open risk in `infra/vm/README.md`). If it is, the fallbacks are Hetzner
+  Object Storage (presigned URLs and CORS documented) or a same-origin upload route; nothing else in this service
+  changes.
+
+### Trying it through the gateway
+
+With the local infrastructure, user-service, listing-service and the gateway running, an access token in `$TOKEN` and a
+draft id in `$ID`:
+
+```bash
+curl -s -X POST http://localhost:8080/api/listings/$ID/photos -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -d "{\"contentType\":\"image/jpeg\",\"sizeBytes\":$(stat -c %s photo.jpg)}"
+curl -X PUT --upload-file photo.jpg -H 'Content-Type: image/jpeg' "$UPLOAD_URL"               # 200, from Garage
+curl -s -X POST http://localhost:8080/api/listings/$ID/photos/$PHOTO_ID/complete -H "Authorization: Bearer $TOKEN"
+# then open url and thumbnailUrl: http://soukly-listings.web.localhost:3902/listings/…/1600.webp
+```
+
 ## Data
 
 Flyway migrations in `src/main/resources/db/migration`:
@@ -209,6 +323,7 @@ Flyway migrations in `src/main/resources/db/migration`:
 | `V4__insert_governorates.sql` | 24 governorates, with their INS code |
 | `V5__insert_delegations.sql` | 264 delegations, with their INS code |
 | `V6__create_listings.sql` | table `listings` (ANN-01): content of a listing, `attributes` in JSONB, `version`, index `(owner_id, status)` |
+| `V7__create_listing_photos.sql` | table `listing_photos` (ANN-02): status, position, size of the 1600 version, bytes, rejection code |
 
 Places come from the official INS "Code géographique tunisien" (December 2012, division at 31 December 2012); the
 source, its checksum and the few display fixes are in the header of `V5`. Never invent a place: a delegation created
@@ -245,6 +360,16 @@ Write a **new** migration (`V5__…`, never edit a released one: Flyway checks t
 | `SPRING_DATASOURCE_PASSWORD` | `LISTING_SVC_DB_PASSWORD` | database password |
 | `USER_SERVICE_JWKS_URI` | `http://localhost:8081/.well-known/jwks.json` | public keys of user-service, same as the gateway |
 | `JWT_ISSUER` | `soukly-user-service` | expected `iss` of the access tokens, same as the gateway |
+| `S3_ENDPOINT` | `http://localhost:3900` | S3 API of the photo storage, as the service reaches it |
+| `S3_PUBLIC_ENDPOINT` | `S3_ENDPOINT` | S3 API as the browsers reach it: host of the presigned upload URLs |
+| `S3_REGION` | `garage` | storage region |
+| `S3_BUCKET` | `soukly-listings` | bucket of the photos |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY` | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` of the root `.env` | key with read and write on the bucket |
+| `PHOTO_PUBLIC_BASE_URL` | `http://soukly-listings.web.localhost:3902` | public URL of the bucket root, the object key is appended |
+
+Photo limits and timings are under `soukly.listing.photos.*` in `application.yml` (10 photos, 5 MB, 50 megapixels,
+400 × 300, URL valid 10 minutes, cleanup every hour after 1 hour, WebP quality 80, 30 s per conversion, 2 conversions
+at a time).
 
 ## Tests
 
@@ -253,3 +378,9 @@ one shared Spring context, base class `support/IntegrationTest`. Access tokens a
 the tests start and published by a local JWKS server (`support/TestJwks`); no key is committed. Listing tests use a new
 account id each time instead of resetting the database. `AttributeValidatorTest` covers every attribute type and
 bound without the database.
+
+Photo tests (`photo/PhotoApiTests`) also start Garage v2.4.1 (`support/TestGarage`, set up through its admin API with
+random secrets) and need the libvips tools on the machine, like the CI. The images are generated by the tests
+(`photo/TestImages`: JPEG with EXIF orientation, GPS position and XMP, PNG, a PNG header declaring 50 megapixels, a PDF
+named like a JPEG); the files are uploaded to the presigned URLs over HTTP like a browser. The absence of metadata is
+checked twice: no `EXIF`, `XMP ` or `ICCP` chunk in the WebP files, and nothing EXIF, XMP or GPS in `vipsheader -a`.

@@ -11,21 +11,22 @@ All documentation, comments, commits and PR descriptions in this repository are 
 
 ## Prerequisites and pinned versions
 
-| Tool                                     | Version                                                                          |
-| ---------------------------------------- | -------------------------------------------------------------------------------- |
-| Node.js                                  | 24 LTS (`frontend/.nvmrc`); 22.12 minimum                                        |
-| pnpm                                     | 10.28.0 (`packageManager` in `frontend/package.json`); npm and yarn are not used |
-| Nx                                       | 23.3.0                                                                           |
-| Angular (devkit, schematics, build, CLI) | 22.2.2                                                                           |
-| Angular (framework, CDK)                 | 22.2.3                                                                           |
-| Tailwind CSS                             | 4.3.3                                                                            |
-| Transloco (`@jsverse/transloco`)         | 8.4.0                                                                            |
-| angular-eslint                           | 22.6.0                                                                           |
-| TypeScript                               | 6.0.x                                                                            |
-| Java                                     | 21                                                                               |
-| Maven                                    | 3.9.16 through the Maven Wrapper (`backend/mvnw`)                                |
-| Spring Boot                              | 4.0.8                                                                            |
-| Spring Cloud                             | 2025.1.3                                                                         |
+| Tool                                      | Version                                                                          |
+| ----------------------------------------- | -------------------------------------------------------------------------------- |
+| Node.js                                   | 24 LTS (`frontend/.nvmrc`); 22.12 minimum                                        |
+| pnpm                                      | 10.28.0 (`packageManager` in `frontend/package.json`); npm and yarn are not used |
+| Nx                                        | 23.3.0                                                                           |
+| Angular (devkit, schematics, build, CLI)  | 22.2.2                                                                           |
+| Angular (framework, CDK)                  | 22.2.3                                                                           |
+| Tailwind CSS                              | 4.3.3                                                                            |
+| Transloco (`@jsverse/transloco`)          | 8.4.0                                                                            |
+| angular-eslint                            | 22.6.0                                                                           |
+| TypeScript                                | 6.0.x                                                                            |
+| Java                                      | 21                                                                               |
+| Maven                                     | 3.9.16 through the Maven Wrapper (`backend/mvnw`)                                |
+| Spring Boot                               | 4.0.8                                                                            |
+| Spring Cloud                              | 2025.1.3                                                                         |
+| libvips tools (photos of listing-service) | 8.15 (`apt install libvips-tools`; `brew install vips` on macOS)                 |
 
 Nx and Angular versions are pinned (no `^`). No milestone or RC version is used.
 
@@ -158,15 +159,18 @@ The verification email appears in Mailpit (http://localhost:8025); its link targ
 
 ## listing-service
 
-Listings of Soukly (package `com.soukly.listing`, database `soukly_listing`): the read-only referentials (CAT-01) and the drafts of listings (ANN-01). Details, rules and error codes: [`backend/listing-service/README.md`](backend/listing-service/README.md).
+Listings of Soukly (package `com.soukly.listing`, database `soukly_listing`): the read-only referentials (CAT-01), the drafts of listings (ANN-01) and their photos (ANN-02: uploaded by the browser straight to S3 with a presigned URL, then converted to WebP by libvips, which must be installed, see the prerequisites). Details, rules and error codes: [`backend/listing-service/README.md`](backend/listing-service/README.md).
 
-| Endpoint (through the gateway)                                 | Answers                                                              |
-| -------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `GET /api/categories`, `GET /api/categories/{code}/attributes` | `200`, `404` `category-not-found`                                    |
-| `GET /api/locations/governorates[/{code}/delegations]`         | `200`, `404` `governorate-not-found`                                 |
-| `POST /api/listings` (JWT)                                     | `201` draft + `ETag`, `400`, `401`, `409` `draft-limit-reached`      |
-| `PATCH /api/listings/{id}` (JWT, JSON Merge Patch, `If-Match`) | `200` + `ETag`, `400`, `401`, `404`, `412` `version-conflict`, `428` |
-| `GET /api/listings/{id}` (owner's JWT)                         | `200` + `ETag`, `404` (a draft is never visible to another account)  |
+| Endpoint (through the gateway)                                                            | Answers                                                               |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `GET /api/categories`, `GET /api/categories/{code}/attributes`                            | `200`, `404` `category-not-found`                                     |
+| `GET /api/locations/governorates[/{code}/delegations]`                                    | `200`, `404` `governorate-not-found`                                  |
+| `POST /api/listings` (JWT)                                                                | `201` draft + `ETag`, `400`, `401`, `409` `draft-limit-reached`       |
+| `PATCH /api/listings/{id}` (JWT, JSON Merge Patch, `If-Match`)                            | `200` + `ETag`, `400`, `401`, `404`, `412` `version-conflict`, `428`  |
+| `GET /api/listings/{id}` (owner's JWT)                                                    | `200` + `ETag`, `404` (a draft is never visible to another account)   |
+| `POST /api/listings/{id}/photos` (JWT)                                                    | `201` presigned upload URL, `400`, `404`, `409` `photo-limit-reached` |
+| `POST /api/listings/{id}/photos/{photoId}/complete` (JWT)                                 | `200` READY photo, `400` `photo-rejected`, `404`                      |
+| `PUT /api/listings/{id}/photos/order`, `DELETE /api/listings/{id}/photos/{photoId}` (JWT) | `200`, `400`, `404` / `204`, `404`                                    |
 
 listing-service validates the access tokens again with the rules of the gateway, from the same `USER_SERVICE_JWKS_URI` and `JWT_ISSUER`.
 
@@ -246,23 +250,23 @@ docker compose down                            # stops, keeping the data
 docker compose down -v                         # stops and deletes the data (full reset)
 ```
 
-Without `.env`, Compose refuses to start and names the missing variable. On first start, the one-shot `garage-init` service creates the Garage layout, imports the `soukly-app` key (ID and secret read from `.env`), creates the `soukly-listings` bucket, grants it read and write, then applies the CORS rule. It can be re-run safely: `docker compose run --rm garage-init`.
+Without `.env`, Compose refuses to start and names the missing variable. On first start, the one-shot `garage-init` service creates the Garage layout, imports the `soukly-app` key (ID and secret read from `.env`), creates the `soukly-listings` bucket, grants it read and write, then applies the CORS rule and the website access (public read of `listings/` only). It can be re-run safely: `docker compose run --rm garage-init`.
 
-| Service            | Host port(s)                         | Use                           | Image                           |
-| ------------------ | ------------------------------------ | ----------------------------- | ------------------------------- |
-| `postgres`         | 5432                                 | database                      | `postgres:18.6`                 |
-| `redpanda`         | 19092 (external Kafka), 9644 (admin) | broker                        | `redpandadata/redpanda:v26.2.4` |
-| `garage`           | 3900 (S3 API), 3903 (admin)          | photo storage                 | `dxflrs/garage:v2.4.1`          |
-| `mailpit`          | 1025 (SMTP), 8025 (web UI)           | test emails                   | `axllent/mailpit:v1.31.5`       |
-| `garage-init`      | -                                    | one-shot Garage setup         | `amazon/aws-cli:2.38.0`         |
-| `redpanda-console` | 8090                                 | Kafka UI (`tools` profile)    | `redpandadata/console:v3.12.0`  |
-| `pgadmin`          | 5050                                 | Postgres UI (`tools` profile) | `dpage/pgadmin4:9.18.0`         |
+| Service            | Host port(s)                                               | Use                           | Image                           |
+| ------------------ | ---------------------------------------------------------- | ----------------------------- | ------------------------------- |
+| `postgres`         | 5432                                                       | database                      | `postgres:18.6`                 |
+| `redpanda`         | 19092 (external Kafka), 9644 (admin)                       | broker                        | `redpandadata/redpanda:v26.2.4` |
+| `garage`           | 3900 (S3 API), 3902 (website, public photos), 3903 (admin) | photo storage                 | `dxflrs/garage:v2.4.1`          |
+| `mailpit`          | 1025 (SMTP), 8025 (web UI)                                 | test emails                   | `axllent/mailpit:v1.31.5`       |
+| `garage-init`      | -                                                          | one-shot Garage setup         | `amazon/aws-cli:2.38.0`         |
+| `redpanda-console` | 8090                                                       | Kafka UI (`tools` profile)    | `redpandadata/console:v3.12.0`  |
+| `pgadmin`          | 5050                                                       | Postgres UI (`tools` profile) | `dpage/pgadmin4:9.18.0`         |
 
 Every image is pinned to an exact version published for `linux/amd64` and `linux/arm64` (checked on 2026-10-14). PostgreSQL is on the latest patch of version 18 (`18.6`).
 
 - **PostgreSQL**: one database and one user per service (`soukly_user` / `user_svc`, `soukly_listing` / `listing_svc`, `soukly_social` / `social_svc`), created on first start by `infra/postgres/init/01-databases.sh`. Each user can only connect to its own database. The script only runs on an empty volume: after changing a password in `.env`, reset with `down -v`.
 - **Redpanda**: one node in `dev-container` mode. Services running outside Docker use `localhost:19092`, containers use `redpanda:9092`. Topics are created automatically on first use, locally only.
-- **Garage**: path-style access (`http://localhost:3900/soukly-listings/<key>`), region `garage`. The key ID follows the Garage format (`GK` + 24 hex characters) and the secret has 64 hex characters. Garage restricts `PutBucketCors` to the bucket owner: `garage-init` grants this right to the key for the duration of the call, then removes it.
+- **Garage**: path-style access (`http://localhost:3900/soukly-listings/<key>`), region `garage`. The key ID follows the Garage format (`GK` + 24 hex characters) and the secret has 64 hex characters. Garage restricts `PutBucketCors` and `PutBucketWebsite` to the bucket owner: `garage-init` grants this right to the key for the duration of the calls, then removes it. The photos are public on the website endpoint, `http://soukly-listings.web.localhost:3902/listings/<key>` (`PHOTO_PUBLIC_BASE_URL`; browsers and curl resolve `*.localhost` to the loopback address, otherwise add `127.0.0.1 soukly-listings.web.localhost` to the hosts file); a routing rule answers `404` for `incoming/`, where the browsers upload the originals.
 - **Mailpit**: SMTP on `localhost:1025` without authentication, emails visible at http://localhost:8025.
 
 Memory budget without the `tools` profile: 2.1 GB at most (postgres 512 MB, redpanda 1.2 GB, garage 256 MB, mailpit 128 MB).
@@ -275,7 +279,7 @@ The `.github/workflows/ci.yml` workflow runs on every PR to `main` and every pus
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
 | `changes`  | which folders changed (`dorny/paths-filter`)                                                                                             | always                                   |
 | `frontend` | `pnpm install --frozen-lockfile`, `pnpm nx affected -t lint test build e2e`, `pnpm nx run-many -t i18n-check`, `pnpm prettier --check .` | if `frontend/**` or `.github/**` changed |
-| `backend`  | `./mvnw -B verify` (Testcontainers integration tests included)                                                                           | if `backend/**` or `.github/**` changed  |
+| `backend`  | installs `libvips-tools` (apt), then `./mvnw -B verify` (Testcontainers integration tests included)                                      | if `backend/**` or `.github/**` changed  |
 | `ci-ok`    | aggregates the results: red if a job that ran failed, green if all succeeded or were skipped                                             | always                                   |
 
 A PR that only touches documentation skips `frontend` and `backend`, and `ci-ok` stays green. A new commit on a PR cancels the running execution. `nx affected` compares the PR with its target branch: only the touched projects are checked.
