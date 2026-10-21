@@ -6,7 +6,12 @@ import {
   ValidationErrors,
   ValidatorFn,
 } from '@angular/forms';
-import { AttributeDefinition, AttributeValue, usesGrouping } from '@soukly/listing-data';
+import {
+  AttributeDefinition,
+  AttributeValue,
+  formatInteger,
+  parseInteger,
+} from '@soukly/listing-data';
 
 /** Bounds of ANN-01 (DraftEditor): the API stays the reference, these give an immediate answer. */
 export const TITLE_LENGTH = { min: 5, max: 80 };
@@ -97,29 +102,6 @@ export const descriptionValidator = textValidator(
   DESCRIPTION_LENGTH.max,
   (value) => value.trim(),
 );
-
-/** Digits typed in a number field, thousands separators (spaces, dots, commas) allowed. */
-const INTEGER_TEXT = /^[\d\s.,\u00a0\u202f\u066c]+$/u;
-
-/** The whole number typed, null when empty, NaN when it is not a whole number. */
-export function parseInteger(value: string): number | null {
-  const text = value.trim();
-  if (!text) {
-    return null;
-  }
-  return INTEGER_TEXT.test(text) ? Number(text.replace(/\D/gu, '')) : Number.NaN;
-}
-
-/** "62000" -> "62 000" (fr), "62,000" (en), in Latin digits; numbers below 5 digits unchanged. */
-export function formatInteger(
-  value: number,
-  attribute: AttributeDefinition,
-  locale: string,
-): string {
-  return usesGrouping(attribute)
-    ? new Intl.NumberFormat(`${locale}-u-nu-latn`, { useGrouping: true }).format(value)
-    : String(value);
-}
 
 /** Validator built from the definition of the attribute (CAT-01): nothing is known by its code. */
 export function attributeValidator(attribute: AttributeDefinition): ValidatorFn {

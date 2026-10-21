@@ -1,0 +1,167 @@
+<div class="results" data-testid="catalog-results">
+  <div class="results__band">
+    <div class="results__band-inner">
+      <h1 class="ui-visually-hidden">{{ 'catalog.results.title' | transloco }}</h1>
+      <app-search-box [query]="criteria().q" (searched)="search($event)" />
+    </div>
+  </div>
+
+  <div class="results__toolbar">
+    <div class="results__toolbar-inner">
+      @if (!desktop()) {
+      <button
+        type="button"
+        class="results__filters-button"
+        data-testid="open-filters"
+        (click)="openFilters()"
+      >
+        <svg lucideSlidersHorizontal [size]="16" aria-hidden="true"></svg>
+        {{ 'catalog.filters.button' | transloco }}@if (filters().length) { · {{ filters().length }}
+        }
+      </button>
+      }
+      <label class="ui-visually-hidden" for="results-sort"
+        >{{ 'catalog.sort.label' | transloco }}</label
+      >
+      <select
+        id="results-sort"
+        class="results__sort"
+        data-testid="sort"
+        (change)="chooseSort($any($event.target).value)"
+      >
+        @for (option of sorts; track option) { @if (option !== 'relevance' || criteria().q) {
+        <option [value]="option" [selected]="option === sort()">
+          {{ 'catalog.sort.' + option | transloco }}
+        </option>
+        } }
+      </select>
+    </div>
+  </div>
+
+  <div class="results__layout">
+    @if (desktop()) {
+    <aside class="results__aside" [attr.aria-labelledby]="'results-filters-title'">
+      <div class="results__aside-header">
+        <h2 id="results-filters-title" class="results__aside-title">
+          {{ 'catalog.filters.title' | transloco }}
+        </h2>
+        @if (filters().length) {
+        <button type="button" class="results__clear" (click)="clearFilters()">
+          {{ 'catalog.filters.clear' | transloco }}
+        </button>
+        }
+      </div>
+      <app-filters-form idPrefix="aside" [criteria]="criteria()" (criteriaChange)="apply($event)" />
+    </aside>
+    }
+
+    <section
+      class="results__main"
+      aria-labelledby="results-context"
+      [attr.aria-busy]="store.status() === 'loading'"
+    >
+      @if (filters().length) {
+      <app-filter-chips
+        [filters]="filters()"
+        [category]="criteria().category"
+        (remove)="removeFilter($event)"
+      />
+      }
+
+      <p
+        id="results-context"
+        class="results__context"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="results-context"
+      >
+        @if (store.total() !== null && store.status() !== 'invalid') {
+        <strong class="results__count">{{ countKey() | transloco: { count: countText() } }}</strong>
+        @if (criteria().q; as q) { {{ 'catalog.results.query' | transloco: { q } }} } {{ whereKey()
+        | transloco: { category: categoryLabel() ?? '', place: placeLabel() ?? '' } }} }
+      </p>
+
+      @if (store.status() === 'error' && store.items().length) {
+      <ui-alert type="error">
+        {{ 'catalog.errors.network' | transloco }}
+        <button
+          ui-button
+          variant="secondary"
+          type="button"
+          class="results__retry"
+          (click)="store.retry()"
+        >
+          {{ 'catalog.actions.retry' | transloco }}
+        </button>
+      </ui-alert>
+      } @switch (store.status()) { @case ('invalid') {
+      <div class="results__state" role="alert" data-testid="results-invalid">
+        <p class="results__state-title">{{ 'catalog.errors.invalid' | transloco }}</p>
+        <a ui-button [routerLink]="newSearchCommands()"
+          >{{ 'catalog.actions.new-search' | transloco }}</a
+        >
+      </div>
+      } @case ('error') { @if (!store.items().length) {
+      <div class="results__state" role="alert" data-testid="results-error">
+        <p class="results__state-title">{{ 'catalog.errors.network' | transloco }}</p>
+        <button ui-button variant="secondary" type="button" (click)="store.retry()">
+          {{ 'catalog.actions.retry' | transloco }}
+        </button>
+      </div>
+      } @else {
+      <app-listing-list
+        [items]="store.items()"
+        [grid]="desktop()"
+        [label]="'catalog.results.list' | transloco"
+      />
+      } } @default { @if (store.status() === 'ready' && !store.items().length) {
+      <div class="results__state" data-testid="results-empty">
+        <svg
+          lucideSearchX
+          [size]="48"
+          [strokeWidth]="1.5"
+          class="results__state-icon"
+          aria-hidden="true"
+        ></svg>
+        <h2 class="results__state-title">{{ 'catalog.empty.title' | transloco }}</h2>
+        @if (suggestions().length) {
+        <p>{{ 'catalog.empty.suggestions' | transloco }}</p>
+        <ul class="results__suggestions">
+          @for (suggestion of suggestions(); track suggestion.key) {
+          <li>
+            <button type="button" class="results__suggestion" (click)="apply(suggestion.criteria)">
+              {{ suggestion.key | transloco: suggestion.params }}
+            </button>
+          </li>
+          }
+        </ul>
+        }
+      </div>
+      } @else {
+      <app-listing-list
+        [items]="store.items()"
+        [grid]="desktop()"
+        [loading]="store.status() === 'loading'"
+        [label]="'catalog.results.list' | transloco"
+      />
+      } } } @if (store.hasMore() && store.status() === 'ready') {
+      <div class="results__more" appNearEnd (nearEnd)="store.loadMore()">
+        @if (store.moreStatus() === 'error') {
+        <p class="results__more-error" role="alert">{{ 'catalog.errors.more' | transloco }}</p>
+        }
+        <button
+          ui-button
+          variant="secondary"
+          type="button"
+          data-testid="show-more"
+          [loading]="store.moreStatus() === 'loading'"
+          (click)="store.moreStatus() === 'error' ? store.retry() : store.loadMore()"
+        >
+          {{ (store.moreStatus() === 'error' ? 'catalog.actions.retry' : 'catalog.results.more') |
+          transloco }}
+        </button>
+      </div>
+      }
+    </section>
+  </div>
+</div>

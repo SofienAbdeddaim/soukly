@@ -1,6 +1,7 @@
 import { FormControl, FormGroup, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { PriceMode } from '@soukly/listing-data';
-import { ERROR_KEY, FieldError, parseInteger } from '../details/details-form';
+import { parseInteger } from '@soukly/listing-data';
+import { ERROR_KEY, FieldError } from '../details/details-form';
 
 /** Bounds of ANN-01 (DraftEditor): whole dinars, the API stays the reference. */
 export const PRICE_RANGE = { min: 1, max: 100_000_000 };

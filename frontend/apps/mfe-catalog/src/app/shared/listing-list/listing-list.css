@@ -1,0 +1,22 @@
+:host {
+  display: block;
+}
+
+.listings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listings--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.listings > li {
+  min-inline-size: 0;
+}

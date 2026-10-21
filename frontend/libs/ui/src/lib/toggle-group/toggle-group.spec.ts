@@ -82,4 +82,42 @@ describe('UiToggleGroup', () => {
     const error = element.querySelector(`#${fieldset.getAttribute('aria-describedby')}`);
     expect(error?.textContent).toContain('Choisissez une valeur.');
   });
+
+  it('presses several options of a multiple group, in the order of the options', async () => {
+    @Component({
+      imports: [UiToggleGroup],
+      template: `
+        <ui-toggle-group
+          legend="Carburant"
+          multiple
+          [options]="options"
+          [values]="values()"
+          (valuesChange)="values.set($event)"
+        />
+      `,
+    })
+    class MultipleHost {
+      options = [
+        { value: 'petrol', label: 'Essence' },
+        { value: 'diesel', label: 'Diesel' },
+        { value: 'lpg', label: 'GPL' },
+      ];
+      values = signal<string[]>(['lpg']);
+    }
+    const fixture = TestBed.createComponent(MultipleHost);
+    await fixture.whenStable();
+    const buttons = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
+
+    buttons()[0].click();
+    await fixture.whenStable();
+    expect(fixture.componentInstance.values()).toEqual(['petrol', 'lpg']);
+    expect(buttons().map((button) => button.getAttribute('aria-pressed'))).toEqual([
+      'true',
+      'false',
+      'true',
+    ]);
+    buttons()[2].click();
+    expect(fixture.componentInstance.values()).toEqual(['petrol']);
+  });
 });

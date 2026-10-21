@@ -3,6 +3,7 @@ export * from './lib/button/button';
 export * from './lib/checkbox/checkbox';
 export * from './lib/field/field';
 export * from './lib/listing-card/listing-card';
+export * from './lib/listing-row/listing-row';
 export * from './lib/photo-tile/photo-tile';
 export * from './lib/progress/progress';
 export * from './lib/skeleton/skeleton';

@@ -1,6 +1,120 @@
 {
-  "coming-soon": {
-    "title": "كتالوج سوقلي، قريبًا",
-    "text": "الصفحة الرئيسية والبحث وتفاصيل الإعلانات ستتوفّر هنا قريبًا."
+  "search": {
+    "label": "ابحث عن إعلان",
+    "placeholder": "عمّا تبحث؟",
+    "submit": "بحث"
+  },
+  "home": {
+    "title": "السوق كلّه، قريب منك",
+    "tagline": "اشترِ وبِع وابحث عن خدمة قريبة منك، في كل أنحاء تونس.",
+    "families": "الأصناف",
+    "latest": "أحدث الإعلانات",
+    "place-label": "مكان أحدث الإعلانات",
+    "see-all": "عرض كل الإعلانات",
+    "no-listing": "لا توجد إعلانات منشورة هنا حاليًا."
+  },
+  "place": {
+    "everywhere": "كل تونس"
+  },
+  "card": {
+    "on-quote": "حسب الطلب",
+    "per-month": " / شهر",
+    "per-night": " / ليلة",
+    "photos": {
+      "zero": "لا صور",
+      "one": "صورة واحدة",
+      "two": "صورتان",
+      "few": "{{count}} صور",
+      "many": "{{count}} صورة",
+      "other": "{{count}} صورة"
+    }
+  },
+  "filters": {
+    "button": "الفلاتر",
+    "title": "الفلاتر",
+    "clear": "مسح الكل",
+    "category": "الصنف",
+    "all-categories": "كل الأصناف",
+    "subcategory": "الصنف الفرعي",
+    "whole-family": "كل الصنف",
+    "governorate": "الولاية",
+    "delegation": "المعتمدية",
+    "all-delegations": "الكل",
+    "price": "السعر ({{currency}})",
+    "min": "الأدنى",
+    "max": "الأقصى",
+    "show": {
+      "zero": "لا إعلانات",
+      "one": "عرض إعلان واحد",
+      "two": "عرض إعلانين",
+      "few": "عرض {{count}} إعلانات",
+      "many": "عرض {{count}} إعلانًا",
+      "other": "عرض {{count}} إعلان"
+    },
+    "show-none": "لا إعلانات",
+    "show-unknown": "عرض الإعلانات"
+  },
+  "sort": {
+    "label": "ترتيب حسب",
+    "recent": "الأحدث",
+    "relevance": "الأكثر صلة",
+    "price-asc": "السعر تصاعديًا",
+    "price-desc": "السعر تنازليًا"
+  },
+  "chips": {
+    "remove": "إزالة الفلتر {{label}}",
+    "price-between": "{{min}} – {{max}}",
+    "price-from": "من {{min}}",
+    "price-up-to": "حتى {{max}}",
+    "range-between": "{{label}}: {{min}} – {{max}}",
+    "range-from": "{{label}}: من {{min}}",
+    "range-up-to": "{{label}}: حتى {{max}}",
+    "not": "{{label}}: لا",
+    "text": "{{label}}: {{value}}"
+  },
+  "results": {
+    "title": "نتائج البحث",
+    "list": "الإعلانات",
+    "count": {
+      "zero": "لا إعلانات",
+      "one": "إعلان واحد",
+      "two": "إعلانان",
+      "few": "{{count}} إعلانات",
+      "many": "{{count}} إعلانًا",
+      "other": "{{count}} إعلان"
+    },
+    "query": "«{{q}}»",
+    "in-category-place": "في {{category}}، {{place}}",
+    "in-category": "في {{category}}، في كل تونس",
+    "in-place": "في {{place}}",
+    "everywhere": "في كل تونس",
+    "more": "عرض المزيد"
+  },
+  "empty": {
+    "title": "لا توجد إعلانات مطابقة",
+    "suggestions": "جرّب بدلًا من ذلك:",
+    "remove-price": "إزالة فلتر السعر",
+    "everywhere": "البحث في كل تونس",
+    "remove-specific": "إزالة الفلاتر الخاصة",
+    "remove-query": "إلغاء البحث عن «{{q}}»"
+  },
+  "errors": {
+    "network": "فشل الاتصال. تحقّق من الشبكة ثم أعد المحاولة.",
+    "more": "تعذّر تحميل الإعلانات التالية.",
+    "invalid": "هذا البحث غير صالح: ربما تم تعديل الرابط."
+  },
+  "actions": {
+    "retry": "أعد المحاولة",
+    "close": "إغلاق",
+    "new-search": "بحث جديد"
+  },
+  "seo": {
+    "home-title": "سوقلي · إعلانات مبوّبة في تونس",
+    "home-description": "اشترِ وبِع وابحث عن خدمة قريبة منك: سيارات وعقارات وشغل وصفقات جيدة في ولايات تونس الأربع والعشرين.",
+    "results-title-what-where": "{{what}} في {{where}} · سوقلي",
+    "results-title-what": "{{what}} في تونس · سوقلي",
+    "results-title-where": "إعلانات في {{where}} · سوقلي",
+    "results-title-all": "كل الإعلانات في تونس · سوقلي",
+    "results-description": "تصفّح الإعلانات المبوّبة في سوقلي وصفِّها حسب الصنف والمكان والسعر والخصائص."
   }
 }

@@ -15,7 +15,7 @@ import { UiListingCard } from './listing-card';
       href="/fr/annonces/42"
       [imageUrl]="imageUrl()"
       [favorite]="favorite()"
-      favoriteLabel="Ajouter aux favoris"
+      [favoriteLabel]="favoriteLabel()"
       (favoriteToggle)="toggled = $event"
     />
   `,
@@ -23,6 +23,7 @@ import { UiListingCard } from './listing-card';
 class Host {
   imageUrl = signal<string | null>(null);
   favorite = signal(false);
+  favoriteLabel = signal<string | null>('Ajouter aux favoris');
   toggled: boolean | undefined;
 }
 
@@ -83,5 +84,13 @@ describe('UiListingCard', () => {
     expect(button.getAttribute('aria-pressed')).toBe('true');
     button.click();
     expect(host.toggled).toBe(false);
+  });
+
+  it('has no favourite button without its label', async () => {
+    const { fixture, host, element } = await setup();
+    host.favoriteLabel.set(null);
+    await fixture.whenStable();
+
+    expect(element.querySelector('.card__favorite')).toBeNull();
   });
 });

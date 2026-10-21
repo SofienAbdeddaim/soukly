@@ -16,7 +16,8 @@ import {
   publishTestingProviders,
   settle,
 } from '../testing/publish-testing';
-import { AUTOSAVE_DELAY_MS, controlKind, DetailsStep } from './details-step';
+import { controlKind } from '@soukly/listing-data';
+import { AUTOSAVE_DELAY_MS, DetailsStep } from './details-step';
 
 const LISTING = `/api/listings/${TEST_ID}`;
 

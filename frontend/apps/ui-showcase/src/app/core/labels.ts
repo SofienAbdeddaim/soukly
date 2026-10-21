@@ -78,6 +78,10 @@ export interface ShowcaseLabels {
   uploading: string;
   uploadFailed: string;
   retry: string;
+  rows: string;
+  /** Summaries of the 3 listings of `listings`, for `ui-listing-row`. */
+  summaries: string[];
+  photos: string;
 }
 
 export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
@@ -171,6 +175,9 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     uploading: 'Envoi de la photo',
     uploadFailed: "Échec de l'envoi",
     retry: 'Réessayer',
+    rows: "Lignes d'annonce (mobile)",
+    summaries: ['Vélo · Très bon état', 'Location · S+1 · 45 m²', ''],
+    photos: 'photos',
   },
   ar: {
     title: 'سوقلي، نظام التصميم',
@@ -262,5 +269,8 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     uploading: 'جارٍ إرسال الصورة',
     uploadFailed: 'فشل الإرسال',
     retry: 'إعادة المحاولة',
+    rows: 'أسطر الإعلانات (الهاتف)',
+    summaries: ['دراجة · حالة جيدة جدًا', 'كراء · S+1 · 45 م²', ''],
+    photos: 'صور',
   },
 };

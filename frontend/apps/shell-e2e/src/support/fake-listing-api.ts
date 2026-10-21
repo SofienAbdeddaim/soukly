@@ -9,12 +9,12 @@ import { problem } from './fake-api';
  * Register it after `fakeAccountApi`: what it does not answer falls back to the account API.
  */
 const STORAGE = 'http://storage.test';
-const PHOTOS = 'http://photos.test';
+export const PHOTOS = 'http://photos.test';
 
 type Labels = { fr: string; ar: string; en: string };
 const l = (fr: string, ar: string, en: string): Labels => ({ fr, ar, en });
 
-const FAMILIES = [
+export const FAMILIES = [
   {
     code: 'vehicles',
     label: l('Véhicules', 'المركبات', 'Vehicles'),
@@ -58,10 +58,11 @@ const FAMILIES = [
   })),
 ];
 
-const GOVERNORATES = [
+export const GOVERNORATES = [
   { code: 'tunis', label: l('Tunis', 'تونس', 'Tunis') },
   { code: 'ariana', label: l('Ariana', 'أريانة', 'Ariana') },
   { code: 'sfax', label: l('Sfax', 'صفاقس', 'Sfax') },
+  { code: 'sousse', label: l('Sousse', 'سوسة', 'Sousse') },
 ];
 
 const DELEGATIONS: Record<string, { code: string; label: Labels }[]> = {
@@ -74,7 +75,7 @@ const DELEGATIONS: Record<string, { code: string; label: Labels }[]> = {
 const enumValues = (...values: [string, Labels][]) =>
   values.map(([code, label]) => ({ code, label }));
 
-const ATTRIBUTES: Record<string, Record<string, unknown>[]> = {
+export const ATTRIBUTES: Record<string, Record<string, unknown>[]> = {
   'vehicles.cars': [
     {
       code: 'brand',

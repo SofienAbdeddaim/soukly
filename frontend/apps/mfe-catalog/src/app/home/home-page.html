@@ -1,0 +1,56 @@
+<div class="home" data-testid="catalog-home">
+  <section class="home__hero" aria-labelledby="home-title">
+    <div class="home__hero-inner">
+      <h1 id="home-title" class="home__title">{{ 'catalog.home.title' | transloco }}</h1>
+      <p class="home__tagline">{{ 'catalog.home.tagline' | transloco }}</p>
+      <app-search-box [size]="desktop() ? 'large' : 'compact'" (searched)="search($event)" />
+    </div>
+  </section>
+
+  <div class="home__content">
+    <section class="home__families" aria-labelledby="home-families">
+      <h2 id="home-families" class="home__families-title">
+        {{ 'catalog.home.families' | transloco }}
+      </h2>
+      <app-family-links [governorate]="governorate()" />
+    </section>
+
+    <section
+      class="home__latest"
+      aria-labelledby="home-latest"
+      [attr.aria-busy]="state() === 'loading'"
+    >
+      <div class="home__latest-header">
+        <h2 id="home-latest" class="home__latest-title">{{ 'catalog.home.latest' | transloco }}</h2>
+        <app-governorate-picker [value]="governorate()" (valueChange)="chooseGovernorate($event)" />
+      </div>
+
+      @switch (state()) { @case ('error') {
+      <div class="home__message" role="alert">
+        <p>{{ 'catalog.errors.network' | transloco }}</p>
+        <button ui-button variant="secondary" type="button" (click)="retry()">
+          {{ 'catalog.actions.retry' | transloco }}
+        </button>
+      </div>
+      } @default { @if (state() === 'ready' && !latest().length) {
+      <p class="home__message">{{ 'catalog.home.no-listing' | transloco }}</p>
+      } @else {
+      <app-listing-list
+        [items]="latest()"
+        [grid]="desktop()"
+        [loading]="state() === 'loading'"
+        [label]="'catalog.home.latest' | transloco"
+      />
+      } } }
+
+      <a
+        class="home__all"
+        data-testid="see-all"
+        [routerLink]="['/', locale.lang(), 'search']"
+        [queryParams]="newSearchParams()"
+      >
+        {{ 'catalog.home.see-all' | transloco }}
+      </a>
+    </section>
+  </div>
+</div>

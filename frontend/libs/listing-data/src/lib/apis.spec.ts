@@ -7,6 +7,7 @@ import { AuthService, authInterceptor, sessionResponse } from '@soukly/auth';
 import { ListingsApi, MERGE_PATCH_JSON } from './listings-api';
 import { PhotosApi } from './photos-api';
 import { ReferentialsApi } from './referentials-api';
+import { SearchApi } from './search-api';
 import { draftListing, TEST_FAMILIES, TEST_ID } from './testing';
 
 const settle = () => new Promise((resolve) => setTimeout(resolve));
@@ -121,6 +122,20 @@ describe('listing-data APIs', () => {
       const again = api.governorates();
       http.expectOne('/api/locations/governorates').flush([]);
       expect(await again).toEqual([]);
+    });
+  });
+
+  describe('SearchApi', () => {
+    it('sends the criteria as query parameters, without the empty ones', () => {
+      let total: number | undefined;
+      TestBed.inject(SearchApi)
+        .search({ q: 'peugeot', 'attr.fuel': 'diesel', governorate: null, priceMin: '', limit: 1 })
+        .subscribe((page) => (total = page.total));
+      const request = http.expectOne((candidate) => candidate.url === '/api/listings');
+      expect(request.request.params.keys()).toEqual(['q', 'attr.fuel', 'limit']);
+      expect(request.request.params.get('attr.fuel')).toBe('diesel');
+      request.flush({ items: [], total: 31 });
+      expect(total).toBe(31);
     });
   });
 });

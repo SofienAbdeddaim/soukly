@@ -24,11 +24,14 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { LocaleService } from '@soukly/i18n';
 import {
   attributePrefix,
+  AttributeControlKind,
   AttributeDefinition,
+  controlKind,
+  formatInteger,
+  parseInteger,
   AttributeValue,
   labelOf,
   ListingPatch,
-  MAX_TOGGLE_VALUES,
   ReferentialsApi,
 } from '@soukly/listing-data';
 import {
@@ -57,8 +60,6 @@ import {
   errorParams,
   fieldError,
   KNOWN_ERRORS,
-  formatInteger,
-  parseInteger,
   textToApi,
   titleValidator,
   toApi,
@@ -67,22 +68,6 @@ import {
 
 /** Delay after the last change before the valid fields are saved (ANN-04 hypothesis). */
 export const AUTOSAVE_DELAY_MS = 1500;
-
-/** How an attribute is rendered, from its type and number of values only. */
-export type AttributeControlKind = 'text' | 'integer' | 'toggles' | 'select' | 'checkbox';
-
-export function controlKind(attribute: AttributeDefinition): AttributeControlKind {
-  switch (attribute.type) {
-    case 'TEXT':
-      return 'text';
-    case 'INTEGER':
-      return 'integer';
-    case 'BOOLEAN':
-      return 'checkbox';
-    case 'ENUM':
-      return (attribute.values?.length ?? 0) <= MAX_TOGGLE_VALUES ? 'toggles' : 'select';
-  }
-}
 
 interface AttributeView {
   definition: AttributeDefinition;

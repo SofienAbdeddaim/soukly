@@ -2,20 +2,20 @@ import { expect, test } from '@playwright/test';
 import { fakeAccountApi } from './support/fake-api';
 
 test.describe('shell navigation', () => {
-  test('shows the layout and the waiting page of mfe-catalog on /fr', async ({ page }) => {
+  test('shows the layout and the home page of mfe-catalog on /fr', async ({ page }) => {
     await page.goto('/fr');
 
     await expect(page.getByRole('banner')).toBeVisible();
     await expect(page.getByRole('contentinfo')).toBeVisible();
-    await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+    await expect(page.getByTestId('catalog-home')).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Catalogue Soukly, bientôt disponible',
+      'Tout le souk, au coin de chez vous',
     );
   });
 
   test('"Se connecter" opens mfe-account without a full page reload', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+    await expect(page.getByTestId('catalog-home')).toBeVisible();
     let documentLoads = 0;
     page.on('load', () => documentLoads++);
 
@@ -42,7 +42,7 @@ test.describe('shell navigation', () => {
     await expect(page.getByTestId('not-found')).toBeVisible();
     await page.getByRole('link', { name: "Retour à l'accueil" }).click();
     await expect(page).toHaveURL('/fr');
-    await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+    await expect(page.getByTestId('catalog-home')).toBeVisible();
   });
 
   test('the footer links open the static pages of the shell', async ({ page }) => {

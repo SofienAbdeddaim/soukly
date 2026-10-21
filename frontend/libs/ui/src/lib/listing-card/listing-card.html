@@ -8,17 +8,18 @@
     </div>
     } @if (typeLabel()) {
     <span class="card__badge">{{ typeLabel() }}</span>
-    }
+    } @if (favoriteLabel(); as label) {
     <button
       type="button"
       class="card__favorite"
       [class.card__favorite--active]="favorite()"
-      [attr.aria-label]="favoriteLabel()"
+      [attr.aria-label]="label"
       [attr.aria-pressed]="favorite()"
       (click)="toggleFavorite()"
     >
       <svg lucideHeart [size]="22" aria-hidden="true"></svg>
     </button>
+    }
   </div>
   <div class="card__body">
     <h3 class="card__title">

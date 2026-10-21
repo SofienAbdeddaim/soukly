@@ -43,7 +43,7 @@ test.describe('remote loading', () => {
     await page.goto('/');
 
     await remoteEntryRequest;
-    await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+    await expect(page.getByTestId('catalog-home')).toBeVisible();
   });
 
   test('Angular is downloaded once, from the shell, even after loading remotes', async ({
@@ -57,7 +57,7 @@ test.describe('remote loading', () => {
     });
 
     await page.goto('/');
-    await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
+    await expect(page.getByTestId('catalog-home')).toBeVisible();
     await page.getByRole('banner').getByRole('link', { name: 'Se connecter' }).click();
     await expect(page.getByTestId('login-form')).toBeVisible();
 

@@ -1,0 +1,37 @@
+:host {
+  display: inline-block;
+}
+
+.picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.picker__select {
+  min-block-size: var(--control-height);
+  padding-inline: 34px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  appearance: none;
+}
+
+.picker__icon,
+.picker__chevron {
+  position: absolute;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.picker__icon {
+  inset-inline-start: 12px;
+}
+
+.picker__chevron {
+  inset-inline-end: 12px;
+}
