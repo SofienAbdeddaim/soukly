@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import { fakeAccountApi } from './support/fake-api';
 
 async function hasHorizontalOverflow(page: Page): Promise<boolean> {
   return page.evaluate(
@@ -52,6 +53,7 @@ test.describe('languages', () => {
   });
 
   test('an unknown language prefix is replaced with French', async ({ page }) => {
+    await fakeAccountApi(page, { signedIn: true });
     await page.goto('/de/publish/new');
 
     await expect(page).toHaveURL('/fr/publish/new');
@@ -68,7 +70,7 @@ test.describe('languages', () => {
     page,
   }) => {
     await page.goto('/fr/account/login');
-    await expect(page.getByTestId('coming-soon-mfe-account')).toBeVisible();
+    await expect(page.getByTestId('login-form')).toBeVisible();
     let documentLoads = 0;
     page.on('load', () => documentLoads++);
 
@@ -78,9 +80,7 @@ test.describe('languages', () => {
     await expect(page).toHaveURL('/en/account/login');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-      'Soukly account area, coming soon',
-    );
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Log in');
     await expect(page.getByRole('banner').getByRole('link', { name: 'Log in' })).toBeVisible();
     expect(documentLoads).toBe(0);
 
@@ -122,6 +122,7 @@ test.describe('languages', () => {
         publishFiles.push(request.url());
       }
     });
+    await fakeAccountApi(page, { signedIn: true });
     await page.goto('/ar');
     await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
     expect(publishFiles).toEqual([]);
@@ -137,7 +138,7 @@ test.describe('languages', () => {
 
   test('every page declares its three language variants (hreflang)', async ({ page }) => {
     await page.goto('/fr/account/login');
-    await expect(page.getByTestId('coming-soon-mfe-account')).toBeVisible();
+    await expect(page.getByTestId('login-form')).toBeVisible();
 
     const alternates = await page
       .locator('link[rel="alternate"][hreflang]')

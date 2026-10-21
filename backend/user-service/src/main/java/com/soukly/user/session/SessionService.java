@@ -91,9 +91,10 @@ class SessionService {
             log.info("Login refused for user {}: email not verified", user.id());
             throw new SessionException.EmailNotVerified();
         }
+        boolean firstLogin = user.recordLogin(now);
         String refreshToken = issueRefreshToken(user.id(), UUID.randomUUID(), userAgent, now);
         log.info("User {} signed in", user.id());
-        return new Session(accessTokens.issue(user.id()), user, refreshToken);
+        return new Session(accessTokens.issue(user.id()), user, refreshToken, firstLogin);
     }
 
     @Transactional(noRollbackFor = SessionException.class)
@@ -122,7 +123,7 @@ class SessionService {
 
         token.markUsed(now);
         String refreshToken = issueRefreshToken(user.id(), token.familyId(), userAgent, now);
-        return new Session(accessTokens.issue(user.id()), user, refreshToken);
+        return new Session(accessTokens.issue(user.id()), user, refreshToken, false);
     }
 
     /** Revokes the family of the token, if it is one of ours; the already issued access tokens expire by themselves. */

@@ -2,5 +2,107 @@
   "coming-soon": {
     "title": "Espace compte Soukly, bientôt disponible",
     "text": "Inscription, connexion et profil arrivent bientôt ici."
+  },
+  "common": {
+    "email": "Email",
+    "password": "Mot de passe",
+    "show-password": "Afficher le mot de passe"
+  },
+  "errors": {
+    "displayName": {
+      "required": "Indiquez le nom à afficher.",
+      "length": "Le nom doit compter entre 2 et 50 caractères."
+    },
+    "email": {
+      "required": "Indiquez votre adresse email.",
+      "invalid": "Adresse email invalide, par exemple nom@exemple.tn."
+    },
+    "phone": {
+      "required": "Indiquez votre numéro de téléphone.",
+      "invalid": "Numéro tunisien à 8 chiffres attendu."
+    },
+    "password": {
+      "required": "Indiquez votre mot de passe.",
+      "length": "Le mot de passe doit compter entre 8 et 128 caractères.",
+      "too-common": "Ce mot de passe est trop courant. Choisissez-en un autre.",
+      "same-as-email": "Le mot de passe ne doit pas être votre adresse email."
+    },
+    "terms": {
+      "required": "Acceptez les conditions pour créer votre compte."
+    },
+    "too-many-requests": "Trop de demandes en peu de temps. Patientez un instant puis réessayez.",
+    "unexpected": "Une erreur est survenue. Vérifiez votre connexion puis réessayez."
+  },
+  "register": {
+    "title": "Créer un compte",
+    "subtitle": "Gratuit, et il ne faut qu'une minute.",
+    "display-name": "Nom affiché",
+    "display-name-hint": "Visible sur vos annonces.",
+    "phone": "Téléphone",
+    "phone-hint": "8 chiffres, après l'indicatif +216.",
+    "password-hint": "8 caractères minimum.",
+    "terms-before": "J'accepte les ",
+    "terms-link": "conditions d'utilisation",
+    "terms-middle": " et la ",
+    "privacy-link": "politique de confidentialité",
+    "terms-after": ".",
+    "submit": "Créer mon compte",
+    "has-account": "Déjà un compte ?",
+    "login-link": "Se connecter"
+  },
+  "check-email": {
+    "title": "Vérifiez votre email",
+    "sent-to": "Nous avons envoyé un lien d'activation à",
+    "validity": "Cliquez dessus pour activer votre compte. Le lien est valable 24 heures.",
+    "spam": "Rien reçu ? Regardez dans vos courriers indésirables.",
+    "change-email": "Modifier l'adresse email",
+    "no-address": "Ouvrez le lien reçu par email pour activer votre compte. Il est valable 24 heures."
+  },
+  "resend": {
+    "button": "Renvoyer l'email",
+    "countdown": "{{label}} ({{seconds}} s)",
+    "sent": "Email renvoyé. Pensez à vérifier vos courriers indésirables."
+  },
+  "verify": {
+    "checking": "Activation de votre compte…",
+    "activated-title": "Votre compte est activé",
+    "activated-text": "Vous pouvez maintenant vous connecter et publier vos annonces.",
+    "login": "Se connecter",
+    "invalid-title": "Ce lien n'est plus valable",
+    "invalid-text": "Il a peut-être expiré ou déjà servi. Indiquez votre adresse email pour recevoir un nouveau lien.",
+    "resend": "Recevoir un nouveau lien",
+    "resend-sent": "Si un compte attend son activation avec cette adresse, un nouveau lien vient de lui être envoyé.",
+    "error-title": "Impossible de vérifier le lien pour le moment",
+    "retry": "Réessayer"
+  },
+  "login": {
+    "title": "Se connecter",
+    "subtitle": "Bon retour sur Soukly.",
+    "forgot-password": "Mot de passe oublié ?",
+    "submit": "Se connecter",
+    "no-account": "Pas encore de compte ?",
+    "register-link": "Créer un compte",
+    "invalid-credentials": "Email ou mot de passe incorrect.",
+    "email-not-verified": "Votre adresse email n'est pas encore vérifiée. Ouvrez le lien reçu par email, ou demandez-en un nouveau.",
+    "resend-verification": "Renvoyer l'email de vérification",
+    "throttled-seconds": "Trop de tentatives. Réessayez dans {{count}} s.",
+    "throttled-minutes": "Trop de tentatives. Réessayez dans {{count}} min."
+  },
+  "welcome": {
+    "later": "Plus tard",
+    "hello": "Bienvenue, {{name}}",
+    "title": "Une annonce, publiée partout",
+    "text": "Reliez votre Page Facebook et votre compte Instagram. À chaque annonce, vous choisissez de la partager automatiquement, ou pas.",
+    "facebook": {
+      "name": "Page Facebook",
+      "hint": "Page professionnelle ou de boutique"
+    },
+    "instagram": {
+      "name": "Instagram",
+      "hint": "Compte professionnel ou créateur"
+    },
+    "connect": "Relier",
+    "note": "Vous pourrez relier ou retirer vos réseaux à tout moment depuis votre profil. Soukly ne publie jamais sans votre accord.",
+    "continue": "Continuer vers Soukly"
   }
 }

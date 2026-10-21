@@ -68,3 +68,64 @@
   border-color: var(--color-danger);
   border-width: 2px;
 }
+
+/* Prefix and suffix: an addon glued before the control (+216) and an icon button inside its end. */
+.ui-field .ui-field__group {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.ui-field .ui-field__prefix {
+  display: flex;
+  flex: none;
+  align-items: center;
+  padding-inline: 12px;
+  border: 1px solid var(--color-border-strong);
+  border-inline-end: 0;
+  border-start-start-radius: var(--radius-md);
+  border-end-start-radius: var(--radius-md);
+  background-color: var(--color-surface-muted);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ui-field .ui-field__prefix + .ui-control {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+
+.ui-field--invalid .ui-field__prefix {
+  border-color: var(--color-danger);
+  border-block-width: 2px;
+  border-inline-start-width: 2px;
+}
+
+.ui-field .ui-field__group:has(.ui-field__suffix) .ui-control {
+  padding-inline-end: var(--control-height);
+}
+
+.ui-field .ui-field__suffix {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  display: grid;
+  place-items: center;
+  inline-size: var(--control-height);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.ui-field .ui-field__suffix:hover {
+  color: var(--color-text);
+}
+
+.ui-field .ui-field__suffix:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}

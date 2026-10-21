@@ -1,0 +1,96 @@
+/* Indigo panel of the mockup, with the tokens of libs/ui only (component styles, see account-page.css). */
+:host {
+  display: block;
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.welcome__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-inline-size: 28rem;
+  margin-inline: auto;
+  padding-block: 16px 40px;
+  padding-inline: 20px;
+}
+
+.welcome__later {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 44px;
+  padding-inline: 8px;
+  color: var(--color-on-brand);
+  font-weight: 500;
+}
+
+.welcome__later:hover {
+  color: var(--color-accent);
+}
+
+.welcome__hello {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.welcome__title {
+  color: var(--color-on-brand);
+  font-size: 2.125rem;
+  line-height: 1.1;
+}
+
+.welcome__text,
+.welcome__note {
+  line-height: 1.5;
+}
+
+.welcome__note {
+  font-size: 0.875rem;
+}
+
+.welcome__networks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.network {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+.network__logo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.network__text {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.network__name {
+  font-weight: 600;
+}
+
+.network__hint {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}

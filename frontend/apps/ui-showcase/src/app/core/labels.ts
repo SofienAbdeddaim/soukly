@@ -29,6 +29,16 @@ export interface ShowcaseLabels {
   categories: string[];
   priceLabel: string;
   priceError: string;
+  phoneLabel: string;
+  phoneHint: string;
+  passwordLabel: string;
+  showPassword: string;
+  termsLabel: string;
+  termsError: string;
+  alerts: string;
+  alertInfo: string;
+  alertSuccess: string;
+  alertError: string;
   cards: string;
   favorite: string;
   removeFavorite: string;
@@ -77,6 +87,16 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     categories: ['Véhicules', 'Immobilier', 'Services'],
     priceLabel: 'Prix (DT)',
     priceError: 'Indiquez un prix en dinars, sans millimes.',
+    phoneLabel: 'Téléphone',
+    phoneHint: '8 chiffres, après l’indicatif +216.',
+    passwordLabel: 'Mot de passe',
+    showPassword: 'Afficher le mot de passe',
+    termsLabel: "J'accepte les conditions d'utilisation.",
+    termsError: 'Acceptez les conditions pour continuer.',
+    alerts: 'Messages (alert)',
+    alertInfo: 'Votre annonce sera visible après relecture.',
+    alertSuccess: 'Votre compte est activé.',
+    alertError: 'Email ou mot de passe incorrect.',
     cards: "Cartes d'annonce",
     favorite: 'Ajouter aux favoris',
     removeFavorite: 'Retirer des favoris',
@@ -140,6 +160,16 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     categories: ['سيارات', 'عقارات', 'خدمات'],
     priceLabel: 'السعر (د.ت)',
     priceError: 'أدخل السعر بالدينار، دون مليمات.',
+    phoneLabel: 'الهاتف',
+    phoneHint: '8 أرقام بعد المفتاح ‎+216.',
+    passwordLabel: 'كلمة المرور',
+    showPassword: 'إظهار كلمة المرور',
+    termsLabel: 'أوافق على شروط الاستخدام.',
+    termsError: 'وافق على الشروط للمتابعة.',
+    alerts: 'الرسائل',
+    alertInfo: 'سيظهر إعلانك بعد المراجعة.',
+    alertSuccess: 'تم تفعيل حسابك.',
+    alertError: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
     cards: 'بطاقات الإعلانات',
     favorite: 'أضف إلى المفضلة',
     removeFavorite: 'أزل من المفضلة',

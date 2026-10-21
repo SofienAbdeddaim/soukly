@@ -15,6 +15,7 @@
     "**/*.ts",
     "**/*.js",
     "playwright.config.mts",
+    "playwright.stack.config.mts",
     "src/**/*.spec.ts",
     "src/**/*.spec.js",
     "src/**/*.test.ts",

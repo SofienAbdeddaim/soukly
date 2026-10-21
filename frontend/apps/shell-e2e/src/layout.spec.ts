@@ -58,9 +58,10 @@ test.describe('layout', () => {
       );
       await expect(bottomNav.getByRole('link', { name: 'Favoris' })).toHaveCount(0);
 
+      // Posting an ad needs a session: a visitor is asked to log in first (AUTH-03).
       await bottomNav.getByTestId('bottom-nav-publish').click();
-      await expect(page).toHaveURL('/fr/publish/new');
-      await expect(page.getByTestId('coming-soon-mfe-publish')).toBeVisible();
+      await expect(page).toHaveURL('/fr/account/login?returnUrl=%2Ffr%2Fpublish%2Fnew');
+      await expect(page.getByTestId('login-form')).toBeVisible();
     });
 
     test('has no horizontal overflow in RTL', async ({ page }) => {

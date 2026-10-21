@@ -1,0 +1,76 @@
+<section
+  class="page page--centered"
+  aria-labelledby="verify-title"
+  [attr.aria-busy]="state() === 'checking' ? 'true' : null"
+>
+  @switch (state()) { @case ('checking') {
+  <h1 id="verify-title" class="page__title">{{ 'account.verify.checking' | transloco }}</h1>
+  <ui-skeleton variant="line" inlineSize="80%" />
+  <ui-skeleton variant="line" inlineSize="60%" />
+  } @case ('activated') {
+  <span class="badge badge--success" aria-hidden="true">
+    <svg lucideCircleCheck [size]="40"></svg>
+  </span>
+  <h1 id="verify-title" class="page__title" data-testid="verify-activated">
+    {{ 'account.verify.activated-title' | transloco }}
+  </h1>
+  <p class="page__text">{{ 'account.verify.activated-text' | transloco }}</p>
+  <a ui-button size="lg" class="page__stretch" [routerLink]="'/account/login' | localePath">
+    {{ 'account.verify.login' | transloco }}
+  </a>
+  } @case ('invalid') {
+  <span class="badge badge--error" aria-hidden="true">
+    <svg lucideLink2Off [size]="40"></svg>
+  </span>
+  <h1 id="verify-title" class="page__title" data-testid="verify-invalid">
+    {{ 'account.verify.invalid-title' | transloco }}
+  </h1>
+  <p class="page__text">{{ 'account.verify.invalid-text' | transloco }}</p>
+  <form class="form page__stretch" novalidate (submit)="resend($event)">
+    <fieldset class="form__fields" [disabled]="sending()">
+      <ui-field
+        [label]="'account.common.email' | transloco"
+        [error]="errorKey(resendForm.email) | transloco"
+        controlId="verify-resend-email"
+        required
+        ltr
+      >
+        <input
+          uiControl
+          type="email"
+          autocomplete="email"
+          inputmode="email"
+          spellcheck="false"
+          [formField]="resendForm.email"
+        />
+      </ui-field>
+      <button
+        ui-button
+        type="submit"
+        size="lg"
+        [loading]="sending()"
+        [disabled]="cooldown.secondsLeft() > 0"
+      >
+        @if (cooldown.secondsLeft() > 0) { {{ 'account.resend.countdown' | transloco : { label:
+        ('account.verify.resend' | transloco), seconds: cooldown.secondsLeft(), } }} } @else { {{
+        'account.verify.resend' | transloco }} }
+      </button>
+    </fieldset>
+  </form>
+  <p class="status" role="status">
+    @if (resendState() === 'sent') { {{ 'account.verify.resend-sent' | transloco }} }
+  </p>
+  @if (resendState() === 'error') {
+  <ui-alert type="error" class="page__stretch">
+    {{ 'account.errors.unexpected' | transloco }}
+  </ui-alert>
+  } } @case ('error') {
+  <h1 id="verify-title" class="page__title">{{ 'account.verify.error-title' | transloco }}</h1>
+  <ui-alert type="error" class="page__stretch">
+    {{ 'account.errors.unexpected' | transloco }}
+  </ui-alert>
+  <button ui-button type="button" variant="secondary" (click)="verify()">
+    {{ 'account.verify.retry' | transloco }}
+  </button>
+  } }
+</section>

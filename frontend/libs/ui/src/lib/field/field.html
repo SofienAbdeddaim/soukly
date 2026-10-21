@@ -3,7 +3,11 @@
   <span class="ui-field__required" aria-hidden="true">*</span>
   }
 </label>
-<ng-content />
+<div class="ui-field__group" [attr.dir]="ltr() ? 'ltr' : null">
+  <ng-content select="[uiFieldPrefix]" />
+  <ng-content />
+  <ng-content select="[uiFieldSuffix]" />
+</div>
 @if (hint()) {
 <p class="ui-field__hint" [id]="hintId()">{{ hint() }}</p>
 } @if (invalid()) {

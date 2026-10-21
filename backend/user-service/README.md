@@ -1,21 +1,21 @@
 # user-service
 
 Accounts of Soukly: registration and email verification (AUTH-01), sign-in, sessions and the JWKS (AUTH-02). The
-screens arrive with AUTH-03. Port 8081, package `com.soukly.user`, database `soukly_user` (user `user_svc`).
+screens are in `frontend/apps/mfe-account` (AUTH-03). Port 8081, package `com.soukly.user`, database `soukly_user` (user `user_svc`).
 
 ## Endpoints
 
 Exposed by the gateway under `/api` (`POST /api/users/register` reaches this service as `POST /users/register`).
 
-| Endpoint | Body | Answers |
-| --- | --- | --- |
-| `POST /users/register` | `{ email, password, displayName, phone, acceptTerms }` | `202`, `400` |
-| `POST /users/verify-email` | `{ token }` | `204`, `400` |
-| `POST /users/verify-email/resend` | `{ email }` | `202`, `400` (malformed email) |
-| `POST /users/login` | `{ email, password }` | `200`, `401` `invalid-credentials`, `403` `email-not-verified`, `429` |
-| `POST /users/refresh` | cookie `soukly_rt`, header `Origin` | `200`, `401` `session-expired` or `session-revoked`, `403` |
-| `POST /users/logout` | cookie `soukly_rt` (optional), header `Origin` | `204`, `403` |
-| `GET /.well-known/jwks.json` | - | `200`; internal only, never routed by the gateway |
+| Endpoint                          | Body                                                   | Answers                                                               |
+| --------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------- |
+| `POST /users/register`            | `{ email, password, displayName, phone, acceptTerms }` | `202`, `400`                                                          |
+| `POST /users/verify-email`        | `{ token }`                                            | `204`, `400`                                                          |
+| `POST /users/verify-email/resend` | `{ email }`                                            | `202`, `400` (malformed email)                                        |
+| `POST /users/login`               | `{ email, password }`                                  | `200`, `401` `invalid-credentials`, `403` `email-not-verified`, `429` |
+| `POST /users/refresh`             | cookie `soukly_rt`, header `Origin`                    | `200`, `401` `session-expired` or `session-revoked`, `403`            |
+| `POST /users/logout`              | cookie `soukly_rt` (optional), header `Origin`         | `204`, `403`                                                          |
+| `GET /.well-known/jwks.json`      | -                                                      | `200`; internal only, never routed by the gateway                     |
 
 These endpoints and `GET /actuator/health` are public. Every other path needs a valid access token: the service
 validates it itself with its own keys, with the gateway's rules (RS256 only, `iss`, `exp` with 30 s of clock skew),
@@ -24,13 +24,13 @@ refresh does not fail it.
 
 ### Registration rules
 
-| Field | Rule | Error codes |
-| --- | --- | --- |
-| `email` | trimmed and lower-cased, 254 characters at most, `local@domain.tld` | `email.required`, `email.invalid` |
-| `password` | 8 to 128 characters, not in the common password list (case ignored), not equal to the email | `password.required`, `password.length`, `password.too-common`, `password.same-as-email` |
-| `displayName` | 2 to 50 characters after trimming, shown publicly on listings | `displayName.required`, `displayName.length` |
-| `phone` | valid Tunisian number (libphonenumber, region `TN`, mobile or fixed line), with or without `+216`/`00216`, spaces allowed; stored in E.164 (`+21620123456`); not unique, never returned | `phone.required`, `phone.invalid` |
-| `acceptTerms` | must be `true`; the acceptance date is stored | `terms.required` |
+| Field         | Rule                                                                                                                                                                                    | Error codes                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `email`       | trimmed and lower-cased, 254 characters at most, `local@domain.tld`                                                                                                                     | `email.required`, `email.invalid`                                                       |
+| `password`    | 8 to 128 characters, not in the common password list (case ignored), not equal to the email                                                                                             | `password.required`, `password.length`, `password.too-common`, `password.same-as-email` |
+| `displayName` | 2 to 50 characters after trimming, shown publicly on listings                                                                                                                           | `displayName.required`, `displayName.length`                                            |
+| `phone`       | valid Tunisian number (libphonenumber, region `TN`, mobile or fixed line), with or without `+216`/`00216`, spaces allowed; stored in E.164 (`+21620123456`); not unique, never returned | `phone.required`, `phone.invalid`                                                       |
+| `acceptTerms` | must be `true`; the acceptance date is stored                                                                                                                                           | `terms.required`                                                                        |
 
 The preferred language comes from `Accept-Language` (`fr`, `ar`, `en`, French by default), is stored on the account
 and used for all its emails.
@@ -38,10 +38,10 @@ and used for all its emails.
 The answer never reveals whether an email is known: `register` always answers `202` with an empty body, and the
 password is hashed in every case so that the response time does not differ.
 
-| Email state | What happens |
-| --- | --- |
-| new | account `PENDING_VERIFICATION`, verification email |
-| `ACTIVE` account | nothing changes, "You already have an account" email (login and forgot-password links) in the account's language |
+| Email state                    | What happens                                                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| new                            | account `PENDING_VERIFICATION`, verification email                                                                                                |
+| `ACTIVE` account               | nothing changes, "You already have an account" email (login and forgot-password links) in the account's language                                  |
 | `PENDING_VERIFICATION` account | the registration data is replaced by the new one, the older links stop working and a new verification email is sent (counted in the resend limit) |
 
 ### Verification and resend
@@ -79,8 +79,7 @@ a cookie that JavaScript cannot read.
 `login` and `refresh` answer:
 
 ```json
-{ "accessToken": "eyJ…", "tokenType": "Bearer", "expiresIn": 900,
-  "user": { "id": "…", "displayName": "Amira", "preferredLanguage": "ar" } }
+{ "accessToken": "eyJ…", "tokenType": "Bearer", "expiresIn": 900, "user": { "id": "…", "displayName": "Amira", "preferredLanguage": "ar" }, "firstLogin": false }
 ```
 
 with `Cache-Control: no-store` and the cookie
@@ -101,6 +100,9 @@ with `Cache-Control: no-store` and the cookie
 - **Logout** revokes the family of the cookie and deletes the cookie, `204` even without a cookie.
 - **CSRF**: on top of `SameSite=Strict`, `refresh` and `logout` require an `Origin` header equal to one of
   `ALLOWED_ORIGINS` (the CORS origins of the gateway); a missing or other origin gets `403` before the cookie is read.
+- **First login** (AUTH-03): `firstLogin` is `true` on the very first successful login of an account only, so the
+  front end shows its optional welcome screen once; it is always `false` on a refresh. Every successful login sets
+  `users.last_login_at` (`NULL` until the first one); failed and refused logins do not.
 - **Login answers**: unknown email and wrong password give the same `401 invalid-credentials` in the same time (a
   dummy Argon2 hash is checked when the email is unknown). Right password on a `PENDING_VERIFICATION` account:
   `403 email-not-verified`, no token. The email is normalized as in registration.
@@ -139,25 +141,25 @@ with `Cache-Control: no-store` and the cookie
 
 ## Configuration
 
-| Variable | Local default | Use |
-| --- | --- | --- |
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/soukly_user` | database |
-| `SPRING_DATASOURCE_USERNAME` | `user_svc` | database user |
-| `SPRING_DATASOURCE_PASSWORD` | `USER_SVC_DB_PASSWORD` | database password |
-| `MAIL_HOST`, `MAIL_PORT` | `localhost`, `1025` (Mailpit) | SMTP server |
-| `MAIL_USERNAME`, `MAIL_PASSWORD` | empty | SMTP credentials |
-| `MAIL_FROM` | `no-reply@example.com` | sender |
-| `FRONT_BASE_URL` | `http://localhost:4200` | origin of the links in the emails |
-| `USER_SERVICE_PORT` | `8081` | HTTP port |
-| `JWT_PRIVATE_KEY_PATH` | `../../.secrets/jwt/jwt-private.pem` | active private key (PEM PKCS#8) |
-| `JWT_KEY_ID` | `local` | `kid` of the active key |
-| `JWT_PREVIOUS_KEY_ID`, `JWT_PREVIOUS_PUBLIC_KEY_PATH` | empty | previous key during a rotation |
-| `JWT_ISSUER` | `soukly-user-service` | `iss` claim, same value on the gateway |
-| `ACCESS_TOKEN_TTL` | `15m` | lifetime of an access token |
-| `REFRESH_TOKEN_TTL` | `30d` | lifetime of a refresh token, renewed by every refresh |
-| `REFRESH_COOKIE_PATH` | `/api/users` | cookie path seen by the browser (the gateway removes `/api`) |
-| `REFRESH_COOKIE_SECURE` | `true` | `Secure` attribute of the cookie, see below |
-| `ALLOWED_ORIGINS` | `CORS_ALLOWED_ORIGINS`, else `http://localhost:4200` | origins allowed on `refresh` and `logout` |
+| Variable                                              | Local default                                        | Use                                                          |
+| ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| `SPRING_DATASOURCE_URL`                               | `jdbc:postgresql://localhost:5432/soukly_user`       | database                                                     |
+| `SPRING_DATASOURCE_USERNAME`                          | `user_svc`                                           | database user                                                |
+| `SPRING_DATASOURCE_PASSWORD`                          | `USER_SVC_DB_PASSWORD`                               | database password                                            |
+| `MAIL_HOST`, `MAIL_PORT`                              | `localhost`, `1025` (Mailpit)                        | SMTP server                                                  |
+| `MAIL_USERNAME`, `MAIL_PASSWORD`                      | empty                                                | SMTP credentials                                             |
+| `MAIL_FROM`                                           | `no-reply@example.com`                               | sender                                                       |
+| `FRONT_BASE_URL`                                      | `http://localhost:4200`                              | origin of the links in the emails                            |
+| `USER_SERVICE_PORT`                                   | `8081`                                               | HTTP port                                                    |
+| `JWT_PRIVATE_KEY_PATH`                                | `../../.secrets/jwt/jwt-private.pem`                 | active private key (PEM PKCS#8)                              |
+| `JWT_KEY_ID`                                          | `local`                                              | `kid` of the active key                                      |
+| `JWT_PREVIOUS_KEY_ID`, `JWT_PREVIOUS_PUBLIC_KEY_PATH` | empty                                                | previous key during a rotation                               |
+| `JWT_ISSUER`                                          | `soukly-user-service`                                | `iss` claim, same value on the gateway                       |
+| `ACCESS_TOKEN_TTL`                                    | `15m`                                                | lifetime of an access token                                  |
+| `REFRESH_TOKEN_TTL`                                   | `30d`                                                | lifetime of a refresh token, renewed by every refresh        |
+| `REFRESH_COOKIE_PATH`                                 | `/api/users`                                         | cookie path seen by the browser (the gateway removes `/api`) |
+| `REFRESH_COOKIE_SECURE`                               | `true`                                               | `Secure` attribute of the cookie, see below                  |
+| `ALLOWED_ORIGINS`                                     | `CORS_ALLOWED_ORIGINS`, else `http://localhost:4200` | origins allowed on `refresh` and `logout`                    |
 
 `REFRESH_COOKIE_SECURE` stays `true` everywhere, including locally: Chrome (89+) and Firefox (75+) accept a
 `Secure` cookie on `http://localhost`. Safari does not, so a developer testing in Safari over plain HTTP sets it to

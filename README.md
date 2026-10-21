@@ -11,21 +11,21 @@ All documentation, comments, commits and PR descriptions in this repository are 
 
 ## Prerequisites and pinned versions
 
-| Tool | Version |
-| --- | --- |
-| Node.js | 24 LTS (`frontend/.nvmrc`); 22.12 minimum |
-| pnpm | 10.28.0 (`packageManager` in `frontend/package.json`); npm and yarn are not used |
-| Nx | 23.3.0 |
-| Angular (devkit, schematics, build, CLI) | 22.2.2 |
-| Angular (framework, CDK) | 22.2.3 |
-| Tailwind CSS | 4.3.3 |
-| Transloco (`@jsverse/transloco`) | 8.4.0 |
-| angular-eslint | 22.6.0 |
-| TypeScript | 6.0.x |
-| Java | 21 |
-| Maven | 3.9.16 through the Maven Wrapper (`backend/mvnw`) |
-| Spring Boot | 4.0.8 |
-| Spring Cloud | 2025.1.3 |
+| Tool                                     | Version                                                                          |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| Node.js                                  | 24 LTS (`frontend/.nvmrc`); 22.12 minimum                                        |
+| pnpm                                     | 10.28.0 (`packageManager` in `frontend/package.json`); npm and yarn are not used |
+| Nx                                       | 23.3.0                                                                           |
+| Angular (devkit, schematics, build, CLI) | 22.2.2                                                                           |
+| Angular (framework, CDK)                 | 22.2.3                                                                           |
+| Tailwind CSS                             | 4.3.3                                                                            |
+| Transloco (`@jsverse/transloco`)         | 8.4.0                                                                            |
+| angular-eslint                           | 22.6.0                                                                           |
+| TypeScript                               | 6.0.x                                                                            |
+| Java                                     | 21                                                                               |
+| Maven                                    | 3.9.16 through the Maven Wrapper (`backend/mvnw`)                                |
+| Spring Boot                              | 4.0.8                                                                            |
+| Spring Cloud                             | 2025.1.3                                                                         |
 
 Nx and Angular versions are pinned (no `^`). No milestone or RC version is used.
 
@@ -45,17 +45,18 @@ pnpm nx run-many -t i18n-check   # same translation keys in fr, ar and en, for e
 pnpm prettier --check .
 ```
 
-| Project | Role | Commands |
-| --- | --- | --- |
-| `libs/i18n` (`@soukly/i18n`) | languages, URL prefix, Transloco setup, `price`/`localDate`/`relativeTime` pipes ([README](frontend/libs/i18n/README.md)) | `pnpm nx test i18n`, `pnpm nx lint i18n` |
-| `libs/ui` (`@soukly/ui`) | design system: tokens, Tailwind theme, fonts, base components, RTL lint rule ([README](frontend/libs/ui/README.md)) | `pnpm nx test ui`, `pnpm nx lint ui` |
-| `apps/ui-showcase` | visual check page of the components in LTR and RTL, never deployed | `pnpm nx serve ui-showcase` (http://localhost:4200), `pnpm nx test ui-showcase` (axe test) |
-| `apps/shell` | host: header, footer, mobile bottom bar, loading of the remotes, error and 404 pages | `pnpm nx serve shell` (http://localhost:4200) |
-| `apps/mfe-account` | remote, account area (AUTH), waiting page for now | `pnpm nx serve mfe-account` (http://localhost:4201) |
-| `apps/mfe-catalog` | remote, home and catalogue (CATA), waiting page for now | `pnpm nx serve mfe-catalog` (http://localhost:4202) |
-| `apps/mfe-publish` | remote, publishing and management of listings (ANN, SOC), waiting page for now | `pnpm nx serve mfe-publish` (http://localhost:4203) |
-| `apps/shell-e2e` | Playwright end-to-end tests of the shell and its remotes (Chromium) | `pnpm nx e2e shell-e2e` (starts the 4 dev servers) |
-| `tools/i18n-check` | translation key check, run by the `i18n-check` target of the shell and of each remote | `pnpm nx run-many -t i18n-check`, `pnpm nx test i18n-check` |
+| Project                      | Role                                                                                                                                                | Commands                                                                                                                                     |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `libs/auth` (`@soukly/auth`) | front-end session: `AuthService` (access token in memory), `authInterceptor`, `authGuard`, session restore ([README](frontend/libs/auth/README.md)) | `pnpm nx test auth`, `pnpm nx lint auth`                                                                                                     |
+| `libs/i18n` (`@soukly/i18n`) | languages, URL prefix, Transloco setup, `price`/`localDate`/`relativeTime` pipes ([README](frontend/libs/i18n/README.md))                           | `pnpm nx test i18n`, `pnpm nx lint i18n`                                                                                                     |
+| `libs/ui` (`@soukly/ui`)     | design system: tokens, Tailwind theme, fonts, base components, RTL lint rule ([README](frontend/libs/ui/README.md))                                 | `pnpm nx test ui`, `pnpm nx lint ui`                                                                                                         |
+| `apps/ui-showcase`           | visual check page of the components in LTR and RTL, never deployed                                                                                  | `pnpm nx serve ui-showcase` (http://localhost:4200), `pnpm nx test ui-showcase` (axe test)                                                   |
+| `apps/shell`                 | host: header, footer, mobile bottom bar, loading of the remotes, error and 404 pages                                                                | `pnpm nx serve shell` (http://localhost:4200)                                                                                                |
+| `apps/mfe-account`           | remote, account area (AUTH): registration, email verification, login, welcome screen                                                                | `pnpm nx serve mfe-account` (http://localhost:4201)                                                                                          |
+| `apps/mfe-catalog`           | remote, home and catalogue (CATA), waiting page for now                                                                                             | `pnpm nx serve mfe-catalog` (http://localhost:4202)                                                                                          |
+| `apps/mfe-publish`           | remote, publishing and management of listings (ANN, SOC), waiting page for now                                                                      | `pnpm nx serve mfe-publish` (http://localhost:4203)                                                                                          |
+| `apps/shell-e2e`             | Playwright end-to-end tests of the shell and its remotes (Chromium)                                                                                 | `pnpm nx e2e shell-e2e` (starts the 4 dev servers, fakes the API), `pnpm nx run shell-e2e:e2e-stack` (against the local back end, see below) |
+| `tools/i18n-check`           | translation key check, run by the `i18n-check` target of the shell and of each remote                                                               | `pnpm nx run-many -t i18n-check`, `pnpm nx test i18n-check`                                                                                  |
 
 The `@soukly/<lib>` aliases point to `libs/<lib>/src/index.ts` (`tsconfig.base.json`).
 
@@ -77,6 +78,19 @@ pnpm nx serve mfe-publish    # 4203
 - Every page URL starts with its language: `/fr/account/login`, `/ar/publish/new`. Each remote ships its translations in `public/i18n/<scope>/`, downloaded from the remote itself when one of its pages is shown.
 - If a remote does not load, the content area shows an error with a retry button; the header and the footer stay.
 - Playwright end-to-end tests: `pnpm nx e2e shell-e2e` (Chromium). The first run needs `pnpm exec playwright install --with-deps chromium`. Set `CHROMIUM_EXECUTABLE_PATH` to use a Chromium already installed.
+- **API proxy**: the dev servers of the shell and of `mfe-account` forward `/api/**` to the gateway on `http://localhost:8080` (`apps/<app>/proxy.conf.json`, `proxyConfig` option of `@angular/build:dev-server`). The front end and the API then share one origin, as behind Caddy in dev and prod, which the `SameSite=Strict` refresh cookie needs. Without a running gateway, the API calls fail and the visitor simply stays signed out.
+- **Account screens against the real back end** (`apps/shell-e2e/src/stack`, not run by the CI, which has no back end; there `src/account.spec.ts` covers the same screens with a faked API):
+
+  ```bash
+  docker compose up -d --wait postgres mailpit    # from the repository root
+  scripts/gen-jwt-key.sh                           # once
+  cd backend && ./mvnw install -DskipTests         # then, with the root .env sourced:
+  ./mvnw -pl user-service spring-boot:run          # 8081, in one terminal
+  ./mvnw -pl gateway spring-boot:run               # 8080, in another
+  cd ../frontend && pnpm nx run shell-e2e:e2e-stack  # starts the 4 dev servers if needed
+  ```
+
+  The tests register new accounts, read the verification link in Mailpit (`http://localhost:8025`) and log in through the gateway.
 
 ### Backend
 
@@ -89,13 +103,13 @@ curl http://localhost:8082/actuator/health        # {"status":"UP",...}
 
 `spring-boot:run` on a service uses `common` from the local Maven repository: run `./mvnw install -DskipTests` once before, and again after changing `common`.
 
-| Service | Port | Package |
-| --- | --- | --- |
+| Service                                   | Port | Package              |
+| ----------------------------------------- | ---- | -------------------- |
 | `gateway` (Spring Cloud Gateway, WebFlux) | 8080 | `com.soukly.gateway` |
-| `user-service` | 8081 | `com.soukly.user` |
-| `listing-service` | 8082 | `com.soukly.listing` |
-| `social-publisher` | 8083 | `com.soukly.social` |
-| `common` (library) | - | `com.soukly.common` |
+| `user-service`                            | 8081 | `com.soukly.user`    |
+| `listing-service`                         | 8082 | `com.soukly.listing` |
+| `social-publisher`                        | 8083 | `com.soukly.social`  |
+| `common` (library)                        | -    | `com.soukly.common`  |
 
 Every service exposes `GET /actuator/health`.
 
@@ -105,14 +119,14 @@ Every service exposes `GET /actuator/health`.
 
 Accounts of Soukly (package `com.soukly.user`, database `soukly_user`, schema managed by Flyway in `user-service/src/main/resources/db/migration`). Details, rules and error codes: [`backend/user-service/README.md`](backend/user-service/README.md).
 
-| Endpoint (through the gateway) | Body | Answers |
-| --- | --- | --- |
-| `POST /api/users/register` | `{ email, password, displayName, phone, acceptTerms }`, header `Accept-Language` | `202` (always the same, new or known email), `400` |
-| `POST /api/users/verify-email` | `{ token }` | `204`, `400` `verification-token-invalid` |
-| `POST /api/users/verify-email/resend` | `{ email }` | `202` (always), `400` malformed email |
-| `POST /api/users/login` | `{ email, password }` | `200` access token + `soukly_rt` cookie, `401` `invalid-credentials`, `403` `email-not-verified`, `429` |
-| `POST /api/users/refresh` | cookie `soukly_rt`, header `Origin` | `200` new access token + new cookie, `401` `session-expired` / `session-revoked`, `403` |
-| `POST /api/users/logout` | cookie `soukly_rt`, header `Origin` | `204`, `403` |
+| Endpoint (through the gateway)        | Body                                                                             | Answers                                                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `POST /api/users/register`            | `{ email, password, displayName, phone, acceptTerms }`, header `Accept-Language` | `202` (always the same, new or known email), `400`                                                      |
+| `POST /api/users/verify-email`        | `{ token }`                                                                      | `204`, `400` `verification-token-invalid`                                                               |
+| `POST /api/users/verify-email/resend` | `{ email }`                                                                      | `202` (always), `400` malformed email                                                                   |
+| `POST /api/users/login`               | `{ email, password }`                                                            | `200` access token + `soukly_rt` cookie, `401` `invalid-credentials`, `403` `email-not-verified`, `429` |
+| `POST /api/users/refresh`             | cookie `soukly_rt`, header `Origin`                                              | `200` new access token + new cookie, `401` `session-expired` / `session-revoked`, `403`                 |
+| `POST /api/users/logout`              | cookie `soukly_rt`, header `Origin`                                              | `204`, `403`                                                                                            |
 
 Sessions last **30 days, renewed at every refresh**: the access token (JWT RS256) lives 15 minutes, the refresh token rotates at each use and a reused one revokes its session. Rules, keys and rotation: [`backend/user-service/README.md`](backend/user-service/README.md#sessions).
 
@@ -150,20 +164,20 @@ The front end only calls the gateway (`http://localhost:8080`, Spring Cloud Gate
 
 The `/api` prefix is removed before forwarding: `GET /api/listings/42` reaches `listing-service` as `GET /listings/42`.
 
-| Incoming path | Target service | Variable (local default) |
-| --- | --- | --- |
-| `/api/users/**` | `user-service` | `USER_SERVICE_URL` (`http://localhost:8081`) |
-| `/api/listings/**`, `/api/categories/**`, `/api/locations/**` (CAT-01) | `listing-service` | `LISTING_SERVICE_URL` (`http://localhost:8082`) |
-| `/api/social/**` | `social-publisher` | `SOCIAL_SERVICE_URL` (`http://localhost:8083`) |
+| Incoming path                                                          | Target service     | Variable (local default)                        |
+| ---------------------------------------------------------------------- | ------------------ | ----------------------------------------------- |
+| `/api/users/**`                                                        | `user-service`     | `USER_SERVICE_URL` (`http://localhost:8081`)    |
+| `/api/listings/**`, `/api/categories/**`, `/api/locations/**` (CAT-01) | `listing-service`  | `LISTING_SERVICE_URL` (`http://localhost:8082`) |
+| `/api/social/**`                                                       | `social-publisher` | `SOCIAL_SERVICE_URL` (`http://localhost:8083`)  |
 
 ### Access policy
 
 The whitelist lives in a single class, `gateway/.../security/PublicPaths.java`. Everything not listed needs a valid JWT.
 
-| Access | Paths |
-| --- | --- |
-| Public | `POST /api/users/register`, `POST /api/users/verify-email`, `POST /api/users/verify-email/resend` (AUTH-01), `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/logout` (AUTH-02, the refresh cookie authenticates them), `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/categories/**` and `GET /api/locations/**` (referentials, CAT-01), `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
-| JWT required | everything else, for example `POST/PUT/PATCH/DELETE /api/listings/**`, `/api/users/me/**`, `/api/social/**` |
+| Access       | Paths                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Public       | `POST /api/users/register`, `POST /api/users/verify-email`, `POST /api/users/verify-email/resend` (AUTH-01), `POST /api/users/login`, `POST /api/users/refresh`, `POST /api/users/logout` (AUTH-02, the refresh cookie authenticates them), `POST /api/users/password/**`, `GET /api/listings/**`, `GET /api/categories/**` and `GET /api/locations/**` (referentials, CAT-01), `GET /api/actuator/info` (version of the running images, DEP-03), `GET /actuator/health` |
+| JWT required | everything else, for example `POST/PUT/PATCH/DELETE /api/listings/**`, `/api/users/me/**`, `/api/social/**`                                                                                                                                                                                                                                                                                                                                                              |
 
 - **JWKS**: the gateway reads the public keys from `USER_SERVICE_JWKS_URI` (internal address of `user-service`); `/.well-known/jwks.json` is never routed to the outside.
 - **JWT**: RS256 only (`none`, HS256 and any other algorithm are rejected); signature checked with the public keys of the `user-service` JWKS (`USER_SERVICE_JWKS_URI`), cached and fetched again when a token carries an unknown `kid` (key rotation); `exp` with a 30 s clock skew; `iss` equal to `JWT_ISSUER`. No secret is shared between services.
@@ -220,15 +234,15 @@ docker compose down -v                         # stops and deletes the data (ful
 
 Without `.env`, Compose refuses to start and names the missing variable. On first start, the one-shot `garage-init` service creates the Garage layout, imports the `soukly-app` key (ID and secret read from `.env`), creates the `soukly-listings` bucket, grants it read and write, then applies the CORS rule. It can be re-run safely: `docker compose run --rm garage-init`.
 
-| Service | Host port(s) | Use | Image |
-| --- | --- | --- | --- |
-| `postgres` | 5432 | database | `postgres:18.6` |
-| `redpanda` | 19092 (external Kafka), 9644 (admin) | broker | `redpandadata/redpanda:v26.2.4` |
-| `garage` | 3900 (S3 API), 3903 (admin) | photo storage | `dxflrs/garage:v2.4.1` |
-| `mailpit` | 1025 (SMTP), 8025 (web UI) | test emails | `axllent/mailpit:v1.31.5` |
-| `garage-init` | - | one-shot Garage setup | `amazon/aws-cli:2.38.0` |
-| `redpanda-console` | 8090 | Kafka UI (`tools` profile) | `redpandadata/console:v3.12.0` |
-| `pgadmin` | 5050 | Postgres UI (`tools` profile) | `dpage/pgadmin4:9.18.0` |
+| Service            | Host port(s)                         | Use                           | Image                           |
+| ------------------ | ------------------------------------ | ----------------------------- | ------------------------------- |
+| `postgres`         | 5432                                 | database                      | `postgres:18.6`                 |
+| `redpanda`         | 19092 (external Kafka), 9644 (admin) | broker                        | `redpandadata/redpanda:v26.2.4` |
+| `garage`           | 3900 (S3 API), 3903 (admin)          | photo storage                 | `dxflrs/garage:v2.4.1`          |
+| `mailpit`          | 1025 (SMTP), 8025 (web UI)           | test emails                   | `axllent/mailpit:v1.31.5`       |
+| `garage-init`      | -                                    | one-shot Garage setup         | `amazon/aws-cli:2.38.0`         |
+| `redpanda-console` | 8090                                 | Kafka UI (`tools` profile)    | `redpandadata/console:v3.12.0`  |
+| `pgadmin`          | 5050                                 | Postgres UI (`tools` profile) | `dpage/pgadmin4:9.18.0`         |
 
 Every image is pinned to an exact version published for `linux/amd64` and `linux/arm64` (checked on 2026-10-14). PostgreSQL is on the latest patch of version 18 (`18.6`).
 
@@ -243,12 +257,12 @@ Memory budget without the `tools` profile: 2.1 GB at most (postgres 512 MB, redp
 
 The `.github/workflows/ci.yml` workflow runs on every PR to `main` and every push to `main`. It deploys nothing, builds no Docker image and uses no secret: the token is read-only, including for PRs opened from a fork.
 
-| Job | What it checks | When |
-| --- | --- | --- |
-| `changes` | which folders changed (`dorny/paths-filter`) | always |
+| Job        | What it checks                                                                                                                           | When                                     |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `changes`  | which folders changed (`dorny/paths-filter`)                                                                                             | always                                   |
 | `frontend` | `pnpm install --frozen-lockfile`, `pnpm nx affected -t lint test build e2e`, `pnpm nx run-many -t i18n-check`, `pnpm prettier --check .` | if `frontend/**` or `.github/**` changed |
-| `backend` | `./mvnw -B verify` (Testcontainers integration tests included) | if `backend/**` or `.github/**` changed |
-| `ci-ok` | aggregates the results: red if a job that ran failed, green if all succeeded or were skipped | always |
+| `backend`  | `./mvnw -B verify` (Testcontainers integration tests included)                                                                           | if `backend/**` or `.github/**` changed  |
+| `ci-ok`    | aggregates the results: red if a job that ran failed, green if all succeeded or were skipped                                             | always                                   |
 
 A PR that only touches documentation skips `frontend` and `backend`, and `ci-ok` stays green. A new commit on a PR cancels the running execution. `nx affected` compares the PR with its target branch: only the touched projects are checked.
 
@@ -264,25 +278,25 @@ Dependabot (`.github/dependabot.yml`) proposes npm, Maven, GitHub Actions and Do
 
 ### Manual settings for `main` protection
 
-To be applied by the maintainer in *Settings > Rules* (or *Branches*); the CI does not change them:
+To be applied by the maintainer in _Settings > Rules_ (or _Branches_); the CI does not change them:
 
 1. Require a pull request before merging (no direct push to `main`).
 2. Require the `ci-ok` check (the only required one: a skipped job never blocks a PR) and up-to-date branches.
 3. Block force pushes.
 4. Forbid deleting `main`.
-5. In *Settings > Actions > General*: `GITHUB_TOKEN` read-only by default, and approval required for workflows from outside contributors.
+5. In _Settings > Actions > General_: `GITHUB_TOKEN` read-only by default, and approval required for workflows from outside contributors.
 
 ## Docker images
 
 Five images, one per deployable part, published on GHCR as `ghcr.io/<owner>/soukly-<name>:<full commit sha>` for `linux/amd64` and `linux/arm64`. There is no `latest` tag; version tags (`v1.2.0`) come with `deploy-prod`. An image holds nothing specific to an environment: the same image runs in dev, then in prod, configured by environment variables.
 
-| Image | Built from | Port | Notes |
-| --- | --- | --- | --- |
-| `soukly-gateway` | `backend/Dockerfile`, `SERVICE=gateway` | 8080 | |
-| `soukly-user-service` | `backend/Dockerfile`, `SERVICE=user-service` | 8081 | |
-| `soukly-listing-service` | `backend/Dockerfile`, `SERVICE=listing-service` | 8082 | `libvips-tools` (photos, ANN-02) |
+| Image                     | Built from                                       | Port | Notes                                      |
+| ------------------------- | ------------------------------------------------ | ---- | ------------------------------------------ |
+| `soukly-gateway`          | `backend/Dockerfile`, `SERVICE=gateway`          | 8080 |                                            |
+| `soukly-user-service`     | `backend/Dockerfile`, `SERVICE=user-service`     | 8081 |                                            |
+| `soukly-listing-service`  | `backend/Dockerfile`, `SERVICE=listing-service`  | 8082 | `libvips-tools` (photos, ANN-02)           |
 | `soukly-social-publisher` | `backend/Dockerfile`, `SERVICE=social-publisher` | 8083 | `libvips-tools` (Instagram images, SOC-05) |
-| `soukly-frontend` | `frontend/Dockerfile` | 8080 | shell and the 3 remotes, served by Caddy |
+| `soukly-frontend`         | `frontend/Dockerfile`                            | 8080 | shell and the 3 remotes, served by Caddy   |
 
 - **Java images**: built with JDK 21, run on the Temurin 21 JRE (Ubuntu 24.04 "noble"), base images pinned by tag and digest. The jar is split into Spring Boot layers (dependencies, loader, snapshot dependencies, application), so a new commit usually only changes the last layer. The process runs as UID `10001` with `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75`.
 - **Front-end image**: Caddy on port 8080, as UID `10001`. The shell is served at `/`, each remote at `/remotes/<mfe>/`. Every application route (`/fr/...`, `/ar/listings/123`, `/r/<ref>`, `/oauth/<network>/callback`) gets the shell's `index.html`; `/remotes/**` and a missing file with an extension get a `404`. `index.html`, `federation.manifest.json`, `remoteEntry.json` and the translations are `no-cache`; files with a content hash in their name are cached for a year (`immutable`).
@@ -303,7 +317,7 @@ docker run --rm -p 8080:8080 -e PUBLIC_BASE_URL=http://localhost:8080 soukly-fro
 
 ### Publishing with `build-images`
 
-`.github/workflows/build-images.yml` only runs by hand (*Actions > build-images > Run workflow*) or when called by `deploy-dev` and `deploy-prod`; never on a push, a PR or a schedule.
+`.github/workflows/build-images.yml` only runs by hand (_Actions > build-images > Run workflow_) or when called by `deploy-dev` and `deploy-prod`; never on a push, a PR or a schedule.
 
 - Inputs: `ref` (branch, tag or SHA, default `main`) and `force` (default `false`). Output for a calling workflow: `sha`, the full commit SHA.
 - An image already published for that SHA is not rebuilt (unless `force`); when all 5 exist, the run succeeds with "Images already present".
@@ -312,7 +326,7 @@ docker run --rm -p 8080:8080 -e PUBLIC_BASE_URL=http://localhost:8080 soukly-fro
 
 ### Making the packages public (once)
 
-GHCR creates a package as **private** the first time it is pushed. After the first `build-images` run, for each of the 5 `soukly-*` packages: *GitHub profile > Packages > soukly-<name> > Package settings > Danger zone > Change visibility > Public*. The VM then pulls the images without credentials. The `org.opencontainers.image.source` label links each package to this repository.
+GHCR creates a package as **private** the first time it is pushed. After the first `build-images` run, for each of the 5 `soukly-*` packages: _GitHub profile > Packages > soukly-<name> > Package settings > Danger zone > Change visibility > Public_. The VM then pulls the images without credentials. The `org.opencontainers.image.source` label links each package to this repository.
 
 ## VM (dev and prod)
 
@@ -320,8 +334,8 @@ One Ubuntu VM (Oracle Cloud Always Free by default, or any provider) runs the `d
 
 - [`infra/vm/README.md`](infra/vm/README.md): creating the VM, `infra/vm/setup.sh` (idempotent preparation), first launch, switching to the real domain, operations.
 - [`infra/backup/README.md`](infra/backup/README.md): nightly backup of the prod databases to object storage (7 days) and the restore procedure.
-- **Deploying to dev**: *Actions > deploy-dev > Run workflow*, with any branch, tag or commit; if the new version does not start, the VM returns to the previous one ([`infra/vm/README.md`](infra/vm/README.md#7-deploy-to-dev)). Tests of the VM script: `bash infra/vm/tests/deploy.test.sh`.
-- **Putting in prod**: *Actions > deploy-prod > Run workflow* from `main`, after your approval; prod databases are backed up first, the commit must have been deployed in dev, and a successful deployment is tagged `vX.Y.Z` with a GitHub release ([`infra/vm/README.md`](infra/vm/README.md#8-put-in-prod)). Tests of the version and release-notes scripts: `bash scripts/release/release.test.sh`.
+- **Deploying to dev**: _Actions > deploy-dev > Run workflow_, with any branch, tag or commit; if the new version does not start, the VM returns to the previous one ([`infra/vm/README.md`](infra/vm/README.md#7-deploy-to-dev)). Tests of the VM script: `bash infra/vm/tests/deploy.test.sh`.
+- **Putting in prod**: _Actions > deploy-prod > Run workflow_ from `main`, after your approval; prod databases are backed up first, the commit must have been deployed in dev, and a successful deployment is tagged `vX.Y.Z` with a GitHub release ([`infra/vm/README.md`](infra/vm/README.md#8-put-in-prod)). Tests of the version and release-notes scripts: `bash scripts/release/release.test.sh`.
 
 ```bash
 docker compose -p soukly-edge --env-file /opt/soukly/edge/.env -f infra/edge/compose.yml up -d --wait

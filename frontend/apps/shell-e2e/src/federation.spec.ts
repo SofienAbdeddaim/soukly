@@ -1,9 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { fakeAccountApi } from './support/fake-api';
 
 test.describe('remote loading', () => {
   test('an unavailable remote shows the error page, then loads after "Réessayer"', async ({
     page,
   }) => {
+    // A member: the publish pages need a session.
+    await fakeAccountApi(page, { signedIn: true });
     // mfe-publish "stopped": every request to its dev server is refused.
     const publishOrigin = 'http://localhost:4203/**';
     await page.route(publishOrigin, (route) => route.abort('connectionrefused'));
@@ -56,7 +59,7 @@ test.describe('remote loading', () => {
     await page.goto('/');
     await expect(page.getByTestId('coming-soon-mfe-catalog')).toBeVisible();
     await page.getByRole('banner').getByRole('link', { name: 'Se connecter' }).click();
-    await expect(page.getByTestId('coming-soon-mfe-account')).toBeVisible();
+    await expect(page.getByTestId('login-form')).toBeVisible();
 
     expect(angularCore).toHaveLength(1);
     expect(angularCore[0]).toMatch(/^http:\/\/localhost:4200\//);

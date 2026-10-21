@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { UiField, UiFieldControl } from './field';
+import { UiField, UiFieldControl, UiFieldPrefix, UiFieldSuffix } from './field';
 
 @Component({
   imports: [UiField, UiFieldControl],
@@ -79,4 +79,29 @@ describe('UiField', () => {
     expect(select.id).toBe('category');
     expect(element.querySelector('label[for=category]')?.textContent).toContain('Catégorie');
   });
+
+  it('projects a prefix before the control and a suffix button after it, left-to-right on demand', async () => {
+    const fixture = TestBed.createComponent(AddonsHost);
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    const group = element.querySelector('.ui-field__group') as HTMLElement;
+    const children = Array.from(group.children);
+
+    expect(group.getAttribute('dir')).toBe('ltr');
+    expect(children.map((child) => child.tagName)).toEqual(['SPAN', 'INPUT', 'BUTTON']);
+    expect(children[0].classList).toContain('ui-field__prefix');
+    expect(children[2].classList).toContain('ui-field__suffix');
+  });
 });
+
+@Component({
+  imports: [UiField, UiFieldControl, UiFieldPrefix, UiFieldSuffix],
+  template: `
+    <ui-field label="Téléphone" ltr>
+      <button uiFieldSuffix type="button" aria-label="Effacer">x</button>
+      <input uiControl type="tel" />
+      <span uiFieldPrefix>+216</span>
+    </ui-field>
+  `,
+})
+class AddonsHost {}

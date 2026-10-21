@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
@@ -72,7 +73,8 @@ class LoginTests extends IntegrationTest {
         // Never in the body, and only its hash in the database.
         String body = result.getResponse().getContentAsString();
         assertThat(body).doesNotContain(refreshToken);
-        assertThat(JSON.readValue(body, Map.class)).containsOnlyKeys("accessToken", "tokenType", "expiresIn", "user");
+        assertThat(JSON.readValue(body, Map.class)).containsOnlyKeys("accessToken", "tokenType", "expiresIn", "user",
+                "firstLogin");
         Map<String, Object> stored = jdbc.queryForMap("SELECT * FROM refresh_tokens");
         assertThat(stored.get("token_hash")).isEqualTo(sha256(refreshToken));
         assertThat(stored.get("user_id")).isEqualTo(userId);
@@ -103,6 +105,39 @@ class LoginTests extends IntegrationTest {
         assertThat(Duration.between(claims.getIssueTime().toInstant(), claims.getExpirationTime().toInstant()))
                 .isEqualTo(Duration.ofMinutes(15));
         assertThat(jwt.getPayload().toString()).doesNotContain(EMAIL, "Amira", "+216");
+    }
+
+    // --- First login (AUTH-03): the front end offers the welcome screen once -------------------------------
+
+    @Test
+    void onlyTheFirstLoginOfAnAccountIsFlaggedAndARefreshNeverIs() throws Exception {
+        UUID userId = createAccount(EMAIL, PASSWORD, "ACTIVE");
+
+        MvcResult first = calls.login(EMAIL, PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstLogin").value(true))
+                .andReturn();
+        assertThat(jdbc.queryForObject("SELECT last_login_at FROM users WHERE id = ?", Timestamp.class,
+                userId).toInstant()).isEqualTo(clock.instant());
+
+        calls.refresh(SessionCalls.refreshToken(first), FRONT_ORIGIN)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstLogin").value(false));
+
+        clock.advance(Duration.ofMinutes(5));
+        calls.login(EMAIL, PASSWORD)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstLogin").value(false));
+        assertThat(jdbc.queryForObject("SELECT last_login_at FROM users WHERE id = ?", Timestamp.class,
+                userId).toInstant()).isEqualTo(clock.instant());
+    }
+
+    @Test
+    void failedOrRefusedLoginsDoNotUseUpTheFirstLogin() throws Exception {
+        createAccount(EMAIL, PASSWORD, "ACTIVE");
+        calls.login(EMAIL, "Not-the-right-one-2026").andExpect(status().isUnauthorized());
+
+        calls.login(EMAIL, PASSWORD).andExpect(jsonPath("$.firstLogin").value(true));
     }
 
     // --- Scenario: invalid credentials ---------------------------------------------------------------------
