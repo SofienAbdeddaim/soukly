@@ -1,0 +1,61 @@
+<form
+  class="card"
+  novalidate
+  aria-labelledby="profile-info-title"
+  (submit)="onSubmit($event)"
+  data-testid="profile-info-form"
+>
+  <h2 id="profile-info-title" class="card__title">
+    {{ 'account.profile.info.title' | transloco }}
+  </h2>
+
+  @if (generalError(); as key) {
+  <ui-alert type="error" data-testid="profile-info-error">{{ key | transloco }}</ui-alert>
+  }
+
+  <fieldset class="card__fields" [disabled]="submitting()">
+    <ui-field
+      [label]="'account.register.display-name' | transloco"
+      [error]="errorKey(form.displayName) | transloco"
+      controlId="profile-display-name"
+      required
+    >
+      <input uiControl type="text" autocomplete="name" [formField]="form.displayName" />
+    </ui-field>
+
+    <ui-field
+      [label]="'account.register.phone' | transloco"
+      [hint]="'account.profile.info.phone-hint' | transloco"
+      [error]="errorKey(form.phone) | transloco"
+      controlId="profile-phone"
+      required
+      ltr
+    >
+      <span uiFieldPrefix aria-hidden="true">+216</span>
+      <input
+        uiControl
+        type="tel"
+        inputmode="numeric"
+        autocomplete="tel-national"
+        [formField]="form.phone"
+      />
+    </ui-field>
+
+    <ui-field
+      [label]="'account.profile.info.email-language' | transloco"
+      [hint]="'account.profile.info.email-language-hint' | transloco"
+      [error]="errorKey(form.preferredLanguage) | transloco"
+      controlId="profile-language"
+    >
+      <select uiControl [formField]="form.preferredLanguage">
+        @for (language of languages; track language.code) {
+        <option [value]="language.code" [attr.lang]="language.code">{{ language.name }}</option>
+        }
+      </select>
+    </ui-field>
+
+    <button ui-button type="submit" size="lg" [loading]="submitting()">
+      {{ 'account.profile.info.save' | transloco }}
+    </button>
+  </fieldset>
+</form>

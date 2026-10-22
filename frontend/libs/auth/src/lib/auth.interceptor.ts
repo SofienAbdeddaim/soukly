@@ -28,6 +28,7 @@ const SESSION_PATHS = [
   '/users/verify-email/resend',
   '/users/password/forgot',
   '/users/password/reset',
+  '/users/email/confirm',
 ].map((path) => `${API_PREFIX}${path}`);
 
 /**

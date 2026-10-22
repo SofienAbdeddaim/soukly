@@ -51,7 +51,7 @@ import { LocalePathPipe, LocaleService } from '@soukly/i18n';
       <li>
         <a
           class="flex min-h-11 items-center rounded-sm px-3 text-text no-underline hover:bg-surface-muted"
-          [routerLink]="'/account' | localePath"
+          [routerLink]="'/account/profile' | localePath"
           (click)="open.set(false)"
         >
           {{ 'header.my-account' | transloco }}

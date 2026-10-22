@@ -1,0 +1,76 @@
+<app-page-header
+  titleId="delete-title"
+  [title]="'account.delete.title' | transloco"
+  back="/account/profile"
+  [backLabel]="'account.profile.back' | transloco"
+/>
+
+<section class="page" aria-labelledby="delete-title">
+  <p class="page__text">
+    {{ 'account.delete.intro-before' | transloco }}<strong
+      >{{ 'account.delete.intro-final' | transloco }}</strong
+    >{{ 'account.delete.intro-after' | transloco }}
+  </p>
+  <ul class="consequences" data-testid="delete-consequences">
+    <li>{{ listingsKey() | transloco: { count: listingCount() } }}</li>
+    <li>{{ 'account.delete.consequences.sessions' | transloco }}</li>
+    <li>{{ 'account.delete.consequences.purge' | transloco }}</li>
+    <li>{{ 'account.delete.consequences.networks' | transloco }}</li>
+  </ul>
+
+  @if (generalError(); as key) {
+  <ui-alert type="error" data-testid="delete-error">{{ key | transloco }}</ui-alert>
+  }
+
+  <form class="form" novalidate (submit)="onSubmit($event)" data-testid="delete-form">
+    <fieldset class="form__fields" [disabled]="submitting()">
+      <ui-field
+        [label]="'account.common.password' | transloco"
+        [error]="errorKey(form.currentPassword) | transloco"
+        controlId="delete-password"
+        required
+      >
+        <input
+          uiControl
+          [type]="showPassword() ? 'text' : 'password'"
+          autocomplete="current-password"
+          [formField]="form.currentPassword"
+        />
+        <button
+          uiFieldSuffix
+          type="button"
+          [attr.aria-label]="'account.common.show-password' | transloco"
+          [attr.aria-pressed]="showPassword()"
+          (click)="showPassword.set(!showPassword())"
+        >
+          @if (showPassword()) {
+          <svg lucideEyeOff [size]="20" aria-hidden="true"></svg>
+          } @else {
+          <svg lucideEye [size]="20" aria-hidden="true"></svg>
+          }
+        </button>
+      </ui-field>
+
+      <ui-checkbox [error]="errorKey(form.understood) | transloco" controlId="delete-understood">
+        <input
+          uiCheckboxControl
+          type="checkbox"
+          aria-required="true"
+          [formField]="form.understood"
+        />
+        {{ 'account.delete.understood' | transloco }}
+      </ui-checkbox>
+
+      <button ui-button type="submit" variant="danger" size="lg" [loading]="submitting()">
+        {{ 'account.delete.submit' | transloco }}
+      </button>
+      <a
+        class="page__link page__center keep"
+        [routerLink]="'/account/profile' | localePath"
+        data-testid="delete-keep"
+      >
+        {{ 'account.delete.keep' | transloco }}
+      </a>
+    </fieldset>
+  </form>
+</section>

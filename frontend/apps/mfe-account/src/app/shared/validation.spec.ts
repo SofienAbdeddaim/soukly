@@ -1,4 +1,4 @@
-import { isEmailFormat, tunisianDigits } from './validation';
+import { isEmailFormat, nationalPhone, tunisianDigits } from './validation';
 
 describe('validation helpers', () => {
   it.each([
@@ -13,6 +13,11 @@ describe('validation helpers', () => {
 
   it.each(['1234', '20 123 45', '201234567', '2O123456', ''])('refuses %j', (input) => {
     expect(tunisianDigits(input)).toBeNull();
+  });
+
+  it('shows an E.164 Tunisian number as typed after +216', () => {
+    expect(nationalPhone('+21698765432')).toBe('98 765 432');
+    expect(tunisianDigits(nationalPhone('+21698765432'))).toBe('98765432');
   });
 
   it('checks the usual email format', () => {

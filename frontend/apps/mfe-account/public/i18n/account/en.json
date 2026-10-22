@@ -6,7 +6,9 @@
   "common": {
     "email": "Email",
     "password": "Password",
-    "show-password": "Show password"
+    "show-password": "Show password",
+    "close": "Close",
+    "current-password": "Current password"
   },
   "errors": {
     "displayName": {
@@ -15,7 +17,8 @@
     },
     "email": {
       "required": "Enter your email address.",
-      "invalid": "Invalid email address, for example name@example.tn."
+      "invalid": "Invalid email address, for example name@example.tn.",
+      "unchanged": "This is already the address of your account."
     },
     "phone": {
       "required": "Enter your phone number.",
@@ -32,7 +35,18 @@
     },
     "too-many-requests": "Too many requests in a short time. Wait a moment, then try again.",
     "unexpected": "Something went wrong. Check your connection, then try again.",
-    "too-many-attempts": "Too many attempts, please try again in a few minutes."
+    "too-many-attempts": "Too many attempts, please try again in a few minutes.",
+    "current-password": {
+      "required": "Enter your current password.",
+      "invalid": "Incorrect current password."
+    },
+    "preferredLanguage": {
+      "required": "Choose the language of the emails.",
+      "invalid": "Choose the language of the emails."
+    },
+    "delete": {
+      "understood": "Tick the box to confirm the deletion."
+    }
   },
   "register": {
     "title": "Create an account",
@@ -233,5 +247,82 @@
     "title": "This link is no longer valid",
     "text": "It has expired, has already been used, or a newer link was sent. Ask for a new one: it will be valid for 1 hour.",
     "new-link": "Ask for a new link"
+  },
+  "profile": {
+    "title": "My profile",
+    "back": "Back to my profile",
+    "member-since": "Member since {{ date }}",
+    "links": "My account",
+    "logout": "Log out",
+    "load-error": "Your profile could not be loaded. Check your connection.",
+    "saved": "Profile updated",
+    "info": {
+      "title": "My details",
+      "phone-hint": "Shown to signed-in members on all your listings.",
+      "email-language": "Language of the emails",
+      "email-language-hint": "The site keeps the language of its address.",
+      "save": "Save"
+    },
+    "security": {
+      "title": "Sign-in and security",
+      "pending": "Waiting for confirmation:",
+      "cancel-change": "Cancel",
+      "change": "Change",
+      "change-email": "Change email",
+      "change-password": "Change password"
+    }
+  },
+  "email-change": {
+    "title": "Change email",
+    "current": "Current address:",
+    "new-email": "New email address",
+    "submit": "Send the confirmation link",
+    "sent-title": "Confirm your new address.",
+    "sent-before": "We sent a link to",
+    "sent-after": ", valid for 24 hours. Until then, you still sign in with the current one.",
+    "notice-sent": "Your current address received a notice.",
+    "cancel": "Cancel this change",
+    "cancelled": "Email change cancelled"
+  },
+  "password-change": {
+    "title": "Change password",
+    "other-devices": "Your other devices will be signed out. This one stays signed in.",
+    "submit": "Save the password",
+    "changed": "Password changed. Your other devices are signed out."
+  },
+  "delete": {
+    "title": "Delete my account",
+    "intro-before": "Deletion is ",
+    "intro-final": "permanent",
+    "intro-after": ". Here is what will happen:",
+    "consequences": {
+      "listings": {
+        "zero": "you have no listing at the moment;",
+        "one": "your listing disappears from the site at once;",
+        "two": "your {{ count }} listings disappear from the site at once;",
+        "few": "your {{ count }} listings disappear from the site at once;",
+        "many": "your {{ count }} listings disappear from the site at once;",
+        "other": "your {{ count }} listings disappear from the site at once;"
+      },
+      "listings-unknown": "all your listings disappear from the site at once;",
+      "sessions": "you are signed out of all your devices;",
+      "purge": "your data and photos are erased within 30 days;",
+      "networks": "the posts Soukly made on your Facebook Page or Instagram are removed as far as possible."
+    },
+    "understood": "I understand that my account and my listings will be deleted for good.",
+    "submit": "Delete my account",
+    "keep": "Keep my account",
+    "deleted": "Your account has been deleted"
+  },
+  "confirm-email": {
+    "checking": "Confirming your new address…",
+    "confirmed-title": "New address confirmed",
+    "confirmed-text": "From now on, sign in with this address. Your Soukly emails will go there.",
+    "to-profile": "Go to my profile",
+    "taken-title": "This address is already in use",
+    "taken-text": "Another account has used this address since your request. Your address has not changed.",
+    "error-title": "The link cannot be checked right now",
+    "invalid-text": "It expired (24 hours), was already used, or a newer request replaced it. Make the request again from your profile.",
+    "new-request": "Change email"
   }
 }

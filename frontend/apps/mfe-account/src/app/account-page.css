@@ -116,6 +116,32 @@
   display: none;
 }
 
+.banner {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-success-surface);
+  line-height: 1.5;
+}
+
+.banner__icon {
+  flex: none;
+  color: var(--color-success);
+}
+
+.banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-inline-size: 0;
+}
+
+.banner__email {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .visually-hidden {
   position: absolute;
   inline-size: 1px;

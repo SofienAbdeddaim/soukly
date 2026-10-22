@@ -1,0 +1,95 @@
+/*
+ * Cards of the profile page (AUTH-05). Component styles only, tokens of libs/ui, logical
+ * properties only (RTL).
+ */
+:host {
+  display: block;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.card__title {
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.card__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.row__text {
+  min-inline-size: 0;
+}
+
+.row__label {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.row__value {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.row__pending {
+  margin-block-start: 2px;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.row__action,
+.row__inline-action {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-block-size: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.row__inline-action {
+  display: inline-flex;
+  min-block-size: 44px;
+  font-size: 0.8125rem;
+}
+
+.row__action:hover,
+.row__inline-action:hover {
+  color: var(--color-primary-hover);
+}
+
+.row__action:disabled,
+.row__inline-action:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
