@@ -36,7 +36,7 @@ class CaptionBuilderTest {
         assertThat(plain(caption.text())).isEqualTo("""
                 Peugeot 208 diesel, première main
                 32.000 د.ت. · قابل للتفاوض
-                صفاقس, ساقية الزيت
+                صفاقس، ساقية الزيت
 
                 Première main, carnet d'entretien complet chez le concessionnaire.
 

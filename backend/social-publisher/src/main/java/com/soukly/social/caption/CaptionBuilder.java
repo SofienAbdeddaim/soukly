@@ -77,7 +77,7 @@ public class CaptionBuilder {
         if (governorate == null) {
             return null;
         }
-        return delegation == null || delegation.equals(governorate) ? governorate : governorate + ", " + delegation;
+        return delegation == null || delegation.equals(governorate) ? governorate : governorate + input.language().listSeparator() + delegation;
     }
 
     private static List<String> hashtags(CaptionInput input) {

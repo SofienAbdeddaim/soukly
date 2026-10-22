@@ -68,7 +68,7 @@ class CaptionPreviewApiTests extends IntegrationTest {
                 .getContentAsString(java.nio.charset.StandardCharsets.UTF_8).transform(json::readTree)
                 .get("text").asString();
 
-        assertThat(plain(text)).contains("32.000 د.ت. · قابل للتفاوض", "صفاقس, ساقية الزيت", "شاهد الإعلان:",
+        assertThat(plain(text)).contains("32.000 د.ت. · قابل للتفاوض", "صفاقس، ساقية الزيت", "شاهد الإعلان:",
                 "#Soukly #صفاقس #سيارات");
     }
 

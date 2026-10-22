@@ -10,19 +10,19 @@ import java.util.Optional;
  */
 public enum CaptionLanguage {
 
-    FR("fr", "Négociable", "Sur devis", "Voir l'annonce : ") {
+    FR("fr", "Négociable", "Sur devis", "Voir l'annonce : ", ", ") {
         @Override
         String price(long dinars) {
             return group(dinars, NARROW_NO_BREAK_SPACE) + NO_BREAK_SPACE + "DT";
         }
     },
-    AR("ar", "قابل للتفاوض", "حسب الطلب", "شاهد الإعلان: ") {
+    AR("ar", "قابل للتفاوض", "حسب الطلب", "شاهد الإعلان: ", "، ") {
         @Override
         String price(long dinars) {
             return group(dinars, '.') + NO_BREAK_SPACE + "د.ت.";
         }
     },
-    EN("en", "Negotiable", "On quote", "See the listing: ") {
+    EN("en", "Negotiable", "On quote", "See the listing: ", ", ") {
         @Override
         String price(long dinars) {
             return "TND" + NO_BREAK_SPACE + group(dinars, ',');
@@ -36,12 +36,14 @@ public enum CaptionLanguage {
     private final String negotiable;
     private final String onQuote;
     private final String seeListing;
+    private final String listSeparator;
 
-    CaptionLanguage(String code, String negotiable, String onQuote, String seeListing) {
+    CaptionLanguage(String code, String negotiable, String onQuote, String seeListing, String listSeparator) {
         this.code = code;
         this.negotiable = negotiable;
         this.onQuote = onQuote;
         this.seeListing = seeListing;
+        this.listSeparator = listSeparator;
     }
 
     /** {@code fr}, {@code ar} or {@code en}. */
@@ -75,6 +77,11 @@ public enum CaptionLanguage {
 
     String seeListing() {
         return seeListing;
+    }
+
+    /** Between the governorate and the delegation: the Arabic comma in Arabic. */
+    String listSeparator() {
+        return listSeparator;
     }
 
     private static String group(long value, char separator) {
