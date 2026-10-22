@@ -329,7 +329,7 @@
     "title": "Mes réseaux",
     "back": "Retour au profil",
     "back-to-networks": "Retour à mes réseaux",
-    "intro": "Reliez votre Page Facebook pour y partager vos annonces en un clic. Soukly ne publie jamais sans votre accord.",
+    "intro": "Reliez vos réseaux pour y partager vos annonces en un clic. Soukly ne publie jamais sans votre accord.",
     "connect": "Relier",
     "not-connected": "Non reliée",
     "load-error": "Impossible de charger vos réseaux. Vérifiez votre connexion puis réessayez.",
@@ -344,11 +344,21 @@
     },
     "instagram": {
       "name": "Instagram",
-      "soon": "Bientôt disponible"
+      "not-connected": "Non relié",
+      "hint": "Compte professionnel (Business ou Créateur) requis. Pas besoin de Page Facebook.",
+      "connected-on": "Instagram · relié le {{date}}",
+      "change": "Changer de compte",
+      "disconnect": "Déconnecter",
+      "needs-reconnect": "Instagram a retiré l'autorisation. Reliez le compte à nouveau.",
+      "reconnect": "Relier à nouveau"
     },
     "connected": {
       "title": "Page reliée.",
       "text": "Vous pourrez la choisir au moment de publier une annonce."
+    },
+    "instagram-connected": {
+      "title": "Instagram relié.",
+      "text": "Vous pourrez le choisir au moment de publier une annonce."
     },
     "failure": {
       "retry": "Réessayer",
@@ -388,6 +398,39 @@
         "text": "Vérifiez votre connexion internet, puis réessayez."
       }
     },
+    "instagram-failure": {
+      "oauth-cancelled": {
+        "title": "Vous avez annulé la connexion",
+        "text": "Votre compte Instagram n'est pas relié. Vous pouvez recommencer quand vous voulez."
+      },
+      "oauth-permission-missing": {
+        "title": "Soukly a besoin de l'autorisation de publier sur votre compte",
+        "text": "Sur Instagram, acceptez toutes les autorisations demandées par Soukly, puis réessayez."
+      },
+      "oauth-state-invalid": {
+        "title": "Ce lien de connexion a expiré",
+        "text": "Recommencez la connexion à Instagram depuis cette page."
+      },
+      "instagram-not-professional": {
+        "title": "Ce compte Instagram est personnel",
+        "text": "Pour publier vos annonces, votre compte doit être un compte professionnel. C'est gratuit et rapide :",
+        "step-1": "dans Instagram, ouvrez « Paramètres et activité » depuis votre profil ;",
+        "step-2": "choisissez « Type de compte et outils » ;",
+        "step-3": "touchez « Passer à un compte professionnel », puis choisissez Business ou Créateur."
+      },
+      "instagram-unavailable": {
+        "title": "Instagram n'a pas terminé la connexion",
+        "text": "Réessayez dans un instant."
+      },
+      "instagram-not-configured": {
+        "title": "La connexion à Instagram n'est pas encore disponible",
+        "text": "Elle arrive bientôt sur Soukly."
+      },
+      "unknown": {
+        "title": "La connexion n'a pas abouti",
+        "text": "Vérifiez votre connexion internet, puis réessayez."
+      }
+    },
     "disconnect": {
       "title": "Déconnecter cette Page ?",
       "text-before": "Soukly ne partagera plus vos annonces sur ",
@@ -396,6 +439,12 @@
       "cancel": "Annuler",
       "done": "Page déconnectée.",
       "error": "La Page n'a pas pu être déconnectée. Réessayez."
+    },
+    "disconnect-instagram": {
+      "title": "Déconnecter ce compte Instagram ?",
+      "text-after": ". Les publications déjà faites restent sur Instagram.",
+      "done": "Compte Instagram déconnecté.",
+      "error": "Le compte Instagram n'a pas pu être déconnecté. Réessayez."
     },
     "choose": {
       "title": "Choisir une Page",

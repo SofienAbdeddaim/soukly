@@ -1,28 +1,29 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { UiButton } from '@soukly/ui';
 
 export interface DisconnectDialogData {
-  /** Name of the connected Page. */
-  pageName: string;
+  network: 'facebook' | 'instagram';
+  /** Name of the connected Page, or "@username" of the Instagram account. */
+  name: string;
 }
 
 /**
- * "Disconnect this Page?" (SOC-01): an alert dialog, the safe "Cancel" focused first. Closes with
- * `true` when the member confirms.
+ * "Disconnect this Page?" (SOC-01) or "Disconnect this Instagram account?" (SOC-02): an alert
+ * dialog, the safe "Cancel" focused first. Closes with `true` when the member confirms.
  */
 @Component({
   selector: 'app-disconnect-dialog',
   imports: [TranslocoPipe, UiButton],
   template: `
     <h2 id="disconnect-dialog-title" class="disconnect__title">
-      {{ 'account.social.disconnect.title' | transloco }}
+      {{ keys() + '.title' | transloco }}
     </h2>
     <p id="disconnect-dialog-text" class="disconnect__text">
       {{ 'account.social.disconnect.text-before' | transloco
-      }}<bdi class="disconnect__name">{{ data.pageName }}</bdi
-      >{{ 'account.social.disconnect.text-after' | transloco }}
+      }}<bdi class="disconnect__name">{{ data.name }}</bdi
+      >{{ keys() + '.text-after' | transloco }}
     </p>
     <div class="disconnect__actions">
       <button
@@ -85,4 +86,11 @@ export interface DisconnectDialogData {
 export class DisconnectDialog {
   protected readonly data = inject<DisconnectDialogData>(DIALOG_DATA);
   protected readonly dialogRef = inject<DialogRef<boolean>>(DialogRef);
+
+  /** Texts of the network: the title and the end of the sentence. */
+  protected readonly keys = computed(() =>
+    this.data.network === 'instagram'
+      ? 'account.social.disconnect-instagram'
+      : 'account.social.disconnect',
+  );
 }

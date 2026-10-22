@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /**
- * Card of one social network on "My networks" (SOC-01): its logo, its name, a status line and
- * the actions projected by the network card that uses it. `attention` outlines a card that needs
+ * Card of one social network on "My networks" (SOC-01, SOC-02): its logo, its name, a status line
+ * and the actions projected by the network card that uses it. The name is isolated (`<bdi>`), so
+ * "@username" reads left to right in an Arabic page. `attention` outlines a card that needs
  * the member (connect again).
  */
 @Component({
@@ -17,7 +18,9 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
         {{ network() === 'facebook' ? 'f' : 'IG' }}
       </span>
       <div class="network-card__text">
-        <p class="network-card__name" [id]="nameId()">{{ name() }}</p>
+        <p class="network-card__name" [id]="nameId()">
+          <bdi>{{ name() }}</bdi>
+        </p>
         <p class="network-card__status" [class.network-card__status--attention]="attention()">
           {{ status() }}
         </p>

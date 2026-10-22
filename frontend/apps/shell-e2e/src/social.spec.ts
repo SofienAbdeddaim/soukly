@@ -1,12 +1,18 @@
 import { expect, Page, test } from '@playwright/test';
 import { expectNoSeriousA11yViolations } from './support/axe';
 import { fakeAccountApi } from './support/fake-api';
-import { connection, FakeSocialApi, fakeSocialApi } from './support/fake-social-api';
+import {
+  connection,
+  FakeSocialApi,
+  fakeSocialApi,
+  instagramConnection,
+} from './support/fake-social-api';
 
 /**
- * "My networks" of SOC-01 with faked user-service and social-publisher: connection of a Facebook
- * Page through the return route `/oauth/facebook/callback`, choice among several Pages, failures and
- * disconnection. Facebook is never called (support/fake-social-api.ts).
+ * "My networks" of SOC-01 and SOC-02 with faked user-service and social-publisher: connection of a
+ * Facebook Page through the return route `/oauth/facebook/callback`, choice among several Pages,
+ * connection of an Instagram account through `/oauth/instagram/callback`, failures and
+ * disconnection. Facebook and Instagram are never called (support/fake-social-api.ts).
  */
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -26,10 +32,10 @@ test.describe('my networks', () => {
     const api = await open(page);
     await expect(page.getByRole('heading', { level: 1, name: 'Mes réseaux' })).toBeVisible();
     await expect(page.getByTestId('facebook-card')).toContainText('Non reliée');
-    await expect(page.getByTestId('instagram-card')).toContainText('Bientôt disponible');
+    await expect(page.getByTestId('instagram-card')).toContainText('Non relié');
     await expectNoSeriousA11yViolations(page);
 
-    await page.getByRole('button', { name: 'Relier' }).click();
+    await page.getByTestId('facebook-connect').click();
 
     await expect(page).toHaveURL('/fr/account/social');
     await expect(page.getByTestId('facebook-connected')).toContainText('Page reliée.');
@@ -46,7 +52,7 @@ test.describe('my networks', () => {
 
   test('a member who manages three Pages chooses one', async ({ page }) => {
     const api = await open(page, { scenario: 'several-pages' });
-    await page.getByRole('button', { name: 'Relier' }).click();
+    await page.getByTestId('facebook-connect').click();
 
     await expect(page).toHaveURL('/fr/account/social/facebook/page');
     await expect(page.getByRole('heading', { level: 1, name: 'Choisir une Page' })).toBeVisible();
@@ -66,7 +72,7 @@ test.describe('my networks', () => {
 
   test('cancelling on Facebook explains that nothing was connected', async ({ page }) => {
     await open(page, { scenario: 'cancelled' });
-    await page.getByRole('button', { name: 'Relier' }).click();
+    await page.getByTestId('facebook-connect').click();
 
     await expect(page).toHaveURL('/fr/account/social');
     const failure = page.getByTestId('facebook-failure');
@@ -80,7 +86,7 @@ test.describe('my networks', () => {
 
   test('a declined permission asks for it again', async ({ page }) => {
     const api = await open(page, { scenario: 'permission-missing' });
-    await page.getByRole('button', { name: 'Relier' }).click();
+    await page.getByTestId('facebook-connect').click();
 
     await expect(page.getByTestId('facebook-failure')).toContainText(
       "Soukly a besoin de l'autorisation de publier sur votre Page",
@@ -92,7 +98,7 @@ test.describe('my networks', () => {
 
   test('a member without a Page is told how to create one', async ({ page }) => {
     await open(page, { scenario: 'no-page' });
-    await page.getByRole('button', { name: 'Relier' }).click();
+    await page.getByTestId('facebook-connect').click();
 
     await expect(page.getByTestId('facebook-failure')).toContainText(
       'Vous ne gérez aucune Page Facebook',
@@ -137,11 +143,106 @@ test.describe('my networks', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'شبكاتي' })).toBeVisible();
     await expectNoSeriousA11yViolations(page);
 
-    await page.getByRole('button', { name: 'ربط' }).click();
+    await page.getByTestId('facebook-connect').click();
 
     await expect(page).toHaveURL('/ar/account/social');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     await expect(page.getByTestId('facebook-card')).toContainText('Sfax Auto Occasion');
+    expect(api.lang).toBe('ar');
+  });
+});
+
+test.describe('instagram', () => {
+  test('a member without a Facebook Page connects a Business account', async ({ page }) => {
+    const api = await open(page);
+    const card = page.getByTestId('instagram-card');
+    await expect(card).toContainText(
+      'Compte professionnel (Business ou Créateur) requis. Pas besoin de Page Facebook.',
+    );
+
+    await card.getByRole('button', { name: 'Relier' }).click();
+
+    await expect(page).toHaveURL('/fr/account/social');
+    await expect(page.getByTestId('instagram-connected')).toContainText('Instagram relié.');
+    await expect(card).toHaveAttribute('data-state', 'connected');
+    await expect(card).toContainText('@sfax.auto');
+    await expect(card).toContainText('Instagram · relié le 12 oct.');
+    await expect(page.getByTestId('facebook-card')).toContainText('Non reliée');
+    await expectNoSeriousA11yViolations(page);
+    expect(api.calls.find((call) => call.path === '/api/social/instagram/callback')?.body).toEqual({
+      code: 'fake-code',
+      state: 'fake-state',
+      error: null,
+    });
+  });
+
+  test('a personal account is told how to switch to a professional one', async ({ page }) => {
+    const api = await open(page, { instagramScenario: 'personal' });
+    await page.getByTestId('instagram-connect').click();
+
+    const failure = page.getByTestId('instagram-failure');
+    await expect(failure).toContainText('Ce compte Instagram est personnel');
+    await expect(failure.getByRole('listitem')).toHaveCount(3);
+    await expect(failure).toBeFocused();
+    await expectNoSeriousA11yViolations(page);
+
+    api.instagramScenario = 'business';
+    await failure.getByRole('button', { name: 'Réessayer' }).click();
+    await expect(page.getByTestId('instagram-card')).toHaveAttribute('data-state', 'connected');
+  });
+
+  test('cancelling on Instagram explains that nothing was connected', async ({ page }) => {
+    await open(page, { instagramScenario: 'cancelled' });
+    await page.getByTestId('instagram-connect').click();
+
+    const failure = page.getByTestId('instagram-failure');
+    await expect(failure).toContainText('Vous avez annulé la connexion');
+    await failure.getByRole('button', { name: 'Plus tard' }).click();
+    await expect(failure).toBeHidden();
+    await expect(page.getByTestId('instagram-card')).toContainText('Non relié');
+  });
+
+  test('with both networks connected, disconnecting Instagram keeps the Page', async ({ page }) => {
+    const api = await open(page, { facebook: connection(), instagram: instagramConnection() });
+    const card = page.getByTestId('instagram-card');
+    await expect(card).toContainText('@sfax.auto');
+    await expectNoSeriousA11yViolations(page);
+
+    await card.getByRole('button', { name: 'Déconnecter' }).click();
+    const dialog = page.getByRole('alertdialog', { name: 'Déconnecter ce compte Instagram ?' });
+    await expect(dialog).toContainText('@sfax.auto');
+    await dialog.getByRole('button', { name: 'Déconnecter' }).click();
+
+    await expect(page.getByText('Compte Instagram déconnecté.')).toBeVisible();
+    await expect(card).toContainText('Non relié');
+    await expect(page.getByTestId('facebook-card')).toContainText('Sfax Auto Occasion');
+    expect(api.calls.filter((call) => call.method === 'DELETE').map((call) => call.path)).toEqual([
+      '/api/social/instagram',
+    ]);
+  });
+
+  test('a token Instagram refused offers to connect again', async ({ page }) => {
+    await open(page, { instagram: { ...instagramConnection(), status: 'NEEDS_RECONNECT' } });
+
+    const card = page.getByTestId('instagram-card');
+    await expect(card).toHaveAttribute('data-state', 'needs-reconnect');
+    await expect(card.getByRole('button', { name: 'Relier à nouveau' })).toBeVisible();
+  });
+
+  test('in Arabic, the page is right to left and @username stays left to right', async ({
+    page,
+  }) => {
+    const api = await open(page, { facebook: connection() }, '/ar/account/social');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+
+    await page.getByTestId('instagram-connect').click();
+
+    await expect(page).toHaveURL('/ar/account/social');
+    const name = page.getByTestId('instagram-card').locator('bdi');
+    await expect(name).toHaveText('@sfax.auto');
+    // An isolated LTR run: "@" stays in front of the name in the RTL page
+    expect(await name.evaluate((element) => getComputedStyle(element).direction)).toBe('ltr');
+    await expectNoSeriousA11yViolations(page);
     expect(api.lang).toBe('ar');
   });
 });

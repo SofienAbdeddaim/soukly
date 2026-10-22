@@ -1,17 +1,23 @@
 import { Page, Route } from '@playwright/test';
 
 /**
- * Fakes social-publisher (SOC-01) in the browser, on top of `fakeAccountApi` (register it after: the
- * last route registered wins). Facebook itself is never opened: the `authorizeUrl` of "Connect"
- * leads straight back to `/oauth/facebook/callback`, as Facebook would after the member's answer.
+ * Fakes social-publisher (SOC-01, SOC-02) in the browser, on top of `fakeAccountApi` (register it
+ * after: the last route registered wins). Facebook and Instagram themselves are never opened: the
+ * `authorizeUrl` of "Connect" leads straight back to `/oauth/facebook/callback` or
+ * `/oauth/instagram/callback`, as the network would after the member's answer.
  */
 export type FacebookScenario =
   'one-page' | 'several-pages' | 'cancelled' | 'permission-missing' | 'no-page';
 
+export type InstagramScenario = 'business' | 'personal' | 'cancelled';
+
 export interface FakeSocialApi {
   scenario: FacebookScenario;
+  instagramScenario: InstagramScenario;
   /** Facebook connection of the member, null when not connected. */
   facebook: FakeConnection | null;
+  /** Instagram connection of the member, null when not connected. */
+  instagram: FakeConnection | null;
   /** Language sent by the last "Connect", given back by the callback. */
   lang: string;
   /** Pages of the choice in progress (`several-pages`). */
@@ -20,7 +26,7 @@ export interface FakeSocialApi {
 }
 
 export interface FakeConnection {
-  network: 'FACEBOOK';
+  network: 'FACEBOOK' | 'INSTAGRAM';
   status: 'CONNECTED' | 'NEEDS_RECONNECT';
   displayName: string;
   pictureUrl: string | null;
@@ -52,6 +58,16 @@ export function connection(name = 'Sfax Auto Occasion'): FakeConnection {
   };
 }
 
+export function instagramConnection(username = '@sfax.auto'): FakeConnection {
+  return {
+    network: 'INSTAGRAM',
+    status: 'CONNECTED',
+    displayName: username,
+    pictureUrl: null,
+    connectedAt: CONNECTED_AT,
+  };
+}
+
 const PROBLEMS: Partial<Record<FacebookScenario, string>> = {
   cancelled: 'oauth-cancelled',
   'permission-missing': 'oauth-permission-missing',
@@ -60,11 +76,15 @@ const PROBLEMS: Partial<Record<FacebookScenario, string>> = {
 
 export async function fakeSocialApi(
   page: Page,
-  options: Partial<Pick<FakeSocialApi, 'scenario' | 'facebook'>> = {},
+  options: Partial<
+    Pick<FakeSocialApi, 'scenario' | 'instagramScenario' | 'facebook' | 'instagram'>
+  > = {},
 ): Promise<FakeSocialApi> {
   const api: FakeSocialApi = {
     scenario: 'one-page',
+    instagramScenario: 'business',
     facebook: null,
+    instagram: null,
     lang: 'fr',
     pending: null,
     calls: [],
@@ -91,7 +111,11 @@ export async function fakeSocialApi(
     api.calls.push({ method, path, body });
 
     if (method === 'GET' && path === '/api/social/connections') {
-      return json(route, 200, api.facebook ? [api.facebook] : []);
+      return json(
+        route,
+        200,
+        [api.facebook, api.instagram].filter((connection) => connection !== null),
+      );
     }
     if (method === 'POST' && path === '/api/social/facebook/connect') {
       api.lang = (body as { lang: string }).lang;
@@ -131,6 +155,28 @@ export async function fakeSocialApi(
     }
     if (method === 'DELETE' && path === '/api/social/facebook') {
       api.facebook = null;
+      return route.fulfill({ status: 204 });
+    }
+    if (method === 'POST' && path === '/api/social/instagram/connect') {
+      api.lang = (body as { lang: string }).lang;
+      const answer =
+        api.instagramScenario === 'cancelled'
+          ? 'error=access_denied&state=fake-state'
+          : 'code=fake-code&state=fake-state';
+      return json(route, 200, { authorizeUrl: `/oauth/instagram/callback?${answer}` });
+    }
+    if (method === 'POST' && path === '/api/social/instagram/callback') {
+      if (api.instagramScenario === 'cancelled') {
+        return json(route, 400, problem('oauth-cancelled', 400, api.lang));
+      }
+      if (api.instagramScenario === 'personal') {
+        return json(route, 400, problem('instagram-not-professional', 400, api.lang));
+      }
+      api.instagram = instagramConnection();
+      return json(route, 200, { lang: api.lang, connection: api.instagram });
+    }
+    if (method === 'DELETE' && path === '/api/social/instagram') {
+      api.instagram = null;
       return route.fulfill({ status: 204 });
     }
     return json(route, 503, problem('unavailable', 503));

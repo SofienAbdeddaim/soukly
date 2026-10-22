@@ -1,23 +1,29 @@
 import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
 import { withLangPrefix } from '@soukly/i18n';
-import { FACEBOOK_CALLBACK_PATH } from '@soukly/social-data';
+import { FACEBOOK_CALLBACK_PATH, INSTAGRAM_CALLBACK_PATH } from '@soukly/social-data';
 import { loadRemoteRoutes } from './federation/load-remote-routes';
 import { NotFound } from './not-found/not-found';
 import { FacebookCallback, preferredLangGuard } from './oauth/facebook-callback';
+import { InstagramCallback } from './oauth/instagram-callback';
 
 /**
  * Routes of the shell, under the language prefix: "/fr/account/login", "/ar/publish/new"…
  * A URL without a supported prefix is redirected (see withLangPrefix in @soukly/i18n).
  * The legal pages (`/{lang}/legal/{slug}`, LEG-01) are static HTML served before the shell: an
- * unknown one reaches the shell and shows its 404 page. The return route of Facebook
- * (`/oauth/facebook/callback`, SOC-01) is the one page without a prefix: a single redirect URI is
- * declared at Meta.
+ * unknown one reaches the shell and shows its 404 page. The return routes of Facebook
+ * (`/oauth/facebook/callback`, SOC-01) and Instagram (`/oauth/instagram/callback`, SOC-02) are the
+ * only pages without a prefix: a single redirect URI per network is declared at Meta.
  */
 export function createShellRoutes(): Routes {
   return [
     {
       path: FACEBOOK_CALLBACK_PATH,
       component: FacebookCallback,
+      canActivate: [preferredLangGuard],
+    },
+    {
+      path: INSTAGRAM_CALLBACK_PATH,
+      component: InstagramCallback,
       canActivate: [preferredLangGuard],
     },
     ...withLangPrefix([

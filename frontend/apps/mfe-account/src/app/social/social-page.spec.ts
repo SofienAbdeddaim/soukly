@@ -18,6 +18,14 @@ const SFAX_AUTO: SocialConnection = {
   connectedAt: '2026-10-12T09:30:00Z',
 };
 
+const SFAX_INSTAGRAM: SocialConnection = {
+  network: 'INSTAGRAM',
+  status: 'CONNECTED',
+  displayName: '@sfax.auto',
+  pictureUrl: null,
+  connectedAt: '2026-10-12T09:30:00Z',
+};
+
 describe('SocialPage', () => {
   const go = vi.fn();
 
@@ -43,18 +51,118 @@ describe('SocialPage', () => {
     await harness.fixture.whenStable();
     const element = () => harness.routeNativeElement as HTMLElement;
     const card = () => element().querySelector('[data-testid=facebook-card]') as HTMLElement;
-    return { harness, http, element, card };
+    const instagram = () => element().querySelector('[data-testid=instagram-card]') as HTMLElement;
+    return { harness, http, element, card, instagram };
   }
 
-  it('shows the Facebook card "Not connected" and Instagram coming soon', async () => {
-    const { element, card } = await setup();
+  it('shows the Facebook and Instagram cards "Not connected"', async () => {
+    const { element, card, instagram } = await setup();
 
     expect(element().querySelector('h1')?.textContent).toContain('Mes réseaux');
     expect(card().dataset['state']).toBe('not-connected');
     expect(card().textContent).toContain('Non reliée');
     expect(card().textContent).toContain('Un profil personnel ne suffit pas');
-    expect(element().querySelector('[data-testid=instagram-card]')?.textContent).toContain(
-      'Bientôt disponible',
+    expect(instagram().dataset['state']).toBe('not-connected');
+    expect(instagram().textContent).toContain('Non relié');
+    expect(instagram().textContent).toContain(
+      'Compte professionnel (Business ou Créateur) requis. Pas besoin de Page Facebook.',
+    );
+  });
+
+  it('starts an Instagram connection in the language of the page', async () => {
+    const { harness, http, instagram } = await setup('/ar/account/social', [], 'ar');
+
+    (instagram().querySelector('[data-testid=instagram-connect]') as HTMLButtonElement).click();
+    const request = http.expectOne('/api/social/instagram/connect');
+    expect(request.request.body).toEqual({ lang: 'ar' });
+    request.flush({ authorizeUrl: 'https://www.instagram.com/oauth/authorize?state=abc' });
+    await settle();
+    await harness.fixture.whenStable();
+
+    expect(go).toHaveBeenCalledWith('https://www.instagram.com/oauth/authorize?state=abc');
+  });
+
+  it('shows the connected Instagram account next to a Facebook card left "Not connected"', async () => {
+    const { element, card, instagram } = await setup('/fr/account/social?instagram=connected', [
+      SFAX_INSTAGRAM,
+    ]);
+
+    expect(instagram().dataset['state']).toBe('connected');
+    expect(instagram().textContent).toContain('@sfax.auto');
+    expect(instagram().textContent).toContain('Instagram · relié le 12 oct.');
+    expect(instagram().querySelector('bdi')?.textContent).toBe('@sfax.auto');
+    expect(element().querySelector('[data-testid=instagram-connected]')?.textContent).toContain(
+      'Instagram relié.',
+    );
+    expect(card().dataset['state']).toBe('not-connected');
+    expect(TestBed.inject(Router).url).toBe('/fr/account/social');
+  });
+
+  it('offers "Connect again" when Instagram refused the token', async () => {
+    const { instagram } = await setup('/fr/account/social', [
+      { ...SFAX_INSTAGRAM, status: 'NEEDS_RECONNECT' },
+    ]);
+
+    expect(instagram().dataset['state']).toBe('needs-reconnect');
+    expect(instagram().textContent).toContain("Instagram a retiré l'autorisation");
+    expect(instagram().querySelector('[data-testid=instagram-reconnect]')?.textContent).toContain(
+      'Relier à nouveau',
+    );
+  });
+
+  it('explains how to switch a personal Instagram account to a professional one', async () => {
+    const { element } = await setup('/fr/account/social?instagram=instagram-not-professional');
+
+    const panel = element().querySelector('[data-testid=instagram-failure]') as HTMLElement;
+    expect(panel.getAttribute('role')).toBe('alert');
+    expect(panel.textContent).toContain('Ce compte Instagram est personnel');
+    expect(panel.querySelectorAll('[data-testid=instagram-steps] li')).toHaveLength(3);
+    expect(panel.textContent).toContain('Passer à un compte professionnel');
+    expect(panel.querySelector('[data-testid=instagram-retry]')?.textContent).toContain(
+      'Réessayer',
+    );
+    expect(panel.querySelector('[data-testid=instagram-failure-dismiss]')?.textContent).toContain(
+      'Plus tard',
+    );
+  });
+
+  it.each([
+    ['oauth-cancelled', 'Vous avez annulé la connexion'],
+    ['oauth-permission-missing', "Soukly a besoin de l'autorisation de publier sur votre compte"],
+    ['instagram-unavailable', "Instagram n'a pas terminé la connexion"],
+  ])('explains the Instagram failure %s', async (failure, title) => {
+    const { element } = await setup(`/fr/account/social?instagram=${failure}`);
+
+    expect(element().querySelector('[data-testid=instagram-failure]')?.textContent).toContain(
+      title,
+    );
+    expect(element().querySelector('[data-testid=facebook-failure]')).toBeNull();
+  });
+
+  it('disconnects only Instagram when both networks are connected', async () => {
+    const { harness, http, card, instagram } = await setup('/fr/account/social', [
+      SFAX_AUTO,
+      SFAX_INSTAGRAM,
+    ]);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    (instagram().querySelector('[data-testid=instagram-disconnect]') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    const dialog = document.querySelector('[data-testid=disconnect-dialog]') as HTMLElement;
+    expect(dialog.textContent).toContain('Déconnecter ce compte Instagram ?');
+    expect(dialog.textContent).toContain('@sfax.auto');
+    (dialog.querySelector('[data-testid=disconnect-confirm]') as HTMLButtonElement).click();
+    await settle();
+    const request = http.expectOne('/api/social/instagram');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await settle();
+    await harness.fixture.whenStable();
+
+    expect(instagram().dataset['state']).toBe('not-connected');
+    expect(card().dataset['state']).toBe('connected');
+    expect(show).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Compte Instagram déconnecté.' }),
     );
   });
 
