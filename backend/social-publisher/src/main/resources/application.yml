@@ -1,12 +1,78 @@
 server:
-  port: 8083
+  port: ${SOCIAL_PUBLISHER_PORT:8083}
 
 spring:
   application:
     name: social-publisher
+  datasource:
+    # Local defaults match docker-compose.yml (SETUP-02); the password comes from SPRING_DATASOURCE_PASSWORD
+    # or, when the root .env is sourced, from SOCIAL_SVC_DB_PASSWORD.
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/soukly_social}
+    username: ${SPRING_DATASOURCE_USERNAME:social_svc}
+    password: ${SPRING_DATASOURCE_PASSWORD:${SOCIAL_SVC_DB_PASSWORD:}}
+  flyway:
+    locations: classpath:db/migration
+  # User events (SOC-01): only user.deleted is handled, to delete the connections of the account. Its dead letters go
+  # through the producer.
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    consumer:
+      group-id: social-publisher
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+    admin:
+      fail-fast: false
+      operation-timeout: 10s
 
 management:
   endpoints:
     web:
       exposure:
         include: health
+
+soukly:
+  social:
+    jwt:
+      # Same values as the gateway (SETUP-06): JWKS of user-service, internal only, and issuer of the access tokens
+      jwk-set-uri: ${USER_SERVICE_JWKS_URI:http://localhost:8081/.well-known/jwks.json}
+      issuer: ${JWT_ISSUER:soukly-user-service}
+      clock-skew: 30s
+    # Tokens of the social networks, encrypted with AES-256-GCM (SOC-01): 32 random bytes in base64
+    # (openssl rand -base64 32). The service does not start without a valid key. key-version is stored with every
+    # token, for a later rotation.
+    token-encryption:
+      key: ${SOCIAL_TOKEN_ENC_KEY:}
+      key-version: ${SOCIAL_TOKEN_ENC_KEY_VERSION:1}
+    # Facebook Login and Graph API (SOC-01). Empty app id: "Connect" answers 503 facebook-not-configured.
+    facebook:
+      app-id: ${META_APP_ID:}
+      app-secret: ${META_APP_SECRET:}
+      graph-version: ${META_GRAPH_VERSION:v26.0}
+      graph-base-url: ${META_GRAPH_BASE_URL:https://graph.facebook.com}
+      dialog-base-url: ${META_DIALOG_BASE_URL:https://www.facebook.com}
+      # Origin of the front end: the redirect URI is {front-base-url}/oauth/facebook/callback, declared once at Meta
+      front-base-url: ${FRONT_BASE_URL:${PUBLIC_BASE_URL:http://localhost:4200}}
+      scopes: pages_show_list,pages_manage_posts,pages_read_engagement
+      # Without these, a connected Page could not be listed or posted to: oauth-permission-missing
+      required-permissions: pages_show_list,pages_manage_posts
+      # A connection started and not finished, and the choice among several Pages, expire after
+      state-ttl: 10m
+      selection-ttl: 10m
+      connect-timeout: 3s
+      read-timeout: 10s
+      purge-interval: PT1H
+      purge-initial-delay: PT5M
+    # Consumer of the user events (AUTH-05): a failed message is retried 3 times, then sent to the DLQ
+    user-events:
+      retries: 3
+      retry-interval: 2s
