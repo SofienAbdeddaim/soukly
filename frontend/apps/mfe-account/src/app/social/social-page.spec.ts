@@ -16,6 +16,7 @@ const SFAX_AUTO: SocialConnection = {
   displayName: 'Sfax Auto Occasion',
   pictureUrl: null,
   connectedAt: '2026-10-12T09:30:00Z',
+  autoShare: true,
 };
 
 const SFAX_INSTAGRAM: SocialConnection = {
@@ -24,6 +25,7 @@ const SFAX_INSTAGRAM: SocialConnection = {
   displayName: '@sfax.auto',
   pictureUrl: null,
   connectedAt: '2026-10-12T09:30:00Z',
+  autoShare: true,
 };
 
 describe('SocialPage', () => {
@@ -266,5 +268,84 @@ describe('SocialPage', () => {
 
     http.expectNone('/api/social/facebook');
     expect(card().dataset['state']).toBe('connected');
+  });
+
+  describe('tick by default for every new listing (SOC-03)', () => {
+    afterEach(() => sessionStorage.clear());
+
+    it('is a switch under each connected network, saved at once', async () => {
+      const { harness, http, card, instagram } = await setup('/fr/account/social', [
+        SFAX_AUTO,
+        SFAX_INSTAGRAM,
+      ]);
+      const toggle = card().querySelector(
+        '[data-testid=facebook-auto-share] button',
+      ) as HTMLElement;
+      expect(toggle.getAttribute('role')).toBe('switch');
+      expect(toggle.getAttribute('aria-checked')).toBe('true');
+      expect(card().textContent).toContain('Cocher par défaut pour chaque nouvelle annonce');
+      expect(instagram().querySelector('[data-testid=instagram-auto-share]')).not.toBeNull();
+
+      toggle.click();
+      await harness.fixture.whenStable();
+      expect(toggle.getAttribute('aria-checked')).toBe('false');
+      const request = http.expectOne('/api/social/connections/facebook');
+      expect(request.request.method).toBe('PATCH');
+      expect(request.request.body).toEqual({ autoShare: false });
+      request.flush({ ...SFAX_AUTO, autoShare: false });
+      await settle();
+      await harness.fixture.whenStable();
+
+      expect(toggle.getAttribute('aria-checked')).toBe('false');
+      http.verify();
+    });
+
+    it('goes back when the saving fails', async () => {
+      const { harness, http, element, instagram } = await setup('/fr/account/social', [
+        SFAX_INSTAGRAM,
+      ]);
+      const toggle = instagram().querySelector(
+        '[data-testid=instagram-auto-share] button',
+      ) as HTMLElement;
+
+      toggle.click();
+      http
+        .expectOne('/api/social/connections/instagram')
+        .flush({}, { status: 500, statusText: 'Error' });
+      await settle();
+      await harness.fixture.whenStable();
+
+      expect(toggle.getAttribute('aria-checked')).toBe('true');
+      expect(element().querySelector('[data-testid=auto-share-error]')?.textContent).toContain(
+        "Votre préférence n'a pas été enregistrée",
+      );
+    });
+
+    it('is not offered for a network to connect again', async () => {
+      const { card } = await setup('/fr/account/social', [
+        { ...SFAX_AUTO, status: 'NEEDS_RECONNECT' },
+      ]);
+
+      expect(card().querySelector('[data-testid=facebook-auto-share]')).toBeNull();
+    });
+
+    it('offers to go back to the preview of the draft that sent the member here', async () => {
+      const preview = '/fr/publish/0b9d6c3e-6a43-4c5e-9f0e-2d7a1b8c4e51/preview';
+      const { element } = await setup(
+        `/fr/account/social?returnTo=${encodeURIComponent(preview)}`,
+        [],
+      );
+
+      const back = element().querySelector('[data-testid=social-return]') as HTMLAnchorElement;
+      expect(back.getAttribute('href')).toBe(preview);
+      expect(back.textContent).toContain('Revenir à mon annonce');
+      expect(TestBed.inject(Router).url).toBe('/fr/account/social');
+    });
+
+    it('never goes back to another site', async () => {
+      const { element } = await setup('/fr/account/social?returnTo=https%3A%2F%2Fevil.example', []);
+
+      expect(element().querySelector('[data-testid=social-return]')).toBeNull();
+    });
   });
 });

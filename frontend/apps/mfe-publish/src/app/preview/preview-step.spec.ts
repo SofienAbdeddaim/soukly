@@ -62,6 +62,8 @@ describe('PreviewStep', () => {
     await fixture.whenStable();
     http.expectOne(`/api/categories/${listing.categoryCode}/attributes`).flush(CAR_ATTRIBUTES);
     http.expectOne('/api/locations/governorates').flush(TEST_GOVERNORATES);
+    // No network connected: the share block (SOC-03, its own tests) only says so
+    http.expectOne('/api/social/connections').flush([]);
     if (listing.governorateCode) {
       http
         .expectOne(`/api/locations/governorates/${listing.governorateCode}/delegations`)

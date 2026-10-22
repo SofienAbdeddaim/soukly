@@ -452,6 +452,9 @@
       "submit": "Connect this Page",
       "cancel": "Cancel",
       "error": "The Page could not be connected. Try again."
-    }
+    },
+    "auto-share": "Tick by default for every new listing",
+    "auto-share-error": "Your preference was not saved. Try again.",
+    "return": "Back to my listing"
   }
 }

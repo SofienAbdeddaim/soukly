@@ -105,7 +105,17 @@ export interface Listing {
   expiresAt: string | null;
   /** Public profile of the seller once the listing is not a draft (CATA-03), null for a draft. */
   seller?: ListingSeller | null;
+  /**
+   * Networks to share to when the draft is published (SOC-03), in the order FACEBOOK, INSTAGRAM;
+   * null until the seller chose (the preview then ticks their preferences).
+   */
+  shareTo?: ShareNetwork[] | null;
+  /** Language of the post texts, `fr`, `ar` or `en`, or null. */
+  shareLanguage?: string | null;
 }
+
+/** Networks a draft can be shared to (SOC-03). */
+export type ShareNetwork = 'FACEBOOK' | 'INSTAGRAM';
 
 /** The seller as a listing page shows them (CATA-03): never their phone number or email. */
 export interface ListingSeller {
@@ -150,6 +160,9 @@ export interface ListingPatch {
   governorateCode?: string | null;
   delegationCode?: string | null;
   attributes?: Record<string, AttributeValue | null> | null;
+  /** Draft only (SOC-03): `409 share-locked` once published. */
+  shareTo?: ShareNetwork[] | null;
+  shareLanguage?: string | null;
 }
 
 /** Statuses listed on "My listings" (ANN-05), one tab each, in the order of the tabs. */

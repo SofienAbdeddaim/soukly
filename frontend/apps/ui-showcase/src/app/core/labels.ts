@@ -37,6 +37,7 @@ export interface ShowcaseLabels {
   passwordLabel: string;
   showPassword: string;
   termsLabel: string;
+  switchLabel: string;
   termsError: string;
   alerts: string;
   alertInfo: string;
@@ -120,6 +121,7 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     passwordLabel: 'Mot de passe',
     showPassword: 'Afficher le mot de passe',
     termsLabel: "J'accepte les conditions d'utilisation.",
+    switchLabel: 'Cocher par défaut pour chaque nouvelle annonce',
     termsError: 'Acceptez les conditions pour continuer.',
     alerts: 'Messages (alert)',
     alertInfo: 'Votre annonce sera visible après relecture.',
@@ -216,6 +218,7 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     passwordLabel: 'كلمة المرور',
     showPassword: 'إظهار كلمة المرور',
     termsLabel: 'أوافق على شروط الاستخدام.',
+    switchLabel: 'تحديده افتراضيًا لكل إعلان جديد',
     termsError: 'وافق على الشروط للمتابعة.',
     alerts: 'الرسائل',
     alertInfo: 'سيظهر إعلانك بعد المراجعة.',

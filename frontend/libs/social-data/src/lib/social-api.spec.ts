@@ -13,6 +13,7 @@ const CONNECTION: SocialConnection = {
   displayName: 'Sfax Auto Occasion',
   pictureUrl: null,
   connectedAt: '2026-10-12T09:30:00Z',
+  autoShare: true,
 };
 
 describe('SocialApi', () => {

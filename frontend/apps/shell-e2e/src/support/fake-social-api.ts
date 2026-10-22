@@ -1,7 +1,7 @@
 import { Page, Route } from '@playwright/test';
 
 /**
- * Fakes social-publisher (SOC-01, SOC-02) in the browser, on top of `fakeAccountApi` (register it
+ * Fakes social-publisher (SOC-01, SOC-02, SOC-03) in the browser, on top of `fakeAccountApi` (register it
  * after: the last route registered wins). Facebook and Instagram themselves are never opened: the
  * `authorizeUrl` of "Connect" leads straight back to `/oauth/facebook/callback` or
  * `/oauth/instagram/callback`, as the network would after the member's answer.
@@ -23,6 +23,8 @@ export interface FakeSocialApi {
   /** Pages of the choice in progress (`several-pages`). */
   pending: FakePage[] | null;
   calls: { method: string; path: string; body: unknown }[];
+  /** SOC-03: "See the post text" answers 503 while true. */
+  captionDown: boolean;
 }
 
 export interface FakeConnection {
@@ -31,6 +33,7 @@ export interface FakeConnection {
   displayName: string;
   pictureUrl: string | null;
   connectedAt: string;
+  autoShare: boolean;
 }
 
 export interface FakePage {
@@ -55,6 +58,7 @@ export function connection(name = 'Sfax Auto Occasion'): FakeConnection {
     displayName: name,
     pictureUrl: null,
     connectedAt: CONNECTED_AT,
+    autoShare: true,
   };
 }
 
@@ -65,7 +69,39 @@ export function instagramConnection(username = '@sfax.auto'): FakeConnection {
     displayName: username,
     pictureUrl: null,
     connectedAt: CONNECTED_AT,
+    autoShare: true,
   };
+}
+
+interface CaptionBody {
+  title: string;
+  description: string;
+  priceTnd: number | null;
+  negotiable: boolean;
+  publicUrl: string;
+  language: string;
+}
+
+/**
+ * A post text of the shape of `CaptionBuilder` for the cars of Sfax of the tests: the real
+ * template lives in social-publisher only (its own tests), never in the front end.
+ */
+function caption(body: CaptionBody) {
+  const ar = body.language === 'ar';
+  const price = ar ? '32.000 د.ت.' : '32 000 DT';
+  const negotiable = ar ? 'قابل للتفاوض' : 'Négociable';
+  const hashtags = ar ? ['#Soukly', '#صفاقس', '#سيارات'] : ['#Soukly', '#Sfax', '#Voitures'];
+  const text = [
+    body.title,
+    body.negotiable ? `${price} · ${negotiable}` : price,
+    ar ? 'صفاقس، ساقية الزيت' : 'Sfax, Sakiet Ezzit',
+    '',
+    body.description,
+    '',
+    `${ar ? 'شاهد الإعلان:' : "Voir l'annonce :"} ${body.publicUrl}`,
+    hashtags.join(' '),
+  ].join('\n');
+  return { text, hashtags };
 }
 
 const PROBLEMS: Partial<Record<FacebookScenario, string>> = {
@@ -77,7 +113,7 @@ const PROBLEMS: Partial<Record<FacebookScenario, string>> = {
 export async function fakeSocialApi(
   page: Page,
   options: Partial<
-    Pick<FakeSocialApi, 'scenario' | 'instagramScenario' | 'facebook' | 'instagram'>
+    Pick<FakeSocialApi, 'scenario' | 'instagramScenario' | 'facebook' | 'instagram' | 'captionDown'>
   > = {},
 ): Promise<FakeSocialApi> {
   const api: FakeSocialApi = {
@@ -88,6 +124,7 @@ export async function fakeSocialApi(
     lang: 'fr',
     pending: null,
     calls: [],
+    captionDown: false,
     ...options,
   };
   const json = (route: Route, status: number, body?: unknown) =>
@@ -116,6 +153,21 @@ export async function fakeSocialApi(
         200,
         [api.facebook, api.instagram].filter((connection) => connection !== null),
       );
+    }
+    const preference = /^\/api\/social\/connections\/(facebook|instagram)$/.exec(path);
+    if (method === 'PATCH' && preference) {
+      const current = preference[1] === 'facebook' ? api.facebook : api.instagram;
+      if (!current) {
+        return json(route, 404, problem('connection-not-found', 404));
+      }
+      current.autoShare = (body as { autoShare: boolean }).autoShare;
+      return json(route, 200, current);
+    }
+    if (method === 'POST' && path === '/api/social/caption-preview') {
+      if (api.captionDown) {
+        return json(route, 503, problem('caption-unavailable', 503));
+      }
+      return json(route, 200, caption(body as CaptionBody));
     }
     if (method === 'POST' && path === '/api/social/facebook/connect') {
       api.lang = (body as { lang: string }).lang;

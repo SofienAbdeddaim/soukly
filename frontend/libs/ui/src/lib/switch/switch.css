@@ -1,0 +1,76 @@
+.ui-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ui-switch .ui-switch__label {
+  color: var(--color-text);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+/* 52 x 30 track in a 44px high button: the touch target of the guidelines. */
+.ui-switch .ui-switch__control {
+  display: grid;
+  flex: none;
+  place-items: center;
+  min-block-size: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.ui-switch .ui-switch__control:disabled {
+  cursor: not-allowed;
+}
+
+.ui-switch .ui-switch__track {
+  position: relative;
+  display: block;
+  inline-size: 52px;
+  block-size: 30px;
+  border-radius: 999px;
+  background-color: var(--color-border-strong);
+  transition: background-color 120ms ease;
+}
+
+.ui-switch .ui-switch__thumb {
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 24px;
+  block-size: 24px;
+  border-radius: 999px;
+  background-color: var(--color-surface);
+  transition: inset-inline-start 120ms ease;
+}
+
+.ui-switch--checked .ui-switch__track {
+  background-color: var(--color-primary);
+}
+
+.ui-switch--checked .ui-switch__thumb {
+  inset-inline-start: 25px;
+}
+
+.ui-switch--disabled .ui-switch__track {
+  opacity: 0.55;
+}
+
+.ui-switch .ui-switch__control:focus-visible {
+  outline: 2px solid transparent;
+}
+
+.ui-switch .ui-switch__control:focus-visible .ui-switch__track {
+  box-shadow: var(--focus-ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-switch .ui-switch__track,
+  .ui-switch .ui-switch__thumb {
+    transition: none;
+  }
+}

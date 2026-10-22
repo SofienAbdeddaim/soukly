@@ -49,6 +49,8 @@ export function draftListing(overrides: Partial<Listing> = {}): Listing {
     updatedAt: '2026-10-21T08:00:00Z',
     publishedAt: null,
     expiresAt: null,
+    shareTo: null,
+    shareLanguage: null,
     ...overrides,
   };
 }

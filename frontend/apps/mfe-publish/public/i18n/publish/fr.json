@@ -213,5 +213,36 @@
       "stay": "Continuer la modification",
       "confirm": "Quitter sans enregistrer"
     }
+  },
+  "share": {
+    "title": "Partager l'annonce",
+    "network": {
+      "FACEBOOK": "Page Facebook",
+      "INSTAGRAM": "Instagram"
+    },
+    "needs-reconnect": "à relier à nouveau",
+    "reconnect": {
+      "FACEBOOK": "Relier à nouveau Facebook",
+      "INSTAGRAM": "Relier à nouveau Instagram"
+    },
+    "caption": {
+      "show": "Voir le texte du post",
+      "error": "Texte indisponible.",
+      "retry": "Réessayer",
+      "photos": {
+        "zero": "Sans photo. Texte généré automatiquement dans la langue de la page.",
+        "one": "Avec votre photo. Texte généré automatiquement dans la langue de la page.",
+        "two": "Avec vos {{ count }} photos. Texte généré automatiquement dans la langue de la page.",
+        "few": "Avec vos {{ count }} photos. Texte généré automatiquement dans la langue de la page.",
+        "many": "Avec vos {{ count }} photos. Texte généré automatiquement dans la langue de la page.",
+        "other": "Avec vos {{ count }} photos. Texte généré automatiquement dans la langue de la page."
+      }
+    },
+    "help": "Publié sur vos réseaux dès que l'annonce est en ligne. Préférences dans",
+    "preferences": "Mes réseaux",
+    "none": "Reliez Facebook ou Instagram pour partager vos annonces.",
+    "connect": "Relier un réseau",
+    "load-error": "Impossible de charger vos réseaux.",
+    "retry": "Réessayer"
   }
 }

@@ -452,6 +452,9 @@
       "submit": "Relier cette Page",
       "cancel": "Annuler",
       "error": "La Page n'a pas pu être reliée. Réessayez."
-    }
+    },
+    "auto-share": "Cocher par défaut pour chaque nouvelle annonce",
+    "auto-share-error": "Votre préférence n'a pas été enregistrée. Réessayez.",
+    "return": "Revenir à mon annonce"
   }
 }

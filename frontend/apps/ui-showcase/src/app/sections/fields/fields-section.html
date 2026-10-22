@@ -51,4 +51,8 @@
     <input uiCheckboxControl type="checkbox" />
     {{ t().termsLabel }}
   </ui-checkbox>
+  <ui-switch [checked]="switchOn()" (checkedChange)="switchOn.set($event)">
+    {{ t().switchLabel }}
+  </ui-switch>
+  <ui-switch [disabled]="true">{{ t().switchLabel }}</ui-switch>
 </app-showcase-section>
