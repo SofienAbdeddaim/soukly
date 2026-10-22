@@ -17,7 +17,8 @@ import com.soukly.social.token.TokenCipher;
 
 /**
  * The {@code social_connections} table: one connection per member and per network. Tokens are encrypted here with
- * {@link TokenCipher}, bound to the member and the network, and never read back by this ticket (SOC-04 does).
+ * {@link TokenCipher}, bound to the member and the network; only the refresh of the Instagram tokens reads them back
+ * (SOC-02), then the publication (SOC-04, SOC-05).
  */
 @Repository
 public class SocialConnectionRepository {
@@ -40,24 +41,25 @@ public class SocialConnectionRepository {
     }
 
     /**
-     * Connects the account, or replaces the one already connected for this network (one Page per member): the status
-     * goes back to {@code CONNECTED} and the connection date is the current one.
+     * Connects the account, or replaces the one already connected for this network (one account per network): the
+     * status goes back to {@code CONNECTED} and the connection date is the current one.
      */
     public ConnectionView save(UUID userId, NewConnection connection) {
         Instant now = clock.instant();
         byte[] ciphertext = cipher.encrypt(connection.token(), associatedData(userId, connection.network()));
         jdbc.update("""
                 INSERT INTO social_connections (id, user_id, network, external_id, external_user_id, display_name,
-                    picture_url, token_ciphertext, key_version, status, connected_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONNECTED', ?, ?)
+                    picture_url, token_ciphertext, key_version, token_expires_at, status, connected_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONNECTED', ?, ?)
                 ON CONFLICT (user_id, network) DO UPDATE SET external_id = EXCLUDED.external_id,
                     external_user_id = EXCLUDED.external_user_id, display_name = EXCLUDED.display_name,
                     picture_url = EXCLUDED.picture_url, token_ciphertext = EXCLUDED.token_ciphertext,
-                    key_version = EXCLUDED.key_version, status = 'CONNECTED', connected_at = EXCLUDED.connected_at,
-                    updated_at = EXCLUDED.updated_at
+                    key_version = EXCLUDED.key_version, token_expires_at = EXCLUDED.token_expires_at,
+                    status = 'CONNECTED', connected_at = EXCLUDED.connected_at, updated_at = EXCLUDED.updated_at
                 """, UUID.randomUUID(), userId, connection.network().name(), connection.externalId(),
                 connection.externalUserId(), connection.displayName(), connection.pictureUrl(), ciphertext,
-                cipher.keyVersion(), Timestamp.from(now), Timestamp.from(now));
+                cipher.keyVersion(), timestamp(connection.tokenExpiresAt()), Timestamp.from(now),
+                Timestamp.from(now));
         return new ConnectionView(connection.network(), ConnectionStatus.CONNECTED, connection.displayName(),
                 connection.pictureUrl(), now);
     }
@@ -82,10 +84,10 @@ public class SocialConnectionRepository {
                 .stream().findFirst().flatMap(id -> id);
     }
 
-    /** Deletes every connection of the member; returns the app-scoped ids of the people who connected them. */
-    public List<String> deleteAll(UUID userId) {
-        return jdbc.query("DELETE FROM social_connections WHERE user_id = ? RETURNING external_user_id",
-                (rs, row) -> rs.getString(1), userId).stream().filter(id -> id != null).toList();
+    /** Deletes every connection of the member; returns them, to revoke the permissions where the network allows it. */
+    public List<DeletedConnection> deleteAll(UUID userId) {
+        return jdbc.query("DELETE FROM social_connections WHERE user_id = ? RETURNING network, external_user_id",
+                (rs, row) -> new DeletedConnection(Network.valueOf(rs.getString(1)), rs.getString(2)), userId);
     }
 
     /** Whether another connection still uses the permissions this person granted (then they are not revoked). */
@@ -93,6 +95,48 @@ public class SocialConnectionRepository {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS (SELECT 1 FROM social_connections WHERE network = ? AND external_user_id = ?)
                 """, Boolean.class, network.name(), externalUserId));
+    }
+
+    /**
+     * Locks the next connected token of this network that expires before {@code before}, after {@code after} in the
+     * order of the expiry (keyset, {@code null} for the first one). Must run in a transaction: the row stays locked
+     * until it ends, and a row locked by another run is skipped ({@code SKIP LOCKED}), so a token is never refreshed
+     * twice at once.
+     */
+    public Optional<ExpiringToken> lockNextExpiring(Network network, Instant before, ExpiringToken after) {
+        String keyset = after == null ? "" : "AND (token_expires_at, id) > (?, ?) ";
+        Object[] args = after == null
+                ? new Object[] { network.name(), Timestamp.from(before) }
+                : new Object[] { network.name(), Timestamp.from(before), Timestamp.from(after.expiresAt()),
+                    after.id() };
+        return jdbc.query("SELECT id, user_id, token_ciphertext, key_version, token_expires_at "
+                + "FROM social_connections WHERE network = ? AND status = 'CONNECTED' AND token_expires_at < ? "
+                + keyset + "ORDER BY token_expires_at, id LIMIT 1 FOR UPDATE SKIP LOCKED", (rs, row) -> {
+                    UUID userId = rs.getObject("user_id", UUID.class);
+                    String token = cipher.decrypt(rs.getBytes("token_ciphertext"), rs.getInt("key_version"),
+                            associatedData(userId, network));
+                    return new ExpiringToken(rs.getObject("id", UUID.class), userId, network, token,
+                            rs.getTimestamp("token_expires_at").toInstant());
+                }, args).stream().findFirst();
+    }
+
+    /** Replaces the token of a connection after a refresh, with its new expiry. */
+    public void updateToken(ExpiringToken connection, String token, Instant expiresAt) {
+        jdbc.update("""
+                UPDATE social_connections SET token_ciphertext = ?, key_version = ?, token_expires_at = ?,
+                    updated_at = ? WHERE id = ?
+                """, cipher.encrypt(token, associatedData(connection.userId(), connection.network())),
+                cipher.keyVersion(), Timestamp.from(expiresAt), Timestamp.from(clock.instant()), connection.id());
+    }
+
+    /** The network refused the token: the member must connect again ({@link #save} clears it). */
+    public void markNeedsReconnect(UUID id) {
+        jdbc.update("UPDATE social_connections SET status = 'NEEDS_RECONNECT', updated_at = ? WHERE id = ?",
+                Timestamp.from(clock.instant()), id);
+    }
+
+    private static Timestamp timestamp(Instant instant) {
+        return instant == null ? null : Timestamp.from(instant);
     }
 
     private static ConnectionView view(ResultSet rs, int row) throws SQLException {

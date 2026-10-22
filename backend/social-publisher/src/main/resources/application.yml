@@ -72,6 +72,26 @@ soukly:
       read-timeout: 10s
       purge-interval: PT1H
       purge-initial-delay: PT5M
+    # Instagram API with Instagram Login (SOC-02): its own app id and secret (Instagram product of the Meta app). Empty
+    # app id: "Connect" answers 503 instagram-not-configured.
+    instagram:
+      app-id: ${INSTAGRAM_APP_ID:}
+      app-secret: ${INSTAGRAM_APP_SECRET:}
+      graph-version: ${INSTAGRAM_GRAPH_VERSION:${META_GRAPH_VERSION:v26.0}}
+      graph-base-url: ${INSTAGRAM_GRAPH_BASE_URL:https://graph.instagram.com}
+      api-base-url: ${INSTAGRAM_API_BASE_URL:https://api.instagram.com}
+      dialog-base-url: ${INSTAGRAM_DIALOG_BASE_URL:https://www.instagram.com}
+      # The redirect URI is {front-base-url}/oauth/instagram/callback, declared once at Meta
+      front-base-url: ${FRONT_BASE_URL:${PUBLIC_BASE_URL:http://localhost:4200}}
+      scopes: instagram_business_basic,instagram_business_content_publish
+      required-permissions: instagram_business_basic,instagram_business_content_publish
+      state-ttl: 10m
+      connect-timeout: 3s
+      read-timeout: 10s
+      # Long-lived tokens last about 60 days: the daily task refreshes those that expire within this delay
+      refresh-before: ${INSTAGRAM_TOKEN_REFRESH_BEFORE:10d}
+      refresh-interval: P1D
+      refresh-initial-delay: PT10M
     # Consumer of the user events (AUTH-05): a failed message is retried 3 times, then sent to the DLQ
     user-events:
       retries: 3

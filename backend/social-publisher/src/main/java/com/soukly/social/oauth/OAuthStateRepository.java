@@ -1,4 +1,4 @@
-package com.soukly.social.facebook;
+package com.soukly.social.oauth;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -18,7 +18,7 @@ import com.soukly.social.connection.Network;
  * their member, network, language and expiry. A state is consumed once.
  */
 @Repository
-class OAuthStateRepository {
+public class OAuthStateRepository {
 
     private final JdbcTemplate jdbc;
 
@@ -48,7 +48,7 @@ class OAuthStateRepository {
                 .stream().findFirst().flatMap(lang -> lang);
     }
 
-    int deleteExpired(Instant now) {
+    public int deleteExpired(Instant now) {
         return jdbc.update("DELETE FROM oauth_states WHERE expires_at <= ?", Timestamp.from(now));
     }
 

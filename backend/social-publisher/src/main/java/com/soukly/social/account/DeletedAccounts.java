@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.soukly.social.connection.DeletedConnection;
+import com.soukly.social.connection.Network;
 import com.soukly.social.connection.SocialConnectionRepository;
 import com.soukly.social.facebook.FacebookConnector;
 import com.soukly.social.facebook.FacebookRevocation;
@@ -41,16 +43,19 @@ class DeletedAccounts {
     }
 
     public void deleteConnections(UUID eventId, UUID userId) {
-        List<String> revocable = transactions.execute(status -> {
+        List<DeletedConnection> deleted = transactions.execute(status -> {
             if (!processed.markProcessed(eventId, clock.instant())) {
                 log.info("User event {} was processed already: connections not deleted again", eventId);
-                return List.<String>of();
+                return List.<DeletedConnection>of();
             }
             facebook.forgetPending(userId);
-            List<String> people = connections.deleteAll(userId);
-            log.info("Account {} deleted: {} social connection(s) deleted", userId, people.size());
-            return people;
+            List<DeletedConnection> all = connections.deleteAll(userId);
+            log.info("Account {} deleted: {} social connection(s) deleted", userId, all.size());
+            return all;
         });
-        revocable.forEach(revocation::revokeQuietly);
+        // Instagram offers no revocation: the member removes Soukly from the apps of their Instagram account
+        deleted.stream()
+                .filter(connection -> connection.network() == Network.FACEBOOK && connection.externalUserId() != null)
+                .forEach(connection -> revocation.revokeQuietly(connection.externalUserId()));
     }
 }

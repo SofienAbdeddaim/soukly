@@ -210,7 +210,7 @@ listing-service validates the access tokens again with the rules of the gateway,
 
 ## social-publisher
 
-Social networks of Soukly (package `com.soukly.social`, database `soukly_social`): the connection of a Facebook Page (SOC-01) through Facebook Login, with the tokens encrypted in AES-256-GCM. Details, Meta set-up and the manual test with a Meta tester account: [`backend/social-publisher/README.md`](backend/social-publisher/README.md).
+Social networks of Soukly (package `com.soukly.social`, database `soukly_social`): the connection of a Facebook Page (SOC-01) through Facebook Login and of an Instagram professional account (SOC-02) through Instagram Login, with the tokens encrypted in AES-256-GCM and the Instagram ones refreshed daily. Details, Meta set-up and the manual test with a Meta tester account: [`backend/social-publisher/README.md`](backend/social-publisher/README.md).
 
 | Endpoint (through the gateway, all with JWT) | Body                                         | Answers                                                                                                                          |
 | -------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -219,9 +219,12 @@ Social networks of Soukly (package `com.soukly.social`, database `soukly_social`
 | `GET /api/social/facebook/page-selection`    |                                              | `200` `{ pendingSelection }`, `404` `page-selection-not-found`                                                                   |
 | `POST /api/social/facebook/page`             | `{ pageId }`                                 | `200` connection, `404` `page-selection-not-found`                                                                               |
 | `DELETE /api/social/facebook`                |                                              | `204`                                                                                                                            |
+| `POST /api/social/instagram/connect`         | `{ lang }` (optional)                        | `200` `{ authorizeUrl }`, `503` `instagram-not-configured`                                                                       |
+| `POST /api/social/instagram/callback`        | `{ code, state }` or `{ error, state }`      | `200` `{ lang, connection }`; `400` `oauth-*` or `instagram-not-professional`, `502` `instagram-unavailable`                     |
+| `DELETE /api/social/instagram`               |                                              | `204`                                                                                                                            |
 | `GET /api/social/connections`                |                                              | `200` `[{ network, status, displayName, pictureUrl, connectedAt }]`, never a token                                               |
 
-It needs `SOCIAL_TOKEN_ENC_KEY` (32 random bytes in base64, `openssl rand -base64 32`) to start, and `META_APP_ID` / `META_APP_SECRET` to connect a Page. It consumes `user.deleted` (group `social-publisher`) to delete the connections of a deleted account.
+It needs `SOCIAL_TOKEN_ENC_KEY` (32 random bytes in base64, `openssl rand -base64 32`) to start, `META_APP_ID` / `META_APP_SECRET` to connect a Page and `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET` to connect an Instagram account (SOC-02). It consumes `user.deleted` (group `social-publisher`) to delete the connections of a deleted account.
 
 ## Gateway
 

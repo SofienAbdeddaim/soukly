@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.soukly.social.connection.Network;
 import com.soukly.social.connection.SocialConnectionRepository;
+import com.soukly.social.graph.GraphApiException;
 
 /**
  * Removes the permissions a person granted to Soukly on Facebook, after their connection was deleted (disconnection or

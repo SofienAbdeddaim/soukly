@@ -17,6 +17,8 @@ import org.springframework.web.util.UriBuilder;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import com.soukly.social.graph.GraphApiException;
+
 /**
  * {@link FacebookGraphClient} over HTTP with {@link RestClient}: origin and version from {@link FacebookProperties}.
  * Tokens and the app secret go in the query string, as the Graph API documents it; the client never logs a URL, and

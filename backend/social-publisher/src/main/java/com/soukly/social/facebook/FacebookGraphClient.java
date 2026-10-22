@@ -3,6 +3,8 @@ package com.soukly.social.facebook;
 import java.util.List;
 import java.util.Set;
 
+import com.soukly.social.graph.GraphApiException;
+
 /**
  * The calls of social-publisher to the Graph API of Meta (SOC-01). Simulated in the tests: the real API is never called
  * by an automated test. Every failure is a {@link GraphApiException} whose message never contains a token, the app

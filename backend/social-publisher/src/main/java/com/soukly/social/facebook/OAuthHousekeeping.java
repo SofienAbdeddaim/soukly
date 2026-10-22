@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.soukly.social.oauth.OAuthStateRepository;
+
 /** Deletes the expired OAuth states and Page choices, hourly: a connection never finished leaves nothing behind. */
 @Component
 @EnableScheduling
