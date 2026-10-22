@@ -19,12 +19,11 @@
   },
   "footer": {
     "label": "Useful links",
-    "help": "Help",
-    "terms": "Terms of use",
-    "privacy": "Privacy"
-  },
-  "static-page": {
-    "coming-soon": "The content of this page will be available soon."
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "posting-rules": "Posting rules",
+    "notice": "Legal notice",
+    "data-deletion": "Delete my data"
   },
   "errors": {
     "not-found": {

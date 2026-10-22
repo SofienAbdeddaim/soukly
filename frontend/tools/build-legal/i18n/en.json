@@ -1,0 +1,22 @@
+{
+  "brand": "Soukly",
+  "skip-link": "Skip to content",
+  "languages": "Change language",
+  "breadcrumb": {
+    "label": "Breadcrumb",
+    "home": "Home",
+    "legal": "Legal information"
+  },
+  "version": "Version of {version}",
+  "effective": "in force since {date}",
+  "draft": "Provisional text, under legal review.",
+  "toc": "Contents",
+  "footer": {
+    "label": "Legal information",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "posting-rules": "Posting rules",
+    "notice": "Legal notice",
+    "data-deletion": "Delete my data"
+  }
+}

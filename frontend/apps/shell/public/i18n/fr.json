@@ -19,12 +19,11 @@
   },
   "footer": {
     "label": "Liens utiles",
-    "help": "Aide",
-    "terms": "Conditions d'utilisation",
-    "privacy": "Confidentialité"
-  },
-  "static-page": {
-    "coming-soon": "Le contenu de cette page sera bientôt disponible."
+    "terms": "Conditions",
+    "privacy": "Confidentialité",
+    "posting-rules": "Règles de publication",
+    "notice": "Mentions légales",
+    "data-deletion": "Supprimer mes données"
   },
   "errors": {
     "not-found": {

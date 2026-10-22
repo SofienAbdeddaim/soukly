@@ -4,6 +4,10 @@
 #   /                         shell (/srv/shell), index.html for every application route
 #   /remotes/<mfe>/           remotes (/srv/remotes/<mfe>), never index.html: 404 if absent
 #   /federation.manifest.json written at startup by entrypoint.sh (/srv/runtime)
+#   /<lang>/legal/<slug>      legal pages (LEG-01), static HTML written at startup by entrypoint.sh
+#                             (/srv/runtime/legal/<lang>/legal/<slug>.html); an unknown slug falls
+#                             back to the shell, which shows its 404 page
+#   /legal-assets/            stylesheet and fonts of the legal pages (/srv/runtime/legal/legal-assets)
 {
 	admin off
 	auto_https off
@@ -25,6 +29,25 @@
 
 	handle /federation.manifest.json {
 		root * /srv/runtime
+		file_server
+	}
+
+	# Legal pages: readable without JavaScript, for the crawlers of Meta and of search engines.
+	@legal {
+		path_regexp ^/(fr|ar|en)/legal/[a-z0-9-]+$
+		file {
+			root /srv/runtime/legal
+			try_files {path}.html
+		}
+	}
+	handle @legal {
+		root * /srv/runtime/legal
+		rewrite * {path}.html
+		file_server
+	}
+
+	handle /legal-assets/* {
+		root * /srv/runtime/legal
 		file_server
 	}
 

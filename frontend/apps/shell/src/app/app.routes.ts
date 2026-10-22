@@ -2,20 +2,18 @@ import { Routes, UrlMatchResult, UrlSegment } from '@angular/router';
 import { withLangPrefix } from '@soukly/i18n';
 import { loadRemoteRoutes } from './federation/load-remote-routes';
 import { NotFound } from './not-found/not-found';
-import { StaticPage } from './static-page/static-page';
 
 /**
  * Routes of the shell, under the language prefix: "/fr/account/login", "/ar/publish/new"…
  * A URL without a supported prefix is redirected (see withLangPrefix in @soukly/i18n).
+ * The legal pages (`/{lang}/legal/{slug}`, LEG-01) are static HTML served before the shell: an
+ * unknown one reaches the shell and shows its 404 page.
  */
 export function createShellRoutes(): Routes {
   return withLangPrefix([
     { matcher: catalogPaths, loadChildren: loadRemoteRoutes('mfe-catalog') },
     { path: 'account', loadChildren: loadRemoteRoutes('mfe-account') },
     { path: 'publish', loadChildren: loadRemoteRoutes('mfe-publish') },
-    { path: 'help', component: StaticPage, data: { titleKey: 'footer.help' } },
-    { path: 'terms', component: StaticPage, data: { titleKey: 'footer.terms' } },
-    { path: 'privacy', component: StaticPage, data: { titleKey: 'footer.privacy' } },
     { path: '**', component: NotFound },
   ]);
 }

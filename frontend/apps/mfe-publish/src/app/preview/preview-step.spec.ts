@@ -105,7 +105,7 @@ describe('PreviewStep', () => {
       'Boîte de vitesses Manuelle',
     ]);
     expect(text('.preview__online')).toContain('En ligne pendant 60 jours');
-    expect(element.querySelector('a[href="/fr/terms"]')?.textContent).toContain(
+    expect(element.querySelector('a[href="/fr/legal/posting-rules"]')?.textContent).toContain(
       'règles de publication',
     );
     expect(element.querySelector('[data-testid=missing-fields]')).toBeNull();

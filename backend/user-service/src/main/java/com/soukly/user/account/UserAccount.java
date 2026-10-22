@@ -40,6 +40,9 @@ public class UserAccount implements Persistable<UUID> {
 
     private Instant termsAcceptedAt;
 
+    /** Version of the terms of use accepted at registration (LEG-01); {@code null} for older accounts. */
+    private String termsVersion;
+
     private Instant emailVerifiedAt;
 
     /** {@code null} until the first successful login. */
@@ -68,13 +71,13 @@ public class UserAccount implements Persistable<UUID> {
      * Creates an account waiting for the verification of its email.
      */
     public static UserAccount pending(String email, String passwordHash, String displayName, String phoneE164,
-            Language language, Instant now) {
+            Language language, String termsVersion, Instant now) {
         UserAccount account = new UserAccount();
         account.id = UUID.randomUUID();
         account.email = email;
         account.status = AccountStatus.PENDING_VERIFICATION;
         account.createdAt = now;
-        account.updateRegistration(passwordHash, displayName, phoneE164, language, now);
+        account.updateRegistration(passwordHash, displayName, phoneE164, language, termsVersion, now);
         return account;
     }
 
@@ -83,7 +86,7 @@ public class UserAccount implements Persistable<UUID> {
      * owner of the mailbox can then activate the account, with the data they entered last.
      */
     public void updateRegistration(String passwordHash, String displayName, String phoneE164, Language language,
-            Instant now) {
+            String termsVersion, Instant now) {
         if (status != AccountStatus.PENDING_VERIFICATION) {
             throw new IllegalStateException("Only a pending account can be registered again");
         }
@@ -92,6 +95,7 @@ public class UserAccount implements Persistable<UUID> {
         this.phoneE164 = phoneE164;
         this.preferredLanguage = language;
         this.termsAcceptedAt = now;
+        this.termsVersion = termsVersion;
         this.updatedAt = now;
     }
 
@@ -193,6 +197,10 @@ public class UserAccount implements Persistable<UUID> {
 
     public Instant termsAcceptedAt() {
         return termsAcceptedAt;
+    }
+
+    public String termsVersion() {
+        return termsVersion;
     }
 
     public Instant emailVerifiedAt() {

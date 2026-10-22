@@ -34,7 +34,13 @@
         "devServer": true,
         "port": 4200
       },
-      "continuous": true
+      "continuous": true,
+      "dependsOn": [
+        {
+          "projects": ["build-legal"],
+          "target": "build"
+        }
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint"
@@ -92,7 +98,18 @@
         "development": {
           "optimization": false,
           "extractLicenses": false,
-          "sourceMap": true
+          "sourceMap": true,
+          "assets": [
+            {
+              "glob": "**/*",
+              "input": "apps/shell/public"
+            },
+            {
+              "glob": "**/*",
+              "input": "dist/legal",
+              "output": "/"
+            }
+          ]
         }
       }
     },
@@ -111,7 +128,13 @@
         "development": {
           "buildTarget": "shell:esbuild:development"
         }
-      }
+      },
+      "dependsOn": [
+        {
+          "projects": ["build-legal"],
+          "target": "build"
+        }
+      ]
     },
     "i18n-check": {
       "executor": "nx:run-commands",

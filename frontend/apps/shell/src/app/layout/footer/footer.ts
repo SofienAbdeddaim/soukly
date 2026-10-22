@@ -1,12 +1,14 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LocalePathPipe } from '@soukly/i18n';
 
-/** Indigo footer of ambiance A. Its pages are empty in V1. */
+/**
+ * Indigo footer of ambiance A, with the legal pages (LEG-01). They are static HTML served before the
+ * shell, not routes: plain links that load the page.
+ */
 @Component({
   selector: 'app-footer',
-  imports: [RouterLink, TranslocoPipe, LocalePathPipe],
+  imports: [TranslocoPipe, LocalePathPipe],
   template: `
     <footer class="bg-brand text-on-brand">
       <div
@@ -20,7 +22,7 @@ import { LocalePathPipe } from '@soukly/i18n';
             @for (link of links; track link.path) {
               <li>
                 <a
-                  [routerLink]="link.path | localePath"
+                  [href]="link.path | localePath"
                   class="inline-flex min-h-11 items-center text-on-brand underline underline-offset-4"
                 >
                   {{ link.labelKey | transloco }}
@@ -36,8 +38,10 @@ import { LocalePathPipe } from '@soukly/i18n';
 })
 export class Footer {
   protected readonly links = [
-    { path: '/help', labelKey: 'footer.help' },
-    { path: '/terms', labelKey: 'footer.terms' },
-    { path: '/privacy', labelKey: 'footer.privacy' },
+    { path: '/legal/terms', labelKey: 'footer.terms' },
+    { path: '/legal/privacy', labelKey: 'footer.privacy' },
+    { path: '/legal/posting-rules', labelKey: 'footer.posting-rules' },
+    { path: '/legal/notice', labelKey: 'footer.notice' },
+    { path: '/legal/data-deletion', labelKey: 'footer.data-deletion' },
   ];
 }

@@ -5,7 +5,8 @@
 #   docker run --rm -p 8080:8080 -e PUBLIC_BASE_URL=http://localhost:8080 soukly-frontend:local
 #
 # The federation manifest is not built in: docker/entrypoint.sh writes it at startup from
-# PUBLIC_BASE_URL, so the same image runs in dev and in prod.
+# PUBLIC_BASE_URL, so the same image runs in dev and in prod. Same for the contact address of the
+# legal pages (LEGAL_CONTACT_EMAIL).
 
 # ---- Build: production build of the shell and the remotes ----
 FROM node:24.22.0-trixie-slim@sha256:7f486cabe892bff8fef04c0f7da8dba84a560be3e4e2740b7a86afc57ebec315 AS build
@@ -25,7 +26,8 @@ COPY . .
 RUN printf 'dist/\n.nx/\n.angular/\n' > .gitignore
 RUN --mount=type=cache,target=/pnpm-store,id=soukly-pnpm \
     pnpm install --frozen-lockfile --store-dir /pnpm-store \
-    && pnpm nx run-many -t build -p shell mfe-account mfe-catalog mfe-publish --configuration=production
+    && pnpm nx run-many -t build -p shell mfe-account mfe-catalog mfe-publish --configuration=production \
+    && node tools/build-legal/build-legal.mjs --out /out/legal
 
 # The local manifest of apps/shell/public points to localhost: it never ships.
 RUN mkdir -p /out/remotes \
@@ -46,6 +48,8 @@ RUN cp /usr/bin/caddy /tmp/caddy && mv /tmp/caddy /usr/bin/caddy \
 
 COPY --from=build /out/shell /srv/shell
 COPY --from=build /out/remotes /srv/remotes
+# Legal pages (LEG-01), with the contact address placeholder: entrypoint.sh copies them to /srv/runtime
+COPY --from=build /out/legal /srv/legal
 COPY docker/Caddyfile /etc/caddy/Caddyfile
 RUN caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/entrypoint.sh

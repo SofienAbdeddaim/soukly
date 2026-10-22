@@ -93,8 +93,9 @@
   </p>
   <p class="step__muted">
     {{ 'publish.preview.rules-before' | transloco }}
-    <a [routerLink]="'/terms' | localePath">{{ 'publish.preview.rules-link' | transloco }}</a>{{
-    'publish.preview.rules-after' | transloco }}
+    <a [href]="'/legal/posting-rules' | localePath" target="_blank" rel="noopener"
+      >{{ 'publish.preview.rules-link' | transloco }}</a
+    >{{ 'publish.preview.rules-after' | transloco }}
   </p>
   }
 

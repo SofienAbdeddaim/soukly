@@ -214,6 +214,8 @@ services:
     restart: unless-stopped
     environment:
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is not set}
+      # Contact address of the legal pages (LEG-01); empty: privacy@<host of PUBLIC_BASE_URL>
+      LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-}
     networks:
       default:
       edge:

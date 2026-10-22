@@ -2,6 +2,7 @@ package com.soukly.user.registration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -26,7 +27,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.jayway.jsonpath.JsonPath;
 import com.soukly.user.support.IntegrationTest;
+import com.soukly.user.support.SessionCalls;
 import com.soukly.user.support.TestSmtpServer;
 
 import jakarta.mail.Message.RecipientType;
@@ -103,6 +106,22 @@ class RegistrationTests extends IntegrationTest {
         assertThat(user(EMAIL).get("email_verified_at")).isNotNull();
 
         expectInvalidToken(verify(token));
+    }
+
+    // --- Scenario: accepted version of the terms (LEG-01) -------------------------------------------------
+
+    @Test
+    void registrationRecordsTheCurrentTermsVersionAndTheProfileReturnsIt() throws Exception {
+        register(EMAIL, "20123456", "fr").andExpect(status().isAccepted());
+        assertThat(user(EMAIL)).containsEntry("terms_version", "2026-10-22");
+        verify(TestSmtpServer.token(SMTP.awaitEmails(1).getFirst())).andExpect(status().isNoContent());
+
+        String login = new SessionCalls(mockMvc).login(EMAIL, PASSWORD).andExpect(status().isOk()).andReturn()
+                .getResponse().getContentAsString();
+        mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION,
+                "Bearer " + JsonPath.read(login, "$.accessToken")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.termsVersion").value("2026-10-22"));
     }
 
     @ParameterizedTest
