@@ -97,7 +97,8 @@ The order of the members of a JSON object is not significant. Java classes of th
     "ar": "https://soukly.tn/ar/listings/5f0c…",
     "en": "https://soukly.tn/en/listings/5f0c…"
   },
-  "shareTo": [],
+  "shareTo": ["FACEBOOK", "INSTAGRAM"],
+  "shareLanguage": "fr",
   "expiresAt": "2026-12-11T20:00:00Z"
 }
 ```
@@ -117,7 +118,8 @@ The order of the members of a JSON object is not significant. Java classes of th
 | `coverPhotoUrl` | string | public URL of the cover photo, the first of `photoUrls` |
 | `photoUrls` | array of strings | public URLs of the WebP versions of at most 1600 px, in the seller's order (1 to 10) |
 | `publicUrls` | object | URL of the listing page in each language: `{PUBLIC_BASE_URL}/{lang}/listings/{listingId}` (route of CATA-03) |
-| `shareTo` | array of strings | social networks the seller chose for this listing; always `[]` until SOC-03 |
+| `shareTo` | array of strings | social networks the seller chose for this listing (SOC-03), `FACEBOOK` and/or `INSTAGRAM` in this order, without duplicates; `[]` when they chose none or published without choosing. listing-service does not check the connections: `social-publisher` skips a network that is not connected or needs a reconnection and records why |
+| `shareLanguage` | string or null | language of the post texts, `fr`, `ar` or `en` (the language of the page when the seller chose); `fr` when a network was chosen without a language, `null` when `shareTo` is empty |
 | `expiresAt` | ISO-8601 instant | end of visibility, 60 days after the publication |
 
 ### `listing.renewed`, `listing.expiring-soon`, `listing.expired`
@@ -194,3 +196,4 @@ written by the seller and may be shown publicly; they are not considered persona
 | ANN-03 | topics, envelope and the types `listing.published`, `listing.renewed`, `listing.expiring-soon`, `listing.expired` (`schemaVersion` 1) |
 | ANN-05 | new types `listing.updated`, `listing.deactivated`, `listing.deleted` (`schemaVersion` 1); `listing.renewed` also from a deactivated listing |
 | AUTH-05 | `listing.deleted` also for each listing of a deleted account; the outbox relay moved to `common` (same behavior), shared with the user events |
+| SOC-03 | `listing.published`: `shareTo` now carries the choice of the seller, new member `shareLanguage` (added, `schemaVersion` still 1) |

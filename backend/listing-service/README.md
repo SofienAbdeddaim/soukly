@@ -108,6 +108,11 @@ but every answer lists what is still missing. Package `com.soukly.listing.listin
 | `governorateCode` | one of the 24 governorates |
 | `delegationCode` | optional, a delegation **of the chosen governorate** |
 | `attributes` | `{ "<code>": value }`, checked against the attributes of the subcategory (below) |
+| `shareTo` | SOC-03: networks to share to at the publication, an array of `FACEBOOK`, `INSTAGRAM` without duplicates, returned in that order; `null` (the default) until the seller chose, `[]` for no network. Draft only |
+| `shareLanguage` | SOC-03: language of the post texts, `fr`, `ar` or `en` (the language of the page when the seller chose), or `null`. Draft only |
+
+listing-service does not check the connections of the seller (social-publisher owns them): at the publication,
+social-publisher skips a network that is not connected or needs a reconnection, and records why (SOC-06).
 
 Read-only members of the answer: `id`, `status` (`DRAFT`), `version`, `kind` (`SERVICE` for the `services` and
 `jobs` families, `SALE` otherwise, never entered), `photos` (below), `missingFields`, `warnings`, `createdAt`, `updatedAt`. Lengths are
@@ -176,6 +181,8 @@ invalid field with a stable code that the front end translates:
 | `governorateCode` | `governorate.unknown` |
 | `delegationCode` | `delegation.unknown`, `delegation.not-in-governorate` |
 | `attributes` | `attributes.invalid` (not an object) |
+| `shareTo` | `share-to.invalid` (not an array, unknown network), `share-to.duplicate` |
+| `shareLanguage` | `share-language.invalid` |
 | `attributes.<code>` | `attribute.unknown`, `attribute.invalid-type`, `attribute.invalid-value` (unknown enum value, control character), `attribute.out-of-range`, `attribute.too-short`, `attribute.too-long` |
 
 | Status | Type |
@@ -547,7 +554,7 @@ which action is allowed from which status, unit tested) with the listing locked,
 | Endpoint (through the gateway, JWT) | Answers |
 | --- | --- |
 | `GET /api/listings/mine?status=&limit=&cursor=` | `200` page, `400` `validation-failed` (`status.invalid`, `limit.invalid`, `cursor.invalid`) |
-| `PATCH /api/listings/{id}` | as ANN-01, plus `409` `category-locked` and `422` `listing-incomplete` once published |
+| `PATCH /api/listings/{id}` | as ANN-01, plus `409` `category-locked` and `422` `listing-incomplete` once published, and `409` `share-locked` for `shareTo` or `shareLanguage` (SOC-03) |
 | `POST /api/listings/{id}/deactivate` | `200` listing + `ETag`, `404`, `409` `transition-not-allowed` |
 | `POST /api/listings/{id}/renew` | as ANN-03, also from `INACTIVE` |
 | `DELETE /api/listings/{id}` | `204`, `404` |
@@ -609,6 +616,7 @@ Flyway migrations in `src/main/resources/db/migration`:
 | `V10__create_contact_reveals.sql` | CATA-03: table `contact_reveals`, index `(viewer_id, revealed_at)` for the daily limit |
 | `V11__manage_own_listings.sql` | ANN-05: `listings.deleted_at`, statuses `INACTIVE` and `DELETED`, index of "My listings" |
 | `V12__create_processed_events.sql` | AUTH-05: table `processed_events` (deduplication of the user events) |
+| `V13__add_share_choice.sql` | SOC-03: `listings.share_to` (`text[]`, NULL until chosen) and `share_language` |
 
 Places come from the official INS "Code géographique tunisien" (December 2012, division at 31 December 2012); the
 source, its checksum and the few display fixes are in the header of `V5`. Never invent a place: a delegation created

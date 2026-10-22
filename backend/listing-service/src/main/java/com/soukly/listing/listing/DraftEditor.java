@@ -3,6 +3,7 @@ package com.soukly.listing.listing;
 import java.time.Clock;
 import java.time.Year;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,9 +48,14 @@ class DraftEditor {
     static final String GOVERNORATE_CODE = "governorateCode";
     static final String DELEGATION_CODE = "delegationCode";
     static final String ATTRIBUTES = "attributes";
+    static final String SHARE_TO = "shareTo";
+    static final String SHARE_LANGUAGE = "shareLanguage";
 
     private static final Set<String> FIELDS = Set.of(CATEGORY_CODE, TITLE, DESCRIPTION, PRICE_MODE, PRICE,
-            NEGOTIABLE, GOVERNORATE_CODE, DELEGATION_CODE, ATTRIBUTES);
+            NEGOTIABLE, GOVERNORATE_CODE, DELEGATION_CODE, ATTRIBUTES, SHARE_TO, SHARE_LANGUAGE);
+
+    /** Languages of the post texts (SOC-03): those of the site. */
+    static final Set<String> SHARE_LANGUAGES = Set.of("fr", "ar", "en");
 
     static final int TITLE_MIN = 5;
     static final int TITLE_MAX = 80;
@@ -131,6 +137,13 @@ class DraftEditor {
         }
         if (patch.has(ATTRIBUTES) && definitions != null) {
             attributes(draft, patch.get(ATTRIBUTES), definitions, errors);
+        }
+        if (patch.has(SHARE_TO)) {
+            draft.shareTo = shareTo(patch.get(SHARE_TO), errors);
+        }
+        if (patch.has(SHARE_LANGUAGE)) {
+            draft.shareLanguage = code(patch.get(SHARE_LANGUAGE), SHARE_LANGUAGE, "share-language.invalid",
+                    SHARE_LANGUAGES::contains, errors);
         }
 
         coherence(draft, errors);
@@ -260,6 +273,39 @@ class DraftEditor {
         return value.stringValue();
     }
 
+    /** A list of {@link ShareNetwork} without duplicates, kept in the order of the enum; {@code null} clears it. */
+    private static List<ShareNetwork> shareTo(JsonNode value, List<FieldError> errors) {
+        if (value.isNull()) {
+            return null;
+        }
+        if (!value.isArray()) {
+            errors.add(new FieldError(SHARE_TO, "share-to.invalid"));
+            return null;
+        }
+        Set<ShareNetwork> networks = new LinkedHashSet<>();
+        for (JsonNode element : value) {
+            ShareNetwork network = element.isString() ? network(element.stringValue()) : null;
+            if (network == null) {
+                errors.add(new FieldError(SHARE_TO, "share-to.invalid"));
+                return null;
+            }
+            if (!networks.add(network)) {
+                errors.add(new FieldError(SHARE_TO, "share-to.duplicate"));
+                return null;
+            }
+        }
+        return Arrays.stream(ShareNetwork.values()).filter(networks::contains).toList();
+    }
+
+    private static ShareNetwork network(String value) {
+        for (ShareNetwork network : ShareNetwork.values()) {
+            if (network.name().equals(value)) {
+                return network;
+            }
+        }
+        return null;
+    }
+
     private void attributes(Draft draft, JsonNode patch, Map<String, Attribute> definitions,
             List<FieldError> errors) {
         if (patch.isNull()) {
@@ -318,6 +364,8 @@ class DraftEditor {
         String governorateCode;
         String delegationCode;
         final Map<String, Object> attributes = new LinkedHashMap<>();
+        List<ShareNetwork> shareTo;
+        String shareLanguage;
 
         Draft() {
         }
@@ -332,6 +380,8 @@ class DraftEditor {
             governorateCode = content.governorateCode();
             delegationCode = content.delegationCode();
             attributes.putAll(content.attributes());
+            shareTo = content.shareTo();
+            shareLanguage = content.shareLanguage();
         }
 
         /** Attributes in the display order of the subcategory. */
@@ -340,7 +390,7 @@ class DraftEditor {
             definitions.keySet().stream().filter(attributes::containsKey)
                     .forEach(code -> ordered.put(code, attributes.get(code)));
             return new ListingContent(categoryCode, title, description, priceMode, price, negotiable,
-                    governorateCode, delegationCode, ordered);
+                    governorateCode, delegationCode, ordered, shareTo, shareLanguage);
         }
     }
 }

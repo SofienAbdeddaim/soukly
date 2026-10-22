@@ -92,6 +92,11 @@ soukly:
       refresh-before: ${INSTAGRAM_TOKEN_REFRESH_BEFORE:10d}
       refresh-interval: P1D
       refresh-initial-delay: PT10M
+    # Labels of the categories and places for the post texts (SOC-03): public referential endpoints of listing-service,
+    # reached directly, never through the gateway
+    listing-service:
+      base-url: ${LISTING_SERVICE_URL:http://localhost:8082}
+      labels-cache-ttl: 1h
     # Consumer of the user events (AUTH-05): a failed message is retried 3 times, then sent to the DLQ
     user-events:
       retries: 3

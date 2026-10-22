@@ -23,6 +23,7 @@ import com.soukly.listing.photo.PhotoView;
 class ListingEventFactory {
 
     static final String CURRENCY = "TND";
+    static final String DEFAULT_SHARE_LANGUAGE = "fr";
 
     private final String publicBaseUrl;
 
@@ -39,7 +40,7 @@ class ListingEventFactory {
         ListingPublishedData data = new ListingPublishedData(content.title(), content.description(),
                 content.categoryCode(), content.kind().name(), content.priceMode().name(), content.price(), CURRENCY,
                 content.negotiable(), content.governorateCode(), content.delegationCode(), photoUrls.getFirst(),
-                photoUrls, publicUrls(listing.id()), List.of(), listing.expiresAt());
+                photoUrls, publicUrls(listing.id()), shareTo(content), listing.expiresAt(), shareLanguage(content));
         return envelope(ListingEvents.PUBLISHED, listing, now, data);
     }
 
@@ -56,6 +57,19 @@ class ListingEventFactory {
                 content.price(), CURRENCY, content.negotiable(), content.governorateCode(), content.delegationCode(),
                 photoUrls.getFirst(), photoUrls, publicUrls(listing.id()), listing.expiresAt());
         return envelope(ListingEvents.UPDATED, listing, now, data);
+    }
+
+    /** No choice yet is no network: the seller published without opening the preview of SOC-03. */
+    private static List<String> shareTo(ListingContent content) {
+        return content.shareTo() == null ? List.of() : content.shareTo().stream().map(Enum::name).toList();
+    }
+
+    /** The language only matters with a network; without a language, French, the default language of the site. */
+    private static String shareLanguage(ListingContent content) {
+        if (content.shareTo() == null || content.shareTo().isEmpty()) {
+            return null;
+        }
+        return content.shareLanguage() == null ? DEFAULT_SHARE_LANGUAGE : content.shareLanguage();
     }
 
     EventEnvelope<Map<String, Object>> deactivated(Listing listing, Instant now) {

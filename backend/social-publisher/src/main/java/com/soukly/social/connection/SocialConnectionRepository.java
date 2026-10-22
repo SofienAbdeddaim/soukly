@@ -24,6 +24,7 @@ import com.soukly.social.token.TokenCipher;
 public class SocialConnectionRepository {
 
     private static final RowMapper<ConnectionView> VIEW = SocialConnectionRepository::view;
+    private static final String VIEW_COLUMNS = "network, status, display_name, picture_url, connected_at, auto_share";
 
     private final JdbcTemplate jdbc;
     private final TokenCipher cipher;
@@ -47,7 +48,8 @@ public class SocialConnectionRepository {
     public ConnectionView save(UUID userId, NewConnection connection) {
         Instant now = clock.instant();
         byte[] ciphertext = cipher.encrypt(connection.token(), associatedData(userId, connection.network()));
-        jdbc.update("""
+        // auto_share is left out of the update: a new connection of a network already connected keeps the preference
+        return jdbc.queryForObject("""
                 INSERT INTO social_connections (id, user_id, network, external_id, external_user_id, display_name,
                     picture_url, token_ciphertext, key_version, token_expires_at, status, connected_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'CONNECTED', ?, ?)
@@ -56,19 +58,27 @@ public class SocialConnectionRepository {
                     picture_url = EXCLUDED.picture_url, token_ciphertext = EXCLUDED.token_ciphertext,
                     key_version = EXCLUDED.key_version, token_expires_at = EXCLUDED.token_expires_at,
                     status = 'CONNECTED', connected_at = EXCLUDED.connected_at, updated_at = EXCLUDED.updated_at
-                """, UUID.randomUUID(), userId, connection.network().name(), connection.externalId(),
-                connection.externalUserId(), connection.displayName(), connection.pictureUrl(), ciphertext,
-                cipher.keyVersion(), timestamp(connection.tokenExpiresAt()), Timestamp.from(now),
-                Timestamp.from(now));
-        return new ConnectionView(connection.network(), ConnectionStatus.CONNECTED, connection.displayName(),
-                connection.pictureUrl(), now);
+                RETURNING\s""" + VIEW_COLUMNS, VIEW, UUID.randomUUID(), userId, connection.network().name(),
+                connection.externalId(), connection.externalUserId(), connection.displayName(),
+                connection.pictureUrl(), ciphertext, cipher.keyVersion(), timestamp(connection.tokenExpiresAt()),
+                Timestamp.from(now), Timestamp.from(now));
     }
 
     public List<ConnectionView> findAll(UUID userId) {
+        return jdbc.query("SELECT " + VIEW_COLUMNS + " FROM social_connections WHERE user_id = ? ORDER BY network",
+                VIEW, userId);
+    }
+
+    /**
+     * Changes the preference "tick by default for every new listing" of a connection (SOC-03).
+     *
+     * @return the connection after the change; empty when the member has no connection of this network
+     */
+    public Optional<ConnectionView> updateAutoShare(UUID userId, Network network, boolean autoShare) {
         return jdbc.query("""
-                SELECT network, status, display_name, picture_url, connected_at FROM social_connections
-                WHERE user_id = ? ORDER BY network
-                """, VIEW, userId);
+                UPDATE social_connections SET auto_share = ?, updated_at = ? WHERE user_id = ? AND network = ?
+                RETURNING\s""" + VIEW_COLUMNS, VIEW, autoShare, Timestamp.from(clock.instant()), userId,
+                network.name()).stream().findFirst();
     }
 
     /**
@@ -142,6 +152,6 @@ public class SocialConnectionRepository {
     private static ConnectionView view(ResultSet rs, int row) throws SQLException {
         return new ConnectionView(Network.valueOf(rs.getString("network")),
                 ConnectionStatus.valueOf(rs.getString("status")), rs.getString("display_name"),
-                rs.getString("picture_url"), rs.getTimestamp("connected_at").toInstant());
+                rs.getString("picture_url"), rs.getTimestamp("connected_at").toInstant(), rs.getBoolean("auto_share"));
     }
 }

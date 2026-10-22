@@ -82,7 +82,7 @@ class ListingViews {
         content.attributes().forEach(ordered::putIfAbsent);
         return new ListingContent(content.categoryCode(), content.title(), content.description(),
                 content.priceMode(), content.price(), content.negotiable(), content.governorateCode(),
-                content.delegationCode(), ordered);
+                content.delegationCode(), ordered, content.shareTo(), content.shareLanguage());
     }
 
     /** Attributes of the subcategory, or null when it is no longer active. */

@@ -22,6 +22,8 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
+import com.soukly.social.caption.CaptionUnavailableException;
+import com.soukly.social.connection.ConnectionNotFoundException;
 import com.soukly.social.facebook.PageSelectionNotFoundException;
 import com.soukly.social.oauth.NetworkNotConfiguredException;
 import com.soukly.social.oauth.OAuthFailedException;
@@ -40,6 +42,9 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     /** Member of an OAuth problem: the language of the page that started the connection, when the state was valid. */
     static final String LANG = "lang";
 
+    /** Member of a {@code validation-failed} problem: the invalid fields. */
+    static final String ERRORS = "errors";
+
     @ExceptionHandler
     ResponseEntity<Object> oauthFailed(OAuthFailedException e, NativeWebRequest request) {
         ProblemDetail problem = ProblemDetails.create(ProblemDetails.type(e.failure().slug()), e.failure().status(),
@@ -55,6 +60,30 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(ProblemDetails.create(ProblemDetails.type("page-selection-not-found"), HttpStatus.NOT_FOUND,
                 "Page choice not found", "No choice of Page is in progress, or it expired. Connect again.",
                 instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> invalidRequest(InvalidRequestException e, NativeWebRequest request) {
+        ProblemDetail problem = ProblemDetails.create(ProblemDetails.type("validation-failed"),
+                HttpStatus.BAD_REQUEST, "Validation failed", "One or more fields are invalid.", instance(request),
+                requestId(request));
+        problem.setProperty(ERRORS, e.errors());
+        return problem(problem);
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> connectionNotFound(ConnectionNotFoundException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("connection-not-found"), HttpStatus.NOT_FOUND,
+                "Connection not found", "This network is not connected to your account.", instance(request),
+                requestId(request)));
+    }
+
+    /** The referentials of listing-service did not answer: the text cannot be made now. */
+    @ExceptionHandler
+    ResponseEntity<Object> captionUnavailable(CaptionUnavailableException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("caption-unavailable"),
+                HttpStatus.SERVICE_UNAVAILABLE, "Post text unavailable",
+                "The text of the post cannot be made right now. Try again.", instance(request), requestId(request)));
     }
 
     /** {@code facebook-not-configured} or {@code instagram-not-configured}. */

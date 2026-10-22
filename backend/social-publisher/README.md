@@ -66,6 +66,44 @@ POST /social/instagram/callback ─► consumes the state ─► POST api.instag
 | `instagram-unavailable`          | 502    | Instagram refused the code, sent another error, or did not answer       |
 | `instagram-not-configured`       | 503    | `INSTAGRAM_APP_ID` or `INSTAGRAM_APP_SECRET` is empty                   |
 
+## Where to share a listing and the post text (SOC-03)
+
+- **Preference per network**: `social_connections.auto_share` (V3), `true` when a network is connected; a new
+  connection of a network already connected (after `NEEDS_RECONNECT`) keeps it, a disconnection forgets it.
+  `GET /social/connections` returns `autoShare`; `PATCH /social/connections/{facebook|instagram}` with
+  `{"autoShare": false}` changes it for the member of the token (`404` `connection-not-found`, `400`
+  `validation-failed` without a boolean). The publish form ticks the networks with `autoShare` the first time it
+  shows the preview of a draft; the choice is then stored in the draft (`shareTo`, listing-service).
+- **Post text**: `CaptionBuilder` (package `caption`) is the single source of the texts, reused by SOC-04 and SOC-05;
+  the front end never builds them. `POST /social/caption-preview` (JWT) takes `{ title, description, priceMode,
+  priceTnd, negotiable, categoryCode, governorateCode, delegationCode, publicUrl, language }` and returns
+  `{ text, hashtags }`:
+
+  ```
+  Peugeot 208 diesel, première main
+  32 000 DT · Négociable
+  Sfax, Sakiet Ezzit
+
+  Première main, carnet d'entretien complet…
+
+  Voir l'annonce : https://soukly.tn/fr/listings/8f3c…
+  #Soukly #Sfax #Voitures
+  ```
+
+  Templates in `fr`, `ar` and `en` (`CaptionLanguage`); prices as the `price` pipe of the front end (`32 000 DT`,
+  `32.000 د.ت.`, `TND 32,000`, with the non-breaking spaces of `Intl`); description cut at 300 characters on the last
+  word, then `…`; whole text at most 2,000 characters (an Instagram caption allows 2,200). An empty field of a draft
+  leaves its line out. Hashtags: the governorate and the subcategory in the language, without spaces or punctuation
+  (`#BenArous`, `#MotosEtScooters`; Arabic words joined with `_`: `#دراجات_نارية_وسكوترات`).
+- **No personal data**: no name, phone number or email of the seller is an input, and email addresses and Tunisian
+  phone numbers typed in the title or the description are replaced with `[…]` (an amount followed by the currency,
+  `25 000 000 DT`, is kept).
+- **Labels** come from the public referential endpoints of listing-service (`GET /categories`,
+  `/locations/governorates`, `/locations/governorates/{code}/delegations`, at `LISTING_SERVICE_URL`, never through the
+  gateway), kept one hour in memory (Caffeine): listing-service stays the single source of the places and categories.
+  listing-service unavailable: `503` `caption-unavailable`; an unknown code: `400` `validation-failed`
+  (`category.unknown`, `governorate.unknown`, `delegation.unknown`).
+
 ## Configuration
 
 | Variable                                  | Meaning                                                                                                                                   |
@@ -79,6 +117,7 @@ POST /social/instagram/callback ─► consumes the state ─► POST api.instag
 | `FRONT_BASE_URL` (else `PUBLIC_BASE_URL`) | origin of the redirect URIs `{FRONT_BASE_URL}/oauth/facebook/callback` and `/oauth/instagram/callback`                                  |
 | `USER_SERVICE_JWKS_URI`, `JWT_ISSUER`     | validation of the access tokens, as in the gateway                                                                                        |
 | `KAFKA_BOOTSTRAP_SERVERS`                 | Redpanda, for `user.deleted`                                                                                                              |
+| `LISTING_SERVICE_URL`                     | listing-service as this service reaches it, for the labels of the post texts (SOC-03), `http://localhost:8082` by default               |
 
 Running it locally (Docker infrastructure up, `.env` copied from `.env.example`):
 
