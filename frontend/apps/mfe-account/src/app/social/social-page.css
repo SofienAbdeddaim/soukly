@@ -1,0 +1,22 @@
+/*
+ * Component styles only (no Tailwind utility): the page is rendered inside the shell. Tokens of
+ * libs/ui, logical properties only (RTL).
+ */
+:host {
+  display: block;
+  max-inline-size: 36rem;
+  margin-inline: auto;
+}
+
+.social {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-block: 16px 48px;
+  padding-inline: 16px;
+}
+
+.social__intro {
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}

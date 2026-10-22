@@ -36,5 +36,11 @@
       "text": "Nous n'arrivons pas à la charger. Vérifiez votre connexion puis réessayez.",
       "retry": "Réessayer"
     }
+  },
+  "oauth": {
+    "facebook": {
+      "title": "Connexion à Facebook",
+      "loading": "Nous terminons la connexion de votre Page Facebook…"
+    }
   }
 }

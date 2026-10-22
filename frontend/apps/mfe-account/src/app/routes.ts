@@ -15,6 +15,8 @@ import { ProfilePage } from './profile/profile-page';
 import { RegisterPage } from './register/register-page';
 import { ResetPasswordPage } from './reset-password/reset-password-page';
 import { VerifyEmailPage } from './verify-email/verify-email-page';
+import { PageChoicePage } from './social/page-choice-page';
+import { SocialPage } from './social/social-page';
 import { WelcomePage } from './welcome/welcome-page';
 
 /**
@@ -47,8 +49,11 @@ export const routes: Routes = [
       { path: 'forgot-password', component: ForgotPasswordPage },
       { path: 'forgot-password/sent', component: ResetLinkSentPage },
       { path: 'reset-password', component: ResetPasswordPage },
-      // Waiting pages: Facebook and Instagram links (SOC-01, SOC-02).
-      { path: 'networks/:network', component: AccountComingSoon, canActivate: [authGuard] },
+      // My networks (SOC-01): the Facebook Page, and the choice when the member manages several.
+      { path: 'social', component: SocialPage, canActivate: [authGuard] },
+      { path: 'social/facebook/page', component: PageChoicePage, canActivate: [authGuard] },
+      // Former waiting pages of the welcome screen (AUTH-03).
+      { path: 'networks/:network', redirectTo: 'social' },
       { path: '**', component: AccountComingSoon },
     ],
   },

@@ -1,0 +1,52 @@
+<app-page-header
+  titleId="social-title"
+  [title]="'account.social.title' | transloco"
+  back="/account/profile"
+  [backLabel]="'account.social.back' | transloco"
+/>
+
+<section
+  class="social"
+  aria-labelledby="social-title"
+  [attr.aria-busy]="state() === 'loading' ? 'true' : null"
+  data-testid="social-page"
+>
+  <p class="social__intro">{{ 'account.social.intro' | transloco }}</p>
+
+  @if (connected()) {
+  <ui-alert type="success" data-testid="facebook-connected">
+    <strong>{{ 'account.social.connected.title' | transloco }}</strong>
+    {{ 'account.social.connected.text' | transloco }}
+  </ui-alert>
+  } @if (failure(); as reason) {
+  <app-facebook-failure [failure]="reason" (retry)="connect()" (dismiss)="dismissFailure()" />
+  } @if (disconnectError()) {
+  <ui-alert type="error" data-testid="disconnect-error">
+    {{ 'account.social.disconnect.error' | transloco }}
+  </ui-alert>
+  } @switch (state()) { @case ('loading') {
+  <ui-skeleton variant="card" blockSize="120px" />
+  <ui-skeleton variant="card" blockSize="72px" />
+  } @case ('error') {
+  <ui-alert type="error" data-testid="social-load-error">
+    {{ 'account.social.load-error' | transloco }}
+  </ui-alert>
+  <button ui-button variant="secondary" type="button" (click)="load()">
+    {{ 'account.listings.retry' | transloco }}
+  </button>
+  } @case ('ready') {
+  <app-facebook-card
+    [connection]="facebook()"
+    [busy]="connecting()"
+    (connectRequested)="connect()"
+    (disconnectRequested)="disconnect()"
+  />
+  <app-network-card
+    network="instagram"
+    [name]="'account.social.instagram.name' | transloco"
+    [status]="'account.social.instagram.soon' | transloco"
+    [disabled]="true"
+    data-testid="instagram-card"
+  />
+  } }
+</section>

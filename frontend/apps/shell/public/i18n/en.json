@@ -36,5 +36,11 @@
       "text": "We cannot load it. Check your connection, then try again.",
       "retry": "Try again"
     }
+  },
+  "oauth": {
+    "facebook": {
+      "title": "Connecting to Facebook",
+      "loading": "We are finishing the connection of your Facebook Page…"
+    }
   }
 }
