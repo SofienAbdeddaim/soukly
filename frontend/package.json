@@ -17,7 +17,7 @@
     "@angular/cli": "22.2.2",
     "@angular/compiler-cli": "22.2.3",
     "@angular/language-service": "22.2.3",
-    "@eslint/css": "2.0.0",
+    "@eslint/css": "2.0.1",
     "@eslint/js": "^9.39.5",
     "@nx/angular": "23.3.0",
     "@nx/devkit": "23.3.0",
