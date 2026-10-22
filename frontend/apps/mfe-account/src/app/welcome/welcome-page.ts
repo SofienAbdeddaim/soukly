@@ -14,7 +14,7 @@ interface Network {
 /**
  * Optional screen after the very first login (`/{lang}/account/welcome`): offers to link Facebook and
  * Instagram. "Later" and "Continue to Soukly" go to the page asked for before the login, or home.
- * "Link" opens a waiting page until SOC-01 and SOC-02 wire it.
+ * "Link" opens "My networks" (SOC-01).
  */
 @Component({
   selector: 'app-welcome-page',

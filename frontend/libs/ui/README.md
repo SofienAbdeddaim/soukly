@@ -96,6 +96,8 @@ Ratios computed with the WCAG 2.x formula on the `tokens.css` values (2026-10-15
 | `on-brand` on `brand`           | header, footer                              | 14.31 | OK                |
 | `on-brand-muted` on `brand`     | step number of the publish header (ANN-04)  | 11.45 | OK                |
 | `accent` on `brand-track`       | filled part of the progress bar (non-text)  | 5.15  | OK (3:1)          |
+| `on-network` on `facebook`      | Facebook logo (SOC-01)                      | 6.70  | OK                |
+| `on-network` on `instagram`     | Instagram logo (SOC-01)                     | 7.88  | OK                |
 | white on `#E0602F`              | no text                                     | 3.57  | rejected for text |
 | saffron on cream                | no text                                     | 1.76  | rejected for text |
 

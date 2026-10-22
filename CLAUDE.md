@@ -11,7 +11,7 @@ Soukly is a classified ads site (sales and services) for **Tunisia**, with autom
 ## Structure (target, created ticket by ticket)
 
 ```
-frontend/   # Nx (pnpm only): apps shell, mfe-account, mfe-catalog, mfe-publish, ui-showcase; libs ui, i18n, auth, listing-data
+frontend/   # Nx (pnpm only): apps shell, mfe-account, mfe-catalog, mfe-publish, ui-showcase; libs ui, i18n, auth, listing-data, social-data
 backend/    # Maven: common, gateway (8080), user-service (8081), listing-service (8082), social-publisher (8083), e2e-tests (tests only)
 infra/      # vm/, edge/, compose/, backup/ (DEP-02 to DEP-04)
 docs/events/  # event contracts (listing-events.md, user-events.md, social-events.md)

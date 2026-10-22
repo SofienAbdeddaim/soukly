@@ -1,0 +1,82 @@
+<app-page-header
+  titleId="page-choice-title"
+  [title]="'account.social.choose.title' | transloco"
+  [back]="socialPath"
+  [backLabel]="'account.social.back-to-networks' | transloco"
+/>
+
+<section
+  class="choice"
+  aria-labelledby="page-choice-title"
+  [attr.aria-busy]="state() === 'loading' ? 'true' : null"
+  data-testid="page-choice"
+>
+  @switch (state()) { @case ('loading') {
+  <ui-skeleton variant="line" inlineSize="80%" />
+  <ui-skeleton variant="card" blockSize="64px" />
+  <ui-skeleton variant="card" blockSize="64px" />
+  } @case ('error') {
+  <ui-alert type="error" data-testid="page-choice-load-error">
+    {{ 'account.social.load-error' | transloco }}
+  </ui-alert>
+  <button ui-button variant="secondary" type="button" (click)="load()">
+    {{ 'account.listings.retry' | transloco }}
+  </button>
+  } @case ('ready') {
+  <form class="choice__form" (ngSubmit)="choose()">
+    <fieldset class="choice__pages">
+      <legend class="choice__legend">{{ 'account.social.choose.legend' | transloco }}</legend>
+      @for (page of pages(); track page.pageId) {
+      <label class="choice__page" [class.choice__page--selected]="selected() === page.pageId">
+        <input
+          type="radio"
+          name="page"
+          class="choice__radio"
+          [value]="page.pageId"
+          [checked]="selected() === page.pageId"
+          (change)="selected.set(page.pageId)"
+          data-testid="page-option"
+        />
+        @if (page.pictureUrl) {
+        <img class="choice__picture" [src]="page.pictureUrl" alt="" width="40" height="40" />
+        } @else {
+        <span class="choice__picture choice__picture--empty" aria-hidden="true"
+          >{{ page.name.charAt(0) }}</span
+        >
+        }
+        <span class="choice__text">
+          <bdi class="choice__name">{{ page.name }}</bdi>
+          @if (page.category) {
+          <bdi class="choice__category">{{ page.category }}</bdi>
+          }
+        </span>
+      </label>
+      }
+    </fieldset>
+
+    @if (saveError()) {
+    <ui-alert type="error" data-testid="page-choice-error">
+      {{ 'account.social.choose.error' | transloco }}
+    </ui-alert>
+    }
+
+    <button
+      ui-button
+      size="lg"
+      type="submit"
+      [loading]="saving()"
+      [disabled]="!selected()"
+      data-testid="page-choice-submit"
+    >
+      {{ 'account.social.choose.submit' | transloco }}
+    </button>
+    <a
+      class="choice__cancel"
+      [routerLink]="socialPath | localePath"
+      data-testid="page-choice-cancel"
+    >
+      {{ 'account.social.choose.cancel' | transloco }}
+    </a>
+  </form>
+  } }
+</section>

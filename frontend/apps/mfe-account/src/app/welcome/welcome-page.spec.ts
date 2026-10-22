@@ -37,8 +37,8 @@ describe('WelcomePage', () => {
     ]);
     expect(links).toEqual([
       ['Plus tard', '/fr'],
-      ['Relier', '/fr/account/networks/facebook'],
-      ['Relier', '/fr/account/networks/instagram'],
+      ['Relier', '/fr/account/social'],
+      ['Relier', '/fr/account/social'],
       ['Continuer vers Soukly', '/fr'],
     ]);
   });

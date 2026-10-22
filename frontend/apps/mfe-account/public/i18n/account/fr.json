@@ -324,5 +324,85 @@
     "error-title": "Impossible de confirmer le lien pour le moment",
     "invalid-text": "Il a expiré (24 heures), a déjà servi, ou une demande plus récente l’a remplacé. Refaites la demande depuis votre profil.",
     "new-request": "Changer d'email"
+  },
+  "social": {
+    "title": "Mes réseaux",
+    "back": "Retour au profil",
+    "back-to-networks": "Retour à mes réseaux",
+    "intro": "Reliez votre Page Facebook pour y partager vos annonces en un clic. Soukly ne publie jamais sans votre accord.",
+    "connect": "Relier",
+    "not-connected": "Non reliée",
+    "load-error": "Impossible de charger vos réseaux. Vérifiez votre connexion puis réessayez.",
+    "facebook": {
+      "name": "Page Facebook",
+      "hint": "Vous serez redirigé vers Facebook pour autoriser Soukly à publier sur une Page que vous gérez. Un profil personnel ne suffit pas.",
+      "connected-on": "Page Facebook · reliée le {{date}}",
+      "change": "Changer de Page",
+      "disconnect": "Déconnecter",
+      "needs-reconnect": "Facebook a retiré l'autorisation. Reliez la Page à nouveau.",
+      "reconnect": "Relier à nouveau"
+    },
+    "instagram": {
+      "name": "Instagram",
+      "soon": "Bientôt disponible"
+    },
+    "connected": {
+      "title": "Page reliée.",
+      "text": "Vous pourrez la choisir au moment de publier une annonce."
+    },
+    "failure": {
+      "retry": "Réessayer",
+      "restart": "Recommencer",
+      "later": "Plus tard",
+      "oauth-cancelled": {
+        "title": "Vous avez annulé la connexion",
+        "text": "Votre Page n'est pas reliée. Vous pouvez recommencer quand vous voulez."
+      },
+      "oauth-permission-missing": {
+        "title": "Soukly a besoin de l'autorisation de publier sur votre Page",
+        "text": "Sur Facebook, laissez cochées les autorisations demandées par Soukly, puis réessayez."
+      },
+      "facebook-no-page": {
+        "title": "Vous ne gérez aucune Page Facebook",
+        "text": "Soukly publie vos annonces sur une Page Facebook, pas sur votre profil personnel. Créez une Page gratuite, puis réessayez.",
+        "help": "Comment créer une Page Facebook ?"
+      },
+      "oauth-state-invalid": {
+        "title": "Ce lien de connexion a expiré",
+        "text": "Recommencez la connexion à Facebook depuis cette page."
+      },
+      "page-selection-not-found": {
+        "title": "Le choix de la Page a expiré",
+        "text": "Recommencez la connexion à Facebook pour choisir votre Page."
+      },
+      "facebook-unavailable": {
+        "title": "Facebook n'a pas terminé la connexion",
+        "text": "Réessayez dans un instant."
+      },
+      "facebook-not-configured": {
+        "title": "La connexion à Facebook n'est pas encore disponible",
+        "text": "Elle arrive bientôt sur Soukly."
+      },
+      "unknown": {
+        "title": "La connexion n'a pas abouti",
+        "text": "Vérifiez votre connexion internet, puis réessayez."
+      }
+    },
+    "disconnect": {
+      "title": "Déconnecter cette Page ?",
+      "text-before": "Soukly ne partagera plus vos annonces sur ",
+      "text-after": ". Les publications déjà faites restent sur Facebook.",
+      "confirm": "Déconnecter",
+      "cancel": "Annuler",
+      "done": "Page déconnectée.",
+      "error": "La Page n'a pas pu être déconnectée. Réessayez."
+    },
+    "choose": {
+      "title": "Choisir une Page",
+      "legend": "Vous gérez plusieurs Pages. Sur laquelle Soukly doit-il partager vos annonces ?",
+      "submit": "Relier cette Page",
+      "cancel": "Annuler",
+      "error": "La Page n'a pas pu être reliée. Réessayez."
+    }
   }
 }

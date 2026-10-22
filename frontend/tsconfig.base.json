@@ -21,7 +21,8 @@
       "@soukly/auth": ["./libs/auth/src/index.ts"],
       "@soukly/ui": ["./libs/ui/src/index.ts"],
       "@soukly/i18n": ["./libs/i18n/src/index.ts"],
-      "@soukly/listing-data": ["./libs/listing-data/src/index.ts"]
+      "@soukly/listing-data": ["./libs/listing-data/src/index.ts"],
+      "@soukly/social-data": ["./libs/social-data/src/index.ts"]
     },
     "resolveJsonModule": true
   },

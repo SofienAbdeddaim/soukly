@@ -324,5 +324,85 @@
     "error-title": "The link cannot be checked right now",
     "invalid-text": "It expired (24 hours), was already used, or a newer request replaced it. Make the request again from your profile.",
     "new-request": "Change email"
+  },
+  "social": {
+    "title": "My networks",
+    "back": "Back to the profile",
+    "back-to-networks": "Back to my networks",
+    "intro": "Connect your Facebook Page to share your listings there in one click. Soukly never posts without your consent.",
+    "connect": "Connect",
+    "not-connected": "Not connected",
+    "load-error": "Your networks could not be loaded. Check your connection and try again.",
+    "facebook": {
+      "name": "Facebook Page",
+      "hint": "You will be taken to Facebook to allow Soukly to post on a Page you manage. A personal profile is not enough.",
+      "connected-on": "Facebook Page · connected on {{date}}",
+      "change": "Change Page",
+      "disconnect": "Disconnect",
+      "needs-reconnect": "Facebook withdrew the permission. Connect the Page again.",
+      "reconnect": "Connect again"
+    },
+    "instagram": {
+      "name": "Instagram",
+      "soon": "Coming soon"
+    },
+    "connected": {
+      "title": "Page connected.",
+      "text": "You can choose it when you publish a listing."
+    },
+    "failure": {
+      "retry": "Try again",
+      "restart": "Start again",
+      "later": "Later",
+      "oauth-cancelled": {
+        "title": "You cancelled the connection",
+        "text": "Your Page is not connected. You can start again whenever you like."
+      },
+      "oauth-permission-missing": {
+        "title": "Soukly needs the permission to post on your Page",
+        "text": "On Facebook, keep the permissions Soukly asks for ticked, then try again."
+      },
+      "facebook-no-page": {
+        "title": "You do not manage any Facebook Page",
+        "text": "Soukly posts your listings on a Facebook Page, not on your personal profile. Create a free Page, then try again.",
+        "help": "How do I create a Facebook Page?"
+      },
+      "oauth-state-invalid": {
+        "title": "This connection link has expired",
+        "text": "Start the connection to Facebook again from this page."
+      },
+      "page-selection-not-found": {
+        "title": "The choice of Page has expired",
+        "text": "Start the connection to Facebook again to choose your Page."
+      },
+      "facebook-unavailable": {
+        "title": "Facebook did not complete the connection",
+        "text": "Try again in a moment."
+      },
+      "facebook-not-configured": {
+        "title": "Connecting to Facebook is not available yet",
+        "text": "It is coming to Soukly soon."
+      },
+      "unknown": {
+        "title": "The connection did not go through",
+        "text": "Check your internet connection, then try again."
+      }
+    },
+    "disconnect": {
+      "title": "Disconnect this Page?",
+      "text-before": "Soukly will no longer share your listings on ",
+      "text-after": ". Posts already made stay on Facebook.",
+      "confirm": "Disconnect",
+      "cancel": "Cancel",
+      "done": "Page disconnected.",
+      "error": "The Page could not be disconnected. Try again."
+    },
+    "choose": {
+      "title": "Choose a Page",
+      "legend": "You manage several Pages. Which one should Soukly share your listings on?",
+      "submit": "Connect this Page",
+      "cancel": "Cancel",
+      "error": "The Page could not be connected. Try again."
+    }
   }
 }

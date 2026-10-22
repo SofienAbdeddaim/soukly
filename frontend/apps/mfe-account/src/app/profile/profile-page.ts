@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { LucideList, LucideLogOut } from '@lucide/angular';
+import { LucideList, LucideLogOut, LucideShare2 } from '@lucide/angular';
 import { AuthService } from '@soukly/auth';
 import { LocalePathPipe, LocaleService } from '@soukly/i18n';
 import { UiAlert, UiButton, UiSkeleton } from '@soukly/ui';
@@ -23,6 +23,7 @@ import { SecuritySection } from './security-section';
     LocalePathPipe,
     LucideList,
     LucideLogOut,
+    LucideShare2,
     UiAlert,
     UiButton,
     UiSkeleton,

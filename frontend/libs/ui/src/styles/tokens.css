@@ -29,6 +29,9 @@
   --soukly-red-50: #fdecea;
   --soukly-green-700: #1b6e45;
   --soukly-green-50: #e8f3ec;
+  /* Brand colours of the social networks (AUTH-03 and SOC-01 mockups), for their logos only */
+  --soukly-facebook-blue: #1d4ed8;
+  --soukly-instagram-plum: #9d174d;
   --soukly-indigo-900-alpha-8: rgb(42 33 64 / 8%);
   --soukly-indigo-900-alpha-16: rgb(42 33 64 / 16%);
 
@@ -55,6 +58,11 @@
   --color-success: var(--soukly-green-700);
   --color-success-surface: var(--soukly-green-50);
   --color-warning-surface: var(--soukly-saffron-100);
+  /* Border of a card that needs attention (decorative: the text says why) */
+  --color-warning-border: var(--soukly-saffron-400);
+  --color-facebook: var(--soukly-facebook-blue);
+  --color-instagram: var(--soukly-instagram-plum);
+  --color-on-network: var(--soukly-white);
 
   --font-display: 'Lalezar', 'Rubik', system-ui, sans-serif;
   --font-body: 'Rubik', system-ui, sans-serif;

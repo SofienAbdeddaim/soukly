@@ -32,6 +32,14 @@
       <svg lucideList [size]="18" aria-hidden="true"></svg>
       {{ 'account.listings.title' | transloco }}
     </a>
+    <a
+      class="profile__link"
+      [routerLink]="'/account/social' | localePath"
+      data-testid="profile-social"
+    >
+      <svg lucideShare2 [size]="18" aria-hidden="true"></svg>
+      {{ 'account.social.title' | transloco }}
+    </a>
     <button
       type="button"
       class="profile__link"
