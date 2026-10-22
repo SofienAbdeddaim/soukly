@@ -8,11 +8,12 @@ import {
   UiFieldPrefix,
   UiFieldUnit,
   UiFieldSuffix,
+  UiSwitch,
 } from '@soukly/ui';
 import { ShowcaseLocale } from '../../core/showcase-locale';
 import { ShowcaseSection } from '../../layout/showcase-section/showcase-section';
 
-/** ui-field around input, select and textarea (hint, error, required, prefix, suffix), ui-checkbox. */
+/** ui-field around input, select and textarea (hint, error, required, prefix, suffix), ui-checkbox, ui-switch. */
 @Component({
   selector: 'app-fields-section',
   imports: [
@@ -26,6 +27,7 @@ import { ShowcaseSection } from '../../layout/showcase-section/showcase-section'
     UiFieldPrefix,
     UiFieldUnit,
     UiFieldSuffix,
+    UiSwitch,
   ],
   templateUrl: './fields-section.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,4 +35,5 @@ import { ShowcaseSection } from '../../layout/showcase-section/showcase-section'
 export class FieldsSection {
   protected readonly t = inject(ShowcaseLocale).labels;
   protected readonly showPassword = signal(false);
+  protected readonly switchOn = signal(true);
 }

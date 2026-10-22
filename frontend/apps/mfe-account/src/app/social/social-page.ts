@@ -28,6 +28,13 @@ import { UiAlert, UiButton, UiSkeleton } from '@soukly/ui';
 import { firstValueFrom } from 'rxjs';
 import { AccountToasts } from '../shared/account-toasts';
 import { PageHeader } from '../shared/page-header';
+import {
+  forgetReturnTo,
+  isPublishPath,
+  recallReturnTo,
+  rememberReturnTo,
+  RETURN_TO_PARAM,
+} from './return-to';
 import { DisconnectDialog, DisconnectDialogData } from './disconnect-dialog';
 import { FacebookCard } from './facebook-card';
 import { FacebookFailurePanel } from './facebook-failure';
@@ -38,7 +45,9 @@ import { InstagramFailurePanel } from './instagram-failure';
  * "My networks" (`/{lang}/account/social`): the Facebook Page (SOC-01) and the Instagram account
  * (SOC-02) of the member, independent of each other. "Connect" opens the dialog of the network;
  * the shell brings the member back here with `?facebook=` or `?instagram=` `connected` or the
- * reason of a failure, read once then removed from the URL.
+ * reason of a failure, read once then removed from the URL. Under each connected network, the
+ * switch "tick by default for every new listing" (SOC-03); a member sent by the preview of a draft
+ * finds "Back to my listing".
  */
 @Component({
   selector: 'app-social-page',
@@ -83,10 +92,19 @@ export class SocialPage implements OnInit {
   protected readonly instagramConnected = signal(false);
   /** The Instagram dialog is about to open. */
   protected readonly instagramConnecting = signal(false);
+  /** The network whose preference "tick by default" is being saved (SOC-03). */
+  protected readonly savingAutoShare = signal<SocialNetwork | null>(null);
+  protected readonly autoShareError = signal(false);
+  /**
+   * The preview of a draft that sent the member here to connect a network (SOC-03): kept for the
+   * time of the connection on the network, then offered as "Back to my listing".
+   */
+  protected readonly returnTo = signal<string | null>(null);
   /** The network whose disconnection failed. */
   protected readonly disconnectError = signal<'facebook' | 'instagram' | null>(null);
 
   ngOnInit(): void {
+    this.readReturnTo();
     this.readResult();
     void this.load();
   }
@@ -145,12 +163,64 @@ export class SocialPage implements OnInit {
     }
   }
 
+  /** Saved at once; the switch goes back when the saving fails. */
+  protected async setAutoShare(network: SocialNetwork, autoShare: boolean): Promise<void> {
+    this.autoShareError.set(false);
+    this.savingAutoShare.set(network);
+    this.patchConnection(network, autoShare);
+    try {
+      const saved = await this.api.updateAutoShare(network, autoShare);
+      this.connections.update((all) =>
+        all.map((connection) => (connection.network === network ? saved : connection)),
+      );
+    } catch {
+      this.patchConnection(network, !autoShare);
+      this.autoShareError.set(true);
+    } finally {
+      this.savingAutoShare.set(null);
+    }
+  }
+
+  protected goBack(event: Event, path: string): void {
+    event.preventDefault();
+    forgetReturnTo();
+    void this.router.navigateByUrl(path);
+  }
+
   protected dismissInstagramFailure(): void {
     this.instagramFailure.set(null);
   }
 
   protected dismissFailure(): void {
     this.failure.set(null);
+  }
+
+  private patchConnection(network: SocialNetwork, autoShare: boolean): void {
+    this.connections.update((all) =>
+      all.map((connection) =>
+        connection.network === network ? { ...connection, autoShare } : connection,
+      ),
+    );
+  }
+
+  /**
+   * `?returnTo=` set by the preview of a draft (SOC-03), only a path of the publish form of this
+   * site; kept in the session, since the member leaves for the network and comes back without it.
+   */
+  private readReturnTo(): void {
+    const param = this.route.snapshot.queryParamMap.get(RETURN_TO_PARAM);
+    if (param !== null) {
+      if (isPublishPath(param)) {
+        rememberReturnTo(param);
+      }
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { [RETURN_TO_PARAM]: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
+    this.returnTo.set(recallReturnTo());
   }
 
   private find(network: SocialNetwork): SocialConnection | null {

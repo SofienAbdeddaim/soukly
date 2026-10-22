@@ -8,5 +8,6 @@ export * from './lib/listing-row/listing-row';
 export * from './lib/photo-tile/photo-tile';
 export * from './lib/progress/progress';
 export * from './lib/skeleton/skeleton';
+export * from './lib/switch/switch';
 export * from './lib/toast/toast';
 export * from './lib/toggle-group/toggle-group';

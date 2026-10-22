@@ -55,6 +55,7 @@ describe('InstagramCallback', () => {
         displayName: '@sfax.auto',
         pictureUrl: null,
         connectedAt: '2026-10-12T09:30:00Z',
+        autoShare: true,
       },
     });
     await settle();

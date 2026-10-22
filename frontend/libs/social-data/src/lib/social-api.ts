@@ -3,12 +3,15 @@ import { inject, Injectable } from '@angular/core';
 import { API_PREFIX, problemCode } from '@soukly/auth';
 import { firstValueFrom } from 'rxjs';
 import {
+  Caption,
+  CaptionRequest,
   FacebookCallbackOutcome,
   FacebookRedirect,
   InstagramCallbackOutcome,
   OAuthRedirect,
   PageCandidate,
   SocialConnection,
+  SocialNetwork,
 } from './models';
 import { toFacebookFailure, toInstagramFailure } from './social-routes';
 
@@ -19,7 +22,7 @@ interface CallbackBody {
 }
 
 /**
- * The social networks of the member, in social-publisher (SOC-01, SOC-02). Every request goes through
+ * The social networks of the member, in social-publisher (SOC-01, SOC-02, SOC-03). Every request goes through
  * `API_PREFIX`, so `authInterceptor` adds the access token. Tokens never reach the browser: the
  * OAuth `code` is only forwarded to the API.
  */
@@ -29,6 +32,21 @@ export class SocialApi {
 
   connections(): Promise<SocialConnection[]> {
     return firstValueFrom(this.http.get<SocialConnection[]>(`${API_PREFIX}/social/connections`));
+  }
+
+  /** Changes "tick by default for every new listing" of a connected network (SOC-03). */
+  updateAutoShare(network: SocialNetwork, autoShare: boolean): Promise<SocialConnection> {
+    return firstValueFrom(
+      this.http.patch<SocialConnection>(
+        `${API_PREFIX}/social/connections/${network.toLowerCase()}`,
+        { autoShare },
+      ),
+    );
+  }
+
+  /** The text that will be posted for a draft (SOC-03). */
+  captionPreview(request: CaptionRequest): Promise<Caption> {
+    return firstValueFrom(this.http.post<Caption>(`${API_PREFIX}/social/caption-preview`, request));
   }
 
   /** Starts a connection and returns the URL of the Facebook dialog to open. */

@@ -30,6 +30,7 @@ import { UiAlert, UiButton } from '@soukly/ui';
 import { DraftStore } from '../draft/draft-store';
 import { StepLayout } from '../layout/step-layout/step-layout';
 import { PublishStep, stepCommands, stepOfField } from '../shared/publish-steps';
+import { ShareBlock } from './share-block';
 
 /** Members of `missingFields` with their own label; `attributes.<code>` take the attribute's. */
 const FIELD_LABELS = new Set([
@@ -59,13 +60,23 @@ interface AttributeLine {
 
 /**
  * Step 5 (`/{lang}/publish/{id}/preview`): the listing as it will look, the elements still
- * missing (each a link to its step, publishing disabled meanwhile), then "Publish". A success
+ * missing (each a link to its step, publishing disabled meanwhile), where to share it (SOC-03),
+ * then "Publish". A success
  * leads to the confirmation page; `422 listing-incomplete` reads the draft again, so the list of
  * missing elements is up to date.
  */
 @Component({
   selector: 'app-preview-step',
-  imports: [RouterLink, TranslocoPipe, LocalePathPipe, LucideImage, StepLayout, UiAlert, UiButton],
+  imports: [
+    RouterLink,
+    TranslocoPipe,
+    LocalePathPipe,
+    LucideImage,
+    StepLayout,
+    UiAlert,
+    UiButton,
+    ShareBlock,
+  ],
   templateUrl: './preview-step.html',
   styleUrls: ['../shared/step-page.css', './preview-step.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,

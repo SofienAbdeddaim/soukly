@@ -204,6 +204,9 @@ export interface FakeListing {
   /** End of visibility; 60 days after the publication when absent. */
   expiresAt?: string;
   contactRevealsCount?: number;
+  /** SOC-03: null (absent) until the seller chose. */
+  shareTo?: string[] | null;
+  shareLanguage?: string | null;
 }
 
 export type FakeStatus = 'DRAFT' | 'PUBLISHED' | 'EXPIRED' | 'INACTIVE' | 'DELETED';
@@ -286,6 +289,8 @@ function view(listing: FakeListing, warnings: string[] = []) {
   return {
     ...fields,
     status: listing.status ?? 'DRAFT',
+    shareTo: listing.shareTo ?? null,
+    shareLanguage: listing.shareLanguage ?? null,
     kind: kindOf(listing),
     missingFields: missingFields(listing),
     warnings,

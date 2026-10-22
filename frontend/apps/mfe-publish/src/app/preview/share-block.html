@@ -1,0 +1,95 @@
+<fieldset
+  class="share"
+  data-testid="share-block"
+  [attr.aria-busy]="state() === 'loading' ? 'true' : null"
+>
+  <legend class="share__legend">{{ 'publish.share.title' | transloco }}</legend>
+
+  @switch (state()) { @case ('loading') {
+  <ui-skeleton variant="card" blockSize="52px" />
+  } @case ('error') {
+  <ui-alert type="error" data-testid="share-load-error">
+    {{ 'publish.share.load-error' | transloco }}
+  </ui-alert>
+  <button ui-button variant="secondary" type="button" (click)="load()">
+    {{ 'publish.share.retry' | transloco }}
+  </button>
+  } @case ('ready') { @if (options().length) { @for (option of options(); track option.network) {
+  <div class="share__option" [class.share__option--disabled]="option.needsReconnect">
+    <label class="share__label" [attr.data-testid]="'share-' + option.network">
+      <input
+        type="checkbox"
+        class="share__checkbox"
+        [checked]="option.checked"
+        [disabled]="option.needsReconnect"
+        (change)="toggle(option.network, $any($event.target).checked)"
+      />
+      <span
+        class="share__logo"
+        [class]="'share__logo--' + option.network.toLowerCase()"
+        aria-hidden="true"
+        >{{ option.network === 'FACEBOOK' ? 'f' : 'IG' }}</span
+      >
+      <span class="share__text">
+        <span class="share__name"><bdi>{{ option.name }}</bdi></span>
+        <span class="share__network">
+          {{ ('publish.share.network.' + option.network) | transloco }} @if (option.needsReconnect)
+          { · {{ 'publish.share.needs-reconnect' | transloco }} }
+        </span>
+      </span>
+    </label>
+    @if (option.needsReconnect) {
+    <a
+      class="share__reconnect"
+      [routerLink]="'/account/social' | localePath"
+      [queryParams]="{ returnTo: returnTo() }"
+      [attr.data-testid]="'share-reconnect-' + option.network"
+    >
+      {{ ('publish.share.reconnect.' + option.network) | transloco }}
+    </a>
+    }
+  </div>
+  }
+
+  <details class="share__caption" data-testid="share-caption" (toggle)="onCaptionToggle($event)">
+    <summary class="share__summary">{{ 'publish.share.caption.show' | transloco }}</summary>
+    @switch (captionState()) { @case ('loading') {
+    <ui-skeleton variant="block" blockSize="120px" />
+    } @case ('error') {
+    <div class="share__caption-error" data-testid="share-caption-error">
+      <span>{{ 'publish.share.caption.error' | transloco }}</span>
+      <button ui-button variant="ghost" type="button" (click)="loadCaption()">
+        {{ 'publish.share.caption.retry' | transloco }}
+      </button>
+    </div>
+    } @case ('ready') { @if (caption(); as caption) {
+    <div class="share__post">
+      @if (listing()?.photos?.[0]; as cover) {
+      <img class="share__thumbnail" [src]="cover.thumbnailUrl" alt="" />
+      }
+      <pre class="share__post-text" data-testid="share-caption-text">{{ caption.text }}</pre>
+    </div>
+    <p class="share__muted">
+      {{ photosKey() | transloco: { count: listing()?.photos?.length ?? 0 } }}
+    </p>
+    } } }
+  </details>
+
+  <p class="share__muted">
+    {{ 'publish.share.help' | transloco }}
+    <a [routerLink]="'/account/social' | localePath"
+      >{{ 'publish.share.preferences' | transloco }}</a
+    >
+  </p>
+  } @else {
+  <p class="share__empty" data-testid="share-none">
+    {{ 'publish.share.none' | transloco }}
+    <a
+      [routerLink]="'/account/social' | localePath"
+      [queryParams]="{ returnTo: returnTo() }"
+      data-testid="share-connect"
+      >{{ 'publish.share.connect' | transloco }}</a
+    >
+  </p>
+  } } }
+</fieldset>

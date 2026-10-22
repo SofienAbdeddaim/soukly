@@ -12,6 +12,31 @@ export interface SocialConnection {
   pictureUrl: string | null;
   /** ISO instant. */
   connectedAt: string;
+  /** Ticked by default on the preview of a new listing (SOC-03). */
+  autoShare: boolean;
+}
+
+/**
+ * What the post text of a listing is made of (SOC-03): the fields of the draft, the link of its
+ * page and the language of the text. Never the name or the phone number of the seller.
+ */
+export interface CaptionRequest {
+  title: string | null;
+  description: string | null;
+  priceMode: 'FIXED' | 'ON_QUOTE' | null;
+  priceTnd: number | null;
+  negotiable: boolean;
+  categoryCode: string | null;
+  governorateCode: string | null;
+  delegationCode: string | null;
+  publicUrl: string;
+  language: string;
+}
+
+/** The text posted on the networks, built by social-publisher (the front end never builds it). */
+export interface Caption {
+  text: string;
+  hashtags: string[];
 }
 
 /** A Page offered when the member manages several. */

@@ -213,5 +213,36 @@
       "stay": "Keep editing",
       "confirm": "Leave without saving"
     }
+  },
+  "share": {
+    "title": "Share the listing",
+    "network": {
+      "FACEBOOK": "Facebook Page",
+      "INSTAGRAM": "Instagram"
+    },
+    "needs-reconnect": "to connect again",
+    "reconnect": {
+      "FACEBOOK": "Connect Facebook again",
+      "INSTAGRAM": "Connect Instagram again"
+    },
+    "caption": {
+      "show": "See the post text",
+      "error": "Text unavailable.",
+      "retry": "Try again",
+      "photos": {
+        "zero": "No photo. Text written automatically in the language of the page.",
+        "one": "With your photo. Text written automatically in the language of the page.",
+        "two": "With your {{ count }} photos. Text written automatically in the language of the page.",
+        "few": "With your {{ count }} photos. Text written automatically in the language of the page.",
+        "many": "With your {{ count }} photos. Text written automatically in the language of the page.",
+        "other": "With your {{ count }} photos. Text written automatically in the language of the page."
+      }
+    },
+    "help": "Posted on your networks as soon as the listing is online. Preferences in",
+    "preferences": "My networks",
+    "none": "Connect Facebook or Instagram to share your listings.",
+    "connect": "Connect a network",
+    "load-error": "Your networks could not be loaded.",
+    "retry": "Try again"
   }
 }

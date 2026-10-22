@@ -2,17 +2,18 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LocaleService } from '@soukly/i18n';
 import { SocialConnection } from '@soukly/social-data';
-import { UiButton } from '@soukly/ui';
+import { UiButton, UiSwitch } from '@soukly/ui';
 import { NetworkCard } from './network-card';
 
 /**
  * Facebook Page card of "My networks" (SOC-01): "Not connected" with "Connect"; once connected the
- * Page name, its connection date, "Change Page" and "Disconnect"; when Facebook refused the token
+ * Page name, its connection date, "Change Page", "Disconnect" and the switch "tick by default for
+ * every new listing" (SOC-03); when Facebook refused the token
  * (`NEEDS_RECONNECT`), a message and "Connect again".
  */
 @Component({
   selector: 'app-facebook-card',
-  imports: [TranslocoPipe, UiButton, NetworkCard],
+  imports: [TranslocoPipe, UiButton, UiSwitch, NetworkCard],
   template: `
     @if (connection(); as page) {
       @if (page.status === 'NEEDS_RECONNECT') {
@@ -64,6 +65,15 @@ import { NetworkCard } from './network-card';
               {{ 'account.social.facebook.disconnect' | transloco }}
             </button>
           </div>
+          <ui-switch
+            class="facebook-card__auto-share"
+            data-testid="facebook-auto-share"
+            [checked]="page.autoShare"
+            [busy]="autoShareBusy()"
+            (checkedChange)="autoShareChange.emit($event)"
+          >
+            {{ 'account.social.auto-share' | transloco }}
+          </ui-switch>
         </app-network-card>
       }
     } @else {
@@ -90,6 +100,11 @@ import { NetworkCard } from './network-card';
     }
   `,
   styles: `
+    .facebook-card__auto-share {
+      padding-block-start: 10px;
+      border-block-start: 1px solid var(--color-border);
+    }
+
     .facebook-card__actions {
       display: flex;
       flex-wrap: wrap;
@@ -120,6 +135,9 @@ export class FacebookCard {
   readonly busy = input(false);
   readonly connectRequested = output<void>();
   readonly disconnectRequested = output<void>();
+  /** The preference "tick by default for every new listing" is being saved (SOC-03). */
+  readonly autoShareBusy = input(false);
+  readonly autoShareChange = output<boolean>();
 
   /** Day and month of the connection in the language of the page: "12 oct.", "Oct 12". */
   protected readonly connectedDate = computed(() => {
