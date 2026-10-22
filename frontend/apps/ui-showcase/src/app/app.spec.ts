@@ -79,6 +79,8 @@ describe('App (ui-showcase)', () => {
     expect(dates()[1]).toBe('أمس');
   });
 
+  // Two full axe passes over the whole showcase: more than the 5 s default when the CI runs every
+  // project in parallel.
   it('has no serious or critical axe violation in LTR and in RTL', async () => {
     const { fixture, element } = await setup();
     expect(await seriousViolations()).toEqual([]);
@@ -86,5 +88,5 @@ describe('App (ui-showcase)', () => {
     (element.querySelector('[data-testid=toggle-direction]') as HTMLButtonElement).click();
     await fixture.whenStable();
     expect(await seriousViolations()).toEqual([]);
-  });
+  }, 30_000);
 });
