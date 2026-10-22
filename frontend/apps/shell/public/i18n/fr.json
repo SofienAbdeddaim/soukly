@@ -41,6 +41,10 @@
     "facebook": {
       "title": "Connexion à Facebook",
       "loading": "Nous terminons la connexion de votre Page Facebook…"
+    },
+    "instagram": {
+      "title": "Connexion à Instagram",
+      "loading": "Nous terminons la connexion de votre compte Instagram…"
     }
   }
 }

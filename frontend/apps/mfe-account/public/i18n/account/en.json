@@ -329,7 +329,7 @@
     "title": "My networks",
     "back": "Back to the profile",
     "back-to-networks": "Back to my networks",
-    "intro": "Connect your Facebook Page to share your listings there in one click. Soukly never posts without your consent.",
+    "intro": "Connect your networks to share your listings there in one click. Soukly never posts without your consent.",
     "connect": "Connect",
     "not-connected": "Not connected",
     "load-error": "Your networks could not be loaded. Check your connection and try again.",
@@ -344,10 +344,20 @@
     },
     "instagram": {
       "name": "Instagram",
-      "soon": "Coming soon"
+      "not-connected": "Not connected",
+      "hint": "A professional account (Business or Creator) is required. No Facebook Page needed.",
+      "connected-on": "Instagram · connected on {{date}}",
+      "change": "Change account",
+      "disconnect": "Disconnect",
+      "needs-reconnect": "Instagram withdrew the permission. Connect the account again.",
+      "reconnect": "Connect again"
     },
     "connected": {
       "title": "Page connected.",
+      "text": "You can choose it when you publish a listing."
+    },
+    "instagram-connected": {
+      "title": "Instagram connected.",
       "text": "You can choose it when you publish a listing."
     },
     "failure": {
@@ -388,6 +398,39 @@
         "text": "Check your internet connection, then try again."
       }
     },
+    "instagram-failure": {
+      "oauth-cancelled": {
+        "title": "You cancelled the connection",
+        "text": "Your Instagram account is not connected. You can start again whenever you like."
+      },
+      "oauth-permission-missing": {
+        "title": "Soukly needs the permission to post on your account",
+        "text": "On Instagram, accept every permission Soukly asks for, then try again."
+      },
+      "oauth-state-invalid": {
+        "title": "This connection link has expired",
+        "text": "Start the connection to Instagram again from this page."
+      },
+      "instagram-not-professional": {
+        "title": "This Instagram account is personal",
+        "text": "To post your listings, your account must be a professional account. It is free and quick:",
+        "step-1": "in Instagram, open “Settings and activity” from your profile;",
+        "step-2": "choose “Account type and tools”;",
+        "step-3": "tap “Switch to professional account”, then choose Business or Creator."
+      },
+      "instagram-unavailable": {
+        "title": "Instagram did not complete the connection",
+        "text": "Try again in a moment."
+      },
+      "instagram-not-configured": {
+        "title": "Connecting to Instagram is not available yet",
+        "text": "It is coming to Soukly soon."
+      },
+      "unknown": {
+        "title": "The connection did not go through",
+        "text": "Check your internet connection, then try again."
+      }
+    },
     "disconnect": {
       "title": "Disconnect this Page?",
       "text-before": "Soukly will no longer share your listings on ",
@@ -396,6 +439,12 @@
       "cancel": "Cancel",
       "done": "Page disconnected.",
       "error": "The Page could not be disconnected. Try again."
+    },
+    "disconnect-instagram": {
+      "title": "Disconnect this Instagram account?",
+      "text-after": ". Posts already made stay on Instagram.",
+      "done": "Instagram account disconnected.",
+      "error": "The Instagram account could not be disconnected. Try again."
     },
     "choose": {
       "title": "Choose a Page",

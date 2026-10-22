@@ -5,7 +5,7 @@ import { provideRouter } from '@angular/router';
 import { AuthService, authInterceptor, sessionResponse } from '@soukly/auth';
 import { SocialConnection } from './models';
 import { SocialApi } from './social-api';
-import { toFacebookFailure } from './social-routes';
+import { toFacebookFailure, toInstagramFailure } from './social-routes';
 
 const CONNECTION: SocialConnection = {
   network: 'FACEBOOK',
@@ -114,5 +114,47 @@ describe('SocialApi', () => {
     expect(toFacebookFailure('facebook-no-page')).toBe('facebook-no-page');
     expect(toFacebookFailure('<script>')).toBe('unknown');
     expect(toFacebookFailure(null)).toBe('unknown');
+  });
+
+  it('connects Instagram, forwards its redirect and disconnects it', async () => {
+    const url = api.connectInstagram('fr');
+    const start = http.expectOne('/api/social/instagram/connect');
+    expect(start.request.body).toEqual({ lang: 'fr' });
+    start.flush({ authorizeUrl: 'https://www.instagram.com/oauth/authorize' });
+    expect(await url).toBe('https://www.instagram.com/oauth/authorize');
+
+    const redirect = { code: 'the-code', state: 'the-state', error: null };
+    const instagram: SocialConnection = {
+      ...CONNECTION,
+      network: 'INSTAGRAM',
+      displayName: '@sfax.auto',
+    };
+    const connected = api.instagramCallback(redirect);
+    const callback = http.expectOne('/api/social/instagram/callback');
+    expect(callback.request.body).toEqual(redirect);
+    callback.flush({ lang: 'ar', connection: instagram });
+    expect(await connected).toEqual({ kind: 'connected', lang: 'ar', connection: instagram });
+
+    const disconnected = api.disconnectInstagram();
+    const request = http.expectOne('/api/social/instagram');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await disconnected;
+  });
+
+  it('turns an Instagram problem into a failure with its language', async () => {
+    const personal = api.instagramCallback({ code: 'c', state: 's', error: null });
+    http
+      .expectOne('/api/social/instagram/callback')
+      .flush(
+        { type: 'urn:soukly:problem:instagram-not-professional', status: 400, lang: 'fr' },
+        { status: 400, statusText: 'Bad Request' },
+      );
+    expect(await personal).toEqual({
+      kind: 'failed',
+      lang: 'fr',
+      failure: 'instagram-not-professional',
+    });
+    expect(toInstagramFailure('facebook-no-page')).toBe('unknown');
   });
 });

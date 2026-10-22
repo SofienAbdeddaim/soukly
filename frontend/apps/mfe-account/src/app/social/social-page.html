@@ -18,15 +18,27 @@
     <strong>{{ 'account.social.connected.title' | transloco }}</strong>
     {{ 'account.social.connected.text' | transloco }}
   </ui-alert>
+  } @if (instagramConnected()) {
+  <ui-alert type="success" data-testid="instagram-connected">
+    <strong>{{ 'account.social.instagram-connected.title' | transloco }}</strong>
+    {{ 'account.social.instagram-connected.text' | transloco }}
+  </ui-alert>
   } @if (failure(); as reason) {
   <app-facebook-failure [failure]="reason" (retry)="connect()" (dismiss)="dismissFailure()" />
-  } @if (disconnectError()) {
+  } @if (instagramFailure(); as reason) {
+  <app-instagram-failure
+    [failure]="reason"
+    (retry)="connectInstagram()"
+    (dismiss)="dismissInstagramFailure()"
+  />
+  } @if (disconnectError(); as network) {
   <ui-alert type="error" data-testid="disconnect-error">
-    {{ 'account.social.disconnect.error' | transloco }}
+    {{ (network === 'instagram' ? 'account.social.disconnect-instagram.error' :
+    'account.social.disconnect.error') | transloco }}
   </ui-alert>
   } @switch (state()) { @case ('loading') {
   <ui-skeleton variant="card" blockSize="120px" />
-  <ui-skeleton variant="card" blockSize="72px" />
+  <ui-skeleton variant="card" blockSize="120px" />
   } @case ('error') {
   <ui-alert type="error" data-testid="social-load-error">
     {{ 'account.social.load-error' | transloco }}
@@ -41,12 +53,11 @@
     (connectRequested)="connect()"
     (disconnectRequested)="disconnect()"
   />
-  <app-network-card
-    network="instagram"
-    [name]="'account.social.instagram.name' | transloco"
-    [status]="'account.social.instagram.soon' | transloco"
-    [disabled]="true"
-    data-testid="instagram-card"
+  <app-instagram-card
+    [connection]="instagram()"
+    [busy]="instagramConnecting()"
+    (connectRequested)="connectInstagram()"
+    (disconnectRequested)="disconnectInstagram()"
   />
   } }
 </section>

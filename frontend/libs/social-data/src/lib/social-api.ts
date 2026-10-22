@@ -5,10 +5,12 @@ import { firstValueFrom } from 'rxjs';
 import {
   FacebookCallbackOutcome,
   FacebookRedirect,
+  InstagramCallbackOutcome,
+  OAuthRedirect,
   PageCandidate,
   SocialConnection,
 } from './models';
-import { toFacebookFailure } from './social-routes';
+import { toFacebookFailure, toInstagramFailure } from './social-routes';
 
 interface CallbackBody {
   lang: string;
@@ -17,7 +19,7 @@ interface CallbackBody {
 }
 
 /**
- * The social networks of the member, in social-publisher (SOC-01). Every request goes through
+ * The social networks of the member, in social-publisher (SOC-01, SOC-02). Every request goes through
  * `API_PREFIX`, so `authInterceptor` adds the access token. Tokens never reach the browser: the
  * OAuth `code` is only forwarded to the API.
  */
@@ -82,6 +84,37 @@ export class SocialApi {
 
   disconnectFacebook(): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${API_PREFIX}/social/facebook`));
+  }
+
+  /** Starts an Instagram connection and returns the URL of the Instagram dialog to open. */
+  async connectInstagram(lang: string): Promise<string> {
+    const body = await firstValueFrom(
+      this.http.post<{ authorizeUrl: string }>(`${API_PREFIX}/social/instagram/connect`, { lang }),
+    );
+    return body.authorizeUrl;
+  }
+
+  /** Ends the Instagram connection with what Instagram sent back; never rejects. */
+  async instagramCallback(redirect: OAuthRedirect): Promise<InstagramCallbackOutcome> {
+    try {
+      const body = await firstValueFrom(
+        this.http.post<{ lang: string; connection: SocialConnection }>(
+          `${API_PREFIX}/social/instagram/callback`,
+          redirect,
+        ),
+      );
+      return { kind: 'connected', lang: body.lang, connection: body.connection };
+    } catch (error) {
+      return {
+        kind: 'failed',
+        lang: problemLang(error),
+        failure: toInstagramFailure(problemCode(error)),
+      };
+    }
+  }
+
+  disconnectInstagram(): Promise<void> {
+    return firstValueFrom(this.http.delete<void>(`${API_PREFIX}/social/instagram`));
   }
 }
 
