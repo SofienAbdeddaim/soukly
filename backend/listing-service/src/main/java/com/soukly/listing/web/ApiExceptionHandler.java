@@ -24,6 +24,7 @@ import com.soukly.common.web.SouklyHeaders;
 import com.soukly.listing.contact.ContactLimitReachedException;
 import com.soukly.listing.listing.AlreadyPublishedException;
 import com.soukly.listing.listing.CategoryLockedException;
+import com.soukly.listing.listing.ShareLockedException;
 import com.soukly.listing.listing.DraftLimitReachedException;
 import com.soukly.listing.listing.IfMatchRequiredException;
 import com.soukly.listing.listing.InvalidListingException;
@@ -172,6 +173,13 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(ProblemDetails.create(ProblemDetails.type("category-locked"), HttpStatus.CONFLICT,
                 "Category locked", "The category of a listing cannot change once it was published.",
                 instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> shareLocked(ShareLockedException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("share-locked"), HttpStatus.CONFLICT,
+                "Share locked", "The networks of a listing are chosen while it is a draft: it is shared when it is "
+                        + "published.", instance(request), requestId(request)));
     }
 
     @ExceptionHandler

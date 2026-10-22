@@ -23,7 +23,8 @@ import com.soukly.common.event.UserEvents;
  * Base of the integration tests: one Spring context for every class, a PostgreSQL container (Testcontainers) migrated
  * by Flyway and a Redpanda container for the user events ({@link TestRedpanda}). Access tokens are validated against
  * the simulated JWKS of {@link TestJwks}, the Graph API of Meta is the fake of {@link TestGraph} and Instagram the fake
- * of {@link TestInstagram}: tests never call the real ones. Tests use a new account id each time instead of resetting
+ * of {@link TestInstagram}: tests never call the real ones. The referentials of listing-service are those of
+ * {@link TestReferentials}. Tests use a new account id each time instead of resetting
  * the database.
  *
  * <p>The housekeeping and token refresh tasks never run on their own; the clock moves only when a test advances it
@@ -73,6 +74,7 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.instagram.api-base-url", TestInstagram::baseUrl);
         registry.add("soukly.social.instagram.dialog-base-url", () -> "https://www.instagram.example.test");
         registry.add("soukly.social.instagram.front-base-url", () -> FRONT_BASE_URL);
+        registry.add("soukly.social.listing-service.base-url", TestReferentials::baseUrl);
         // Run by the tests only
         registry.add("soukly.social.facebook.purge-initial-delay", () -> "P1D");
         registry.add("soukly.social.instagram.refresh-initial-delay", () -> "P1D");

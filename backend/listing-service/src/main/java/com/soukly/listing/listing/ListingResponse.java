@@ -19,12 +19,14 @@ import com.soukly.listing.seller.SellerProfile;
  * @param expiresAt   end of visibility of a published listing, its past expiry for an expired one
  * @param seller      public profile of the seller when the owner reads a listing that is not a draft (CATA-03),
  *                    otherwise null
+ * @param shareTo     networks to share to at the publication (SOC-03), null until the seller chose
+ * @param shareLanguage language of the post texts, or null
  */
 public record ListingResponse(UUID id, ListingStatus status, long version, ListingKind kind, String categoryCode,
         String title, String description, PriceMode priceMode, Long price, boolean negotiable,
         String governorateCode, String delegationCode, Map<String, Object> attributes, List<Photo> photos,
         List<String> missingFields, List<String> warnings, Instant createdAt, Instant updatedAt,
-        Instant publishedAt, Instant expiresAt, Seller seller) {
+        Instant publishedAt, Instant expiresAt, Seller seller, List<ShareNetwork> shareTo, String shareLanguage) {
 
     /** The only currency of V1. */
     static final String CURRENCY = "TND";
@@ -45,7 +47,7 @@ public record ListingResponse(UUID id, ListingStatus status, long version, Listi
                 content.price(), content.negotiable(), content.governorateCode(), content.delegationCode(),
                 content.attributes(), view.photos().stream().map(Photo::of).toList(), view.missingFields(),
                 view.warnings(), listing.createdAt(), listing.updatedAt(), listing.publishedAt(),
-                listing.expiresAt(), seller);
+                listing.expiresAt(), seller, content.shareTo(), content.shareLanguage());
     }
 
     /**
