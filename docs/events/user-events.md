@@ -65,7 +65,7 @@ and `UserEventEnvelope` (module `common`).
 
 | Type           | When                                                  | Consumed by                                                                                                                                       |
 | -------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `user.deleted` | the member deleted their account (`DELETE /users/me`) | `listing-service`: deletes every listing of the account with the rules of ANN-05 (drafts erased, other listings `DELETED` with `listing.deleted`) |
+| `user.deleted` | the member deleted their account (`DELETE /users/me`) | `listing-service`: deletes every listing of the account with the rules of ANN-05 (drafts erased, other listings `DELETED` with `listing.deleted`); `social-publisher` (SOC-01): deletes the social network connections of the account and revokes the Facebook permissions at best effort |
 
 ### `user.deleted`
 

@@ -207,6 +207,21 @@ Listings of Soukly (package `com.soukly.listing`, database `soukly_listing`): th
 
 listing-service validates the access tokens again with the rules of the gateway, from the same `USER_SERVICE_JWKS_URI` and `JWT_ISSUER`. It reads the sellers from the internal endpoints of user-service (`/internal/**`, `USER_SERVICE_URL`), with the shared `INTERNAL_API_TOKEN` in `X-Internal-Token` (CATA-03); the gateway never routes `/internal/**`.
 
+## social-publisher
+
+Social networks of Soukly (package `com.soukly.social`, database `soukly_social`): the connection of a Facebook Page (SOC-01) through Facebook Login, with the tokens encrypted in AES-256-GCM. Details, Meta set-up and the manual test with a Meta tester account: [`backend/social-publisher/README.md`](backend/social-publisher/README.md).
+
+| Endpoint (through the gateway, all with JWT) | Body                                         | Answers                                                                                                                          |
+| -------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/social/facebook/connect`          | `{ lang }` (optional)                        | `200` `{ authorizeUrl }`, `503` `facebook-not-configured`                                                                        |
+| `POST /api/social/facebook/callback`         | `{ code, state }` or `{ error, state }`      | `200` `{ lang, connection }` or `{ lang, pendingSelection }`, `400` `oauth-state-invalid` / `oauth-cancelled` / `oauth-permission-missing` / `facebook-no-page`, `502` `facebook-unavailable` |
+| `GET /api/social/facebook/page-selection`    |                                              | `200` `{ pendingSelection }`, `404` `page-selection-not-found`                                                                   |
+| `POST /api/social/facebook/page`             | `{ pageId }`                                 | `200` connection, `404` `page-selection-not-found`                                                                               |
+| `DELETE /api/social/facebook`                |                                              | `204`                                                                                                                            |
+| `GET /api/social/connections`                |                                              | `200` `[{ network, status, displayName, pictureUrl, connectedAt }]`, never a token                                               |
+
+It needs `SOCIAL_TOKEN_ENC_KEY` (32 random bytes in base64, `openssl rand -base64 32`) to start, and `META_APP_ID` / `META_APP_SECRET` to connect a Page. It consumes `user.deleted` (group `social-publisher`) to delete the connections of a deleted account.
+
 ## Gateway
 
 The front end only calls the gateway (`http://localhost:8080`, Spring Cloud Gateway on WebFlux). It routes to the services, applies CORS, checks the JWT, adds `X-Request-Id`, limits the authentication endpoints and answers its own errors in `application/problem+json`.
