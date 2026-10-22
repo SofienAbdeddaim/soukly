@@ -50,7 +50,7 @@
     "tslib": "^2.3.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.2",
-    "vitest": "^4.0.8"
+    "vitest": "^5.0.5"
   },
   "packageManager": "pnpm@10.28.0",
   "engines": {
