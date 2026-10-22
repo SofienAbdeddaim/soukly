@@ -1,5 +1,6 @@
 package com.soukly.listing.support;
 
+import org.apache.kafka.clients.admin.NewTopic;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,9 +10,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+
+import com.soukly.common.event.UserEvents;
 
 /**
  * Base of the integration tests: one Spring context for every class, a PostgreSQL container (Testcontainers)
@@ -25,7 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import({ PostgresContainerConfig.class, IntegrationTest.ClockConfig.class })
+@Import({ PostgresContainerConfig.class, IntegrationTest.ClockConfig.class, IntegrationTest.TopicsConfig.class })
 public abstract class IntegrationTest {
 
     @Autowired
@@ -61,6 +65,22 @@ public abstract class IntegrationTest {
         registry.add("soukly.listing.outbox.purge-interval", () -> "P1D");
         registry.add("soukly.listing.publication.check-initial-delay", () -> "P1D");
         registry.add("soukly.listing.photos.cleanup-interval", () -> "P1D");
+        registry.add("soukly.listing.user-events.retry-interval", () -> "100ms");
+    }
+
+    /** The topics of user-service, which creates them outside the tests. */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class TopicsConfig {
+
+        @Bean
+        NewTopic userEventsTopic() {
+            return TopicBuilder.name(UserEvents.TOPIC).partitions(3).replicas(1).build();
+        }
+
+        @Bean
+        NewTopic userEventsDlqTopic() {
+            return TopicBuilder.name(UserEvents.DLQ_TOPIC).partitions(1).replicas(1).build();
+        }
     }
 
     @TestConfiguration(proxyBeanMethods = false)

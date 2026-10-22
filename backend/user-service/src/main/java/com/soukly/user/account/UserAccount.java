@@ -45,6 +45,14 @@ public class UserAccount implements Persistable<UUID> {
     /** {@code null} until the first successful login. */
     private Instant lastLoginAt;
 
+    /** New address waiting for its confirmation (AUTH-05); the login still uses {@link #email} until then. */
+    private String pendingEmail;
+
+    private Instant deletedAt;
+
+    /** Address of a deleted account, kept until the purge; {@link #email} is then {@code null}. */
+    private String deletedEmail;
+
     private Instant createdAt;
 
     private Instant updatedAt;
@@ -95,7 +103,46 @@ public class UserAccount implements Persistable<UUID> {
         }
     }
 
-    /** Replaces the password hash (AUTH-04 reset). */
+    /** Replaces the profile fields of an active account (AUTH-05); the values are validated and normalized. */
+    public void updateProfile(String displayName, String phoneE164, Language language, Instant now) {
+        this.displayName = displayName;
+        this.phoneE164 = phoneE164;
+        this.preferredLanguage = language;
+        this.updatedAt = now;
+    }
+
+    /** Shows {@code newEmail} as waiting for its confirmation; a newer request replaces it. */
+    public void requestEmailChange(String newEmail, Instant now) {
+        this.pendingEmail = newEmail;
+        this.updatedAt = now;
+    }
+
+    public void cancelEmailChange(Instant now) {
+        this.pendingEmail = null;
+        this.updatedAt = now;
+    }
+
+    /** The new address was confirmed by its link: the login uses it from now on. */
+    public void changeEmail(String newEmail, Instant now) {
+        this.email = newEmail;
+        this.pendingEmail = null;
+        this.updatedAt = now;
+    }
+
+    /**
+     * Deletes the account (AUTH-05): it can no longer sign in, and its address is free for a new registration at
+     * once. The address is kept in {@code deleted_email} until the purge.
+     */
+    public void delete(Instant now) {
+        this.deletedEmail = email;
+        this.email = null;
+        this.pendingEmail = null;
+        this.status = AccountStatus.DELETED;
+        this.deletedAt = now;
+        this.updatedAt = now;
+    }
+
+    /** Replaces the password hash (AUTH-04 reset, AUTH-05 change). */
     public void changePassword(String passwordHash, Instant now) {
         this.passwordHash = passwordHash;
         this.updatedAt = now;
@@ -118,6 +165,10 @@ public class UserAccount implements Persistable<UUID> {
 
     public String email() {
         return email;
+    }
+
+    public String pendingEmail() {
+        return pendingEmail;
     }
 
     public String passwordHash() {

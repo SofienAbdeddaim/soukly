@@ -13,8 +13,10 @@ import org.springframework.security.web.server.util.matcher.ServerWebExchangeMat
  * <p>This is the single place to change the access policy. AUTH-01 fixed the registration paths ({@code register},
  * {@code verify-email}, {@code verify-email/resend}); AUTH-02 the session paths ({@code login}, {@code refresh} and
  * {@code logout}, which rely on the refresh cookie, not on a JWT); CAT-01 added the read-only referentials
- * (categories and locations); ANN-05 keeps {@code GET /api/listings/mine} protected. The JWKS of user-service is
- * never routed: the gateway reads it internally.
+ * (categories and locations); ANN-05 keeps {@code GET /api/listings/mine} protected; AUTH-05 added the confirmation of a
+ * new address ({@code email/confirm}, opened from an email, maybe on another device), while every
+ * {@code /api/users/me/**} path needs a token. The JWKS of user-service is never routed: the gateway reads it
+ * internally.
  */
 public final class PublicPaths {
 
@@ -31,7 +33,8 @@ public final class PublicPaths {
                     "/api/users/logout",
                     "/api/users/verify-email",
                     "/api/users/verify-email/resend",
-                    "/api/users/password/**"),
+                    "/api/users/password/**",
+                    "/api/users/email/confirm"),
             ServerWebExchangeMatchers.pathMatchers(HttpMethod.GET,
                     "/api/listings/**",
                     "/api/categories/**",

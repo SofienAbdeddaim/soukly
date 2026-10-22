@@ -351,7 +351,8 @@ phone number.
 - Business code never sends to Kafka: it writes the event in `outbox_events` (`id` = `eventId`, `aggregate_id`,
   `type`, `payload` JSONB with the whole envelope, `created_at`, `sent_at`, `attempts`, `last_error`) in the
   transaction of the change. A rollback leaves neither the change nor the event.
-- The **relay** (`OutboxRelay`) runs every second after its previous run: it locks up to 100 unsent events in order of
+- The **relay** (`OutboxRelay`, in `common` since AUTH-05 and shared with the user events of user-service, same
+  behavior) runs every second after its previous run: it locks up to 100 unsent events in order of
   creation (`FOR UPDATE SKIP LOCKED`), sends them with an idempotent producer (`acks=all`) and sets `sent_at` only
   after the broker acknowledged each one. An event leaves only when every older unsent event of its listing is in
   the same batch, so two relays (two instances) never reorder the events of a listing.
@@ -574,6 +575,22 @@ which action is allowed from which status, unit tested) with the listing locked,
   `listing_photos`, `contact_reveals` and `listings` rows. Events already written are left as they are. Batches of 20
   listings per transaction, locked with `FOR UPDATE SKIP LOCKED`, so several instances can run it.
 
+## Deleted accounts (AUTH-05)
+
+listing-service consumes `soukly.user-events` (contract: [`docs/events/user-events.md`](../../docs/events/user-events.md))
+in the consumer group `listing-service`, from the earliest offset the first time. It handles **`user.deleted` only**
+and ignores every other type.
+
+- **Effect**: every listing of the account that is not deleted yet is deleted with the rules of ANN-05
+  (`ListingDeletion.deleteAllOf`): drafts erased at once with their photos, other listings `DELETED` with
+  `listing.deleted` (so social-publisher removes their posts), `410` on their pages; the daily purge erases them 30
+  days later. The account is locked like a draft creation, so a draft created at the same time is seen.
+- **Deduplication**: the `eventId` is inserted in `processed_events` (V12) in the transaction of the deletion; an event
+  delivered again does nothing, and a failure rolls the row back so that the retry deletes the listings.
+- **Errors**: a failed message is retried 3 times, 2 s apart (`soukly.listing.user-events.*`), then published to
+  `soukly.user-events.dlq` with the cause in the `kafka_dlt-*` headers. A message that does not follow the contract
+  goes to the DLQ at once. The logs name the account by id only.
+
 ## Data
 
 Flyway migrations in `src/main/resources/db/migration`:
@@ -590,6 +607,8 @@ Flyway migrations in `src/main/resources/db/migration`:
 | `V8__publish_listings.sql` | ANN-03: `listings.expires_at` and `reminder_sent_at`, statuses `PUBLISHED` and `EXPIRED`, table `outbox_events` |
 | `V9__search_listings.sql` | CATA-01: extensions `unaccent` and `pg_trgm`, function `soukly_normalize`, generated column `search_vector`, search indexes |
 | `V10__create_contact_reveals.sql` | CATA-03: table `contact_reveals`, index `(viewer_id, revealed_at)` for the daily limit |
+| `V11__manage_own_listings.sql` | ANN-05: `listings.deleted_at`, statuses `INACTIVE` and `DELETED`, index of "My listings" |
+| `V12__create_processed_events.sql` | AUTH-05: table `processed_events` (deduplication of the user events) |
 
 Places come from the official INS "Code géographique tunisien" (December 2012, division at 31 December 2012); the
 source, its checksum and the few display fixes are in the header of `V5`. Never invent a place: a delegation created
@@ -632,7 +651,7 @@ Write a **new** migration (`V5__…`, never edit a released one: Flyway checks t
 | `S3_BUCKET` | `soukly-listings` | bucket of the photos |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` of the root `.env` | key with read and write on the bucket |
 | `PHOTO_PUBLIC_BASE_URL` | `http://soukly-listings.web.localhost:3902` | public URL of the bucket root, the object key is appended |
-| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:19092` | Kafka API of Redpanda (outbox relay) |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:19092` | Kafka API of Redpanda (outbox relay, user events consumer) |
 | `PUBLIC_BASE_URL` | `http://localhost:4200` | origin of the site, for `publicUrls` of `listing.published` |
 | `LISTING_TTL` | `60d` | visibility of a publication or a renewal |
 | `LISTING_REMINDER_BEFORE` | `3d` | the reminder is written, and renewal allowed, this long before the expiry |
@@ -663,6 +682,10 @@ the message read back from the topic (3 photo URLs in order, exactly the members
 atomicity (a PostgreSQL trigger makes the outbox insert fail after the status update: the listing stays `DRAFT`, no
 event), broker down (a relay pointed at a closed port, then the real one: sent once), reminder once, expiry, renewal
 without `listing.published`, and two relays at the same time on 240 events (each sent once, in order per listing).
+
+`account/DeletedAccountTests` covers the consumer of AUTH-05 against Redpanda: three listings deleted with
+`listing.deleted` and `410`, the draft erased, another seller untouched, the same event delivered twice, other types
+ignored and a malformed message in the DLQ.
 
 Search tests (`search/SearchApiTests`) empty the listings before each test (the search reads every published
 listing) and insert published listings straight into the table with chosen dates; one test per scenario of CATA-01,

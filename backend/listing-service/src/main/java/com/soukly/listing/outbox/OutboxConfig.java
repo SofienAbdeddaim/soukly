@@ -9,6 +9,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,6 +17,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.soukly.common.event.ListingEvents;
+import com.soukly.common.outbox.OutboxRelay;
+import com.soukly.common.outbox.OutboxRepository;
 
 /** Topics of the listing events, and the relay of the outbox with its schedule. */
 @Configuration(proxyBeanMethods = false)
@@ -38,9 +41,15 @@ class OutboxConfig {
     }
 
     @Bean
+    OutboxRepository outboxRepository(JdbcClient jdbc) {
+        return new OutboxRepository(jdbc);
+    }
+
+    @Bean
     OutboxRelay outboxRelay(OutboxRepository repository, KafkaTemplate<String, String> kafka,
             PlatformTransactionManager transactions, OutboxProperties properties, Clock clock) {
-        return new OutboxRelay(repository, kafka, new TransactionTemplate(transactions), properties, clock);
+        return new OutboxRelay(ListingEvents.TOPIC, repository, kafka, new TransactionTemplate(transactions),
+                properties, clock);
     }
 
     @Bean

@@ -1,4 +1,4 @@
-package com.soukly.listing.outbox;
+package com.soukly.common.outbox;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -7,21 +7,24 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.stereotype.Repository;
 
-@Repository
-class OutboxRepository {
+/**
+ * The {@code outbox_events} table of a service (same shape in listing-service and user-service): written in the
+ * transaction of a change, read and marked by {@link OutboxRelay}.
+ */
+public class OutboxRepository {
 
     /** {@code last_error} is cut to the size of its column. */
     static final int MAX_ERROR_LENGTH = 500;
 
     private final JdbcClient jdbc;
 
-    OutboxRepository(JdbcClient jdbc) {
+    public OutboxRepository(JdbcClient jdbc) {
         this.jdbc = jdbc;
     }
 
-    void insert(UUID id, UUID aggregateId, String type, String payload, Instant createdAt) {
+    /** @param payload the whole envelope, in JSON */
+    public void insert(UUID id, UUID aggregateId, String type, String payload, Instant createdAt) {
         jdbc.sql("""
                 INSERT INTO outbox_events (id, aggregate_id, type, payload, created_at)
                 VALUES (:id, :aggregateId, :type, CAST(:payload AS jsonb), :createdAt)""")

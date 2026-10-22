@@ -15,7 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
  * header is refused too.
  */
 @Component
-class OriginPolicy {
+public class OriginPolicy {
 
     private final Set<String> allowedOrigins;
 
@@ -28,7 +28,7 @@ class OriginPolicy {
     }
 
     /** @throws ForbiddenOriginException when the request does not come from an allowed origin */
-    void check(HttpServletRequest request) {
+    public void check(HttpServletRequest request) {
         String origin = request.getHeader(HttpHeaders.ORIGIN);
         if (origin == null || !allowedOrigins.contains(normalize(origin))) {
             throw new ForbiddenOriginException();

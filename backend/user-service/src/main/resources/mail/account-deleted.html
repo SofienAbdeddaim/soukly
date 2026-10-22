@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{account-deleted.subject}, ~{:: #content})}">
+<body>
+<div id="content">
+  <p style="margin:0 0 16px;" th:text="#{common.greeting(${displayName})}">Hello Amira,</p>
+  <p style="margin:0 0 16px;" th:text="#{account-deleted.intro}">Your account was deleted.</p>
+  <p style="margin:0 0 16px;" th:text="#{account-deleted.listings}">Your listings were removed.</p>
+  <p style="margin:0 0 16px;" th:text="#{account-deleted.purge(${purgeDays})}">Your data will be erased in 30 days.</p>
+  <p style="margin:0;color:#6a5f7e;font-size:14px;" th:text="#{account-deleted.goodbye}">Thank you.</p>
+</div>
+</body>
+</html>

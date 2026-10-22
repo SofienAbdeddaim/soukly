@@ -5,6 +5,8 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
+import com.soukly.common.outbox.OutboxSettings;
+
 /**
  * Relay of the outbox (ANN-03), bound from {@code soukly.listing.outbox.*}.
  *
@@ -20,5 +22,5 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 public record OutboxProperties(@DefaultValue("1s") Duration relayInterval,
         @DefaultValue("5s") Duration relayInitialDelay, @DefaultValue("100") int batchSize,
         @DefaultValue("15s") Duration sendTimeout, @DefaultValue("7d") Duration retention,
-        @DefaultValue("1h") Duration purgeInterval, @DefaultValue("3") int partitions) {
+        @DefaultValue("1h") Duration purgeInterval, @DefaultValue("3") int partitions) implements OutboxSettings {
 }

@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.soukly.common.event.EventEnvelope;
+import com.soukly.common.outbox.OutboxRelay;
+import com.soukly.common.outbox.OutboxRepository;
 
 import tools.jackson.databind.json.JsonMapper;
 

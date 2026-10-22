@@ -56,4 +56,33 @@ public sealed interface AccountMail {
             return "PasswordChanged[userId=" + userId + "]";
         }
     }
+
+    /** Link to confirm a new address (AUTH-05), sent to that address; {@code token} is never stored or logged. */
+    record EmailChangeConfirmation(UUID userId, String to, String displayName, Language language, String token)
+            implements AccountMail {
+
+        @Override
+        public String toString() {
+            return "EmailChangeConfirmation[userId=" + userId + "]";
+        }
+    }
+
+    /** Tells the current address that a change to {@code newEmail} was asked. */
+    record EmailChangeRequested(UUID userId, String to, String displayName, Language language, String newEmail)
+            implements AccountMail {
+
+        @Override
+        public String toString() {
+            return "EmailChangeRequested[userId=" + userId + "]";
+        }
+    }
+
+    /** The account was deleted (AUTH-05); sent to the address it had. */
+    record AccountDeleted(UUID userId, String to, String displayName, Language language) implements AccountMail {
+
+        @Override
+        public String toString() {
+            return "AccountDeleted[userId=" + userId + "]";
+        }
+    }
 }

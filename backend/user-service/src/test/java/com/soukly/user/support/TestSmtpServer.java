@@ -47,7 +47,7 @@ public final class TestSmtpServer {
         }
     }
 
-    void purge() throws FolderException {
+    public void purge() throws FolderException {
         greenMail.purgeEmailFromAllMailboxes();
     }
 

@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,5 +121,11 @@ public class PasswordResets {
                 account.preferredLanguage(), now));
         log.info("Password of user {} reset", account.id());
         return account;
+    }
+
+    /** Invalidates every unused reset link of the account (deletion of the account, AUTH-05). */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void invalidateAll(UUID userId) {
+        tokens.invalidateUnused(userId, null, clock.instant());
     }
 }

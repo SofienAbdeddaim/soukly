@@ -12,9 +12,16 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:${LISTING_SVC_DB_PASSWORD:}}
   flyway:
     locations: classpath:db/migration
-  # Listing events (ANN-03): Redpanda through the Kafka API. Only the outbox relay produces.
+  # Listing events (ANN-03): Redpanda through the Kafka API. The outbox relay produces them; the dead letters of the
+  # user events consumer (AUTH-05) go through the same producer.
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    # User events (AUTH-05): only user.deleted is handled, to delete the listings of the account
+    consumer:
+      group-id: listing-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
       acks: all
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -66,6 +73,10 @@ soukly:
       purge-interval: P1D
       purge-initial-delay: PT10M
       batch-size: 20
+    # Consumer of the user events (AUTH-05): a failed message is retried 3 times, then sent to the DLQ
+    user-events:
+      retries: 3
+      retry-interval: 2s
     outbox:
       relay-interval: PT1S
       relay-initial-delay: PT5S

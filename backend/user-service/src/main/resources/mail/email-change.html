@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout.html :: email(#{email-change.subject}, ~{:: #content})}">
+<body>
+<div id="content">
+  <p style="margin:0 0 16px;" th:text="#{common.greeting(${displayName})}">Hello Amira,</p>
+  <p style="margin:0 0 24px;" th:text="#{email-change.intro}">Confirm your new address.</p>
+  <p style="margin:0 0 24px;">
+    <a th:href="${confirmUrl}" href="#"
+       style="display:inline-block;padding:12px 24px;background:#2a2140;color:#fff8ec;text-decoration:none;border-radius:8px;font-weight:bold;"
+       th:text="#{email-change.button}">Confirm my new address</a>
+  </p>
+  <p style="margin:0 0 16px;" th:text="#{email-change.validity(${validityHours})}">Valid 24 hours.</p>
+  <p style="margin:0 0 4px;color:#6a5f7e;font-size:14px;" th:text="#{common.link-fallback}">Copy this link:</p>
+  <p style="margin:0 0 16px;font-size:14px;word-break:break-all;" dir="ltr"><a th:href="${confirmUrl}" th:text="${confirmUrl}" href="#" style="color:#b4441f;">link</a></p>
+  <p style="margin:0;color:#6a5f7e;font-size:14px;" th:text="#{email-change.ignore}">Ignore this email.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,11 @@
+[(#{common.greeting(${displayName})})]
+
+[(#{email-change.intro})]
+
+[(#{email-change.button})]: [(${confirmUrl})]
+
+[(#{email-change.validity(${validityHours})})]
+
+[(#{email-change.ignore})]
+
+[(#{common.signature})]
