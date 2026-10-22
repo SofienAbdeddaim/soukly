@@ -1,0 +1,58 @@
+<app-page-header
+  titleId="profile-title"
+  [title]="'account.profile.title' | transloco"
+  back="/"
+  [backLabel]="'account.listings.back' | transloco"
+/>
+
+<section
+  class="profile"
+  aria-labelledby="profile-title"
+  [attr.aria-busy]="state() === 'loading' ? 'true' : null"
+  data-testid="profile-page"
+>
+  @switch (state()) { @case ('loading') {
+  <div class="profile__loading">
+    <ui-skeleton variant="line" inlineSize="60%" />
+    <ui-skeleton variant="card" blockSize="320px" />
+    <ui-skeleton variant="card" blockSize="140px" />
+  </div>
+  } @case ('error') {
+  <ui-alert type="error" data-testid="profile-load-error">
+    {{ 'account.profile.load-error' | transloco }}
+  </ui-alert>
+  <button ui-button variant="secondary" type="button" (click)="load()">
+    {{ 'account.listings.retry' | transloco }}
+  </button>
+  } @case ('ready') { @if (profile(); as current) {
+  <app-profile-identity [displayName]="current.displayName" [createdAt]="current.createdAt" />
+
+  <nav class="profile__links" [attr.aria-label]="'account.profile.links' | transloco">
+    <a class="profile__link" [routerLink]="'/account/listings' | localePath">
+      <svg lucideList [size]="18" aria-hidden="true"></svg>
+      {{ 'account.listings.title' | transloco }}
+    </a>
+    <button
+      type="button"
+      class="profile__link"
+      [disabled]="loggingOut()"
+      (click)="logout()"
+      data-testid="profile-logout"
+    >
+      <svg lucideLogOut class="ui-flip-rtl" [size]="18" aria-hidden="true"></svg>
+      {{ 'account.profile.logout' | transloco }}
+    </button>
+  </nav>
+
+  <app-profile-info-form [profile]="current" (saved)="onSaved($event)" />
+  <app-security-section [profile]="current" (emailChangeCancelled)="onEmailChangeCancelled()" />
+
+  <a
+    class="profile__delete"
+    [routerLink]="'/account/profile/delete' | localePath"
+    data-testid="profile-delete"
+  >
+    {{ 'account.delete.title' | transloco }}
+  </a>
+  } } }
+</section>

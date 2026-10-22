@@ -44,7 +44,9 @@ describe('Header of a member', () => {
     toggle.click();
     await fixture.whenStable();
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(element.querySelector('a[href="/fr/account"]')?.textContent).toContain('Mon compte');
+    expect(element.querySelector('a[href="/fr/account/profile"]')?.textContent).toContain(
+      'Mon compte',
+    );
     expect(element.querySelector('#user-menu button')?.textContent).toContain('Se déconnecter');
   });
 

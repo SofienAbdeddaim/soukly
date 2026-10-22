@@ -125,6 +125,16 @@ describe('authInterceptor', () => {
     http.expectNone('/api/users/refresh');
   });
 
+  it('sends no bearer token with the confirmation of a new email, opened from any device', async () => {
+    await signIn();
+    const call = firstValueFrom(client.post('/api/users/email/confirm', { token: 't' }));
+    const request = http.expectOne('/api/users/email/confirm');
+
+    expect(request.request.headers.has('Authorization')).toBe(false);
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await call;
+  });
+
   it('never refreshes on a 401 of the login itself', async () => {
     const login = auth.login('amira@example.tn', 'wrong');
     http.expectOne('/api/users/login').flush(null, unauthorized);

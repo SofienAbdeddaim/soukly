@@ -46,3 +46,11 @@ export function focusFirstInvalid(fields: ReadonlyFieldTree<unknown>[]): void {
     .find((field) => field().invalid())?.()
     .focusBoundControl();
 }
+
+/** The 8 digits of an E.164 Tunisian number as typed after +216: "+21620123456" -> "20 123 456". */
+export function nationalPhone(e164: string): string {
+  const digits = e164.replace(/^\+216/, '');
+  return TUNISIAN_DIGITS.test(digits)
+    ? `${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`
+    : digits;
+}

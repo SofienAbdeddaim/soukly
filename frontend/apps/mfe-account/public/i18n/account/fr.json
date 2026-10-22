@@ -6,7 +6,9 @@
   "common": {
     "email": "Email",
     "password": "Mot de passe",
-    "show-password": "Afficher le mot de passe"
+    "show-password": "Afficher le mot de passe",
+    "close": "Fermer",
+    "current-password": "Mot de passe actuel"
   },
   "errors": {
     "displayName": {
@@ -15,7 +17,8 @@
     },
     "email": {
       "required": "Indiquez votre adresse email.",
-      "invalid": "Adresse email invalide, par exemple nom@exemple.tn."
+      "invalid": "Adresse email invalide, par exemple nom@exemple.tn.",
+      "unchanged": "C'est déjà l'adresse de votre compte."
     },
     "phone": {
       "required": "Indiquez votre numéro de téléphone.",
@@ -32,7 +35,18 @@
     },
     "too-many-requests": "Trop de demandes en peu de temps. Patientez un instant puis réessayez.",
     "unexpected": "Une erreur est survenue. Vérifiez votre connexion puis réessayez.",
-    "too-many-attempts": "Trop de tentatives, réessayez dans quelques minutes."
+    "too-many-attempts": "Trop de tentatives, réessayez dans quelques minutes.",
+    "current-password": {
+      "required": "Indiquez votre mot de passe actuel.",
+      "invalid": "Mot de passe actuel incorrect."
+    },
+    "preferredLanguage": {
+      "required": "Choisissez la langue des emails.",
+      "invalid": "Choisissez la langue des emails."
+    },
+    "delete": {
+      "understood": "Cochez la case pour confirmer la suppression."
+    }
   },
   "register": {
     "title": "Créer un compte",
@@ -233,5 +247,82 @@
     "title": "Ce lien n'est plus valable",
     "text": "Il a expiré, a déjà servi, ou un lien plus récent a été envoyé. Demandez-en un nouveau : il sera valable 1 heure.",
     "new-link": "Demander un nouveau lien"
+  },
+  "profile": {
+    "title": "Mon profil",
+    "back": "Retour au profil",
+    "member-since": "Membre depuis {{ date }}",
+    "links": "Mon compte",
+    "logout": "Se déconnecter",
+    "load-error": "Votre profil n'a pas pu être chargé. Vérifiez votre connexion.",
+    "saved": "Profil mis à jour",
+    "info": {
+      "title": "Mes informations",
+      "phone-hint": "Affiché aux membres connectés sur toutes vos annonces.",
+      "email-language": "Langue des emails",
+      "email-language-hint": "Le site reste dans la langue de l'adresse.",
+      "save": "Enregistrer"
+    },
+    "security": {
+      "title": "Connexion et sécurité",
+      "pending": "En attente de confirmation :",
+      "cancel-change": "Annuler",
+      "change": "Modifier",
+      "change-email": "Modifier l'email",
+      "change-password": "Modifier le mot de passe"
+    }
+  },
+  "email-change": {
+    "title": "Changer d'email",
+    "current": "Adresse actuelle :",
+    "new-email": "Nouvelle adresse email",
+    "submit": "Envoyer le lien de confirmation",
+    "sent-title": "Confirmez votre nouvelle adresse.",
+    "sent-before": "Nous avons envoyé un lien à",
+    "sent-after": ", valable 24 heures. En attendant, vous vous connectez toujours avec l’ancienne.",
+    "notice-sent": "Votre adresse actuelle a reçu un message d'information.",
+    "cancel": "Annuler ce changement",
+    "cancelled": "Changement d'adresse annulé"
+  },
+  "password-change": {
+    "title": "Changer de mot de passe",
+    "other-devices": "Vos autres appareils seront déconnectés. Celui-ci reste connecté.",
+    "submit": "Enregistrer le mot de passe",
+    "changed": "Mot de passe modifié. Vos autres appareils sont déconnectés."
+  },
+  "delete": {
+    "title": "Supprimer mon compte",
+    "intro-before": "La suppression est ",
+    "intro-final": "définitive",
+    "intro-after": ". Voici ce qui va se passer :",
+    "consequences": {
+      "listings": {
+        "zero": "vous n’avez aucune annonce en ce moment ;",
+        "one": "votre annonce disparaît tout de suite du site ;",
+        "two": "vos {{ count }} annonces disparaissent tout de suite du site ;",
+        "few": "vos {{ count }} annonces disparaissent tout de suite du site ;",
+        "many": "vos {{ count }} annonces disparaissent tout de suite du site ;",
+        "other": "vos {{ count }} annonces disparaissent tout de suite du site ;"
+      },
+      "listings-unknown": "toutes vos annonces disparaissent tout de suite du site ;",
+      "sessions": "vous êtes déconnecté de tous vos appareils ;",
+      "purge": "vos données et photos sont effacées sous 30 jours ;",
+      "networks": "les publications faites par Soukly sur votre Page Facebook ou Instagram sont retirées dans la mesure du possible."
+    },
+    "understood": "Je comprends que mon compte et mes annonces seront supprimés définitivement.",
+    "submit": "Supprimer mon compte",
+    "keep": "Garder mon compte",
+    "deleted": "Votre compte a été supprimé"
+  },
+  "confirm-email": {
+    "checking": "Confirmation de votre nouvelle adresse…",
+    "confirmed-title": "Nouvelle adresse confirmée",
+    "confirmed-text": "Connectez-vous désormais avec cette adresse. Vos emails Soukly y seront envoyés.",
+    "to-profile": "Aller à mon profil",
+    "taken-title": "Cette adresse est déjà utilisée",
+    "taken-text": "Un autre compte utilise cette adresse depuis votre demande. Votre adresse n'a pas changé.",
+    "error-title": "Impossible de confirmer le lien pour le moment",
+    "invalid-text": "Il a expiré (24 heures), a déjà servi, ou une demande plus récente l’a remplacé. Refaites la demande depuis votre profil.",
+    "new-request": "Changer d'email"
   }
 }

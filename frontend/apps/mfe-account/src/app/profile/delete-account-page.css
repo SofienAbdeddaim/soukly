@@ -1,0 +1,14 @@
+.consequences {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-inline-start: 20px;
+  line-height: 1.45;
+}
+
+.keep {
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
+}

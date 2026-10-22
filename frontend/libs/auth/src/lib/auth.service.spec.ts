@@ -40,6 +40,20 @@ describe('AuthService', () => {
     expect(auth.accessToken()).toBe('token-1');
   });
 
+  it('updates the signed-in member after a profile change, and nothing without a session', async () => {
+    auth.updateUser({ displayName: 'Nobody' });
+    expect(auth.user()).toBeNull();
+
+    const login = auth.login('amira@example.tn', 'Jasmin-de-Carthage-2026');
+    http.expectOne('/api/users/login').flush(sessionResponse('token-1'));
+    await login;
+    auth.updateUser({ displayName: 'Amira Ben Salah', preferredLanguage: 'ar' });
+
+    expect(auth.user()?.displayName).toBe('Amira Ben Salah');
+    expect(auth.user()?.preferredLanguage).toBe('ar');
+    expect(auth.accessToken()).toBe('token-1');
+  });
+
   it('keeps the access token in memory only', async () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem');
     const login = auth.login('amira@example.tn', 'secret-password');

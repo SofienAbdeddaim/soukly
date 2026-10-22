@@ -68,7 +68,7 @@ import { LocalePathPipe } from '@soukly/i18n';
         </li>
         <li>
           <a
-            [routerLink]="'/account' | localePath"
+            [routerLink]="'/account/profile' | localePath"
             routerLinkActive="text-primary font-semibold"
             ariaCurrentWhenActive="page"
             class="flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs text-text-muted no-underline"

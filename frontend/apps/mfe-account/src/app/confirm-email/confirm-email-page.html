@@ -1,0 +1,57 @@
+<section
+  class="page page--centered"
+  aria-labelledby="confirm-email-title"
+  [attr.aria-busy]="state() === 'checking' ? 'true' : null"
+>
+  @switch (state()) { @case ('checking') {
+  <h1 id="confirm-email-title" class="page__title">
+    {{ 'account.confirm-email.checking' | transloco }}
+  </h1>
+  <ui-skeleton variant="line" inlineSize="80%" />
+  <ui-skeleton variant="line" inlineSize="60%" />
+  } @case ('confirmed') {
+  <span class="badge badge--success" aria-hidden="true">
+    <svg lucideCircleCheck [size]="40"></svg>
+  </span>
+  <h1 id="confirm-email-title" class="page__title" data-testid="confirm-email-confirmed">
+    {{ 'account.confirm-email.confirmed-title' | transloco }}
+  </h1>
+  <p class="page__text">{{ 'account.confirm-email.confirmed-text' | transloco }}</p>
+  <a ui-button size="lg" class="page__stretch" [routerLink]="'/account/profile' | localePath">
+    {{ 'account.confirm-email.to-profile' | transloco }}
+  </a>
+  } @case ('taken') {
+  <span class="badge badge--error" aria-hidden="true">
+    <svg lucideTriangleAlert [size]="40"></svg>
+  </span>
+  <h1 id="confirm-email-title" class="page__title" data-testid="confirm-email-taken">
+    {{ 'account.confirm-email.taken-title' | transloco }}
+  </h1>
+  <p class="page__text">{{ 'account.confirm-email.taken-text' | transloco }}</p>
+  <a ui-button size="lg" class="page__stretch" [routerLink]="'/account/profile' | localePath">
+    {{ 'account.confirm-email.to-profile' | transloco }}
+  </a>
+  } @case ('error') {
+  <span class="badge badge--error" aria-hidden="true">
+    <svg lucideTriangleAlert [size]="40"></svg>
+  </span>
+  <h1 id="confirm-email-title" class="page__title" data-testid="confirm-email-error">
+    {{ 'account.confirm-email.error-title' | transloco }}
+  </h1>
+  <p class="page__text">{{ 'account.errors.unexpected' | transloco }}</p>
+  <button ui-button type="button" size="lg" class="page__stretch" (click)="confirm()">
+    {{ 'account.verify.retry' | transloco }}
+  </button>
+  } @default {
+  <span class="badge badge--error" aria-hidden="true">
+    <svg lucideLink2Off [size]="40"></svg>
+  </span>
+  <h1 id="confirm-email-title" class="page__title" data-testid="confirm-email-invalid">
+    {{ 'account.invalid-link.title' | transloco }}
+  </h1>
+  <p class="page__text">{{ 'account.confirm-email.invalid-text' | transloco }}</p>
+  <a ui-button size="lg" class="page__stretch" [routerLink]="'/account/profile/email' | localePath">
+    {{ 'account.confirm-email.new-request' | transloco }}
+  </a>
+  } }
+</section>

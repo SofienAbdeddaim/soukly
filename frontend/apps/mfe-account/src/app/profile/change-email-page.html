@@ -1,0 +1,95 @@
+<app-page-header
+  titleId="email-change-title"
+  [title]="'account.email-change.title' | transloco"
+  back="/account/profile"
+  [backLabel]="'account.profile.back' | transloco"
+/>
+
+<section class="page" aria-labelledby="email-change-title">
+  @if (generalError(); as key) {
+  <ui-alert type="error" data-testid="email-change-error">{{ key | transloco }}</ui-alert>
+  } @if (sentTo(); as newEmail) {
+  <div class="banner" role="status" data-testid="email-change-sent">
+    <svg lucideMailCheck class="banner__icon" [size]="24" aria-hidden="true"></svg>
+    <div class="banner__text">
+      <p>
+        <strong>{{ 'account.email-change.sent-title' | transloco }}</strong>
+        {{ 'account.email-change.sent-before' | transloco }}
+        <bdi class="banner__email">{{ newEmail }}</bdi>{{ 'account.email-change.sent-after' |
+        transloco }}
+      </p>
+      <p class="page__muted">{{ 'account.email-change.notice-sent' | transloco }}</p>
+    </div>
+  </div>
+  <button
+    ui-button
+    type="button"
+    variant="secondary"
+    [loading]="cancelling()"
+    (click)="cancelChange()"
+    data-testid="email-change-cancel"
+  >
+    {{ 'account.email-change.cancel' | transloco }}
+  </button>
+  <a class="page__link page__center" [routerLink]="'/account/profile' | localePath">
+    {{ 'account.profile.back' | transloco }}
+  </a>
+  } @else { @if (currentEmail(); as email) {
+  <p class="page__muted" data-testid="email-change-current">
+    {{ 'account.email-change.current' | transloco }} <bdi>{{ email }}</bdi>
+  </p>
+  }
+
+  <form class="form" novalidate (submit)="onSubmit($event)" data-testid="email-change-form">
+    <fieldset class="form__fields" [disabled]="submitting()">
+      <ui-field
+        [label]="'account.email-change.new-email' | transloco"
+        [error]="errorKey(form.newEmail) | transloco"
+        controlId="email-change-new"
+        required
+        ltr
+      >
+        <input
+          uiControl
+          type="email"
+          autocomplete="email"
+          inputmode="email"
+          spellcheck="false"
+          [formField]="form.newEmail"
+        />
+      </ui-field>
+
+      <ui-field
+        [label]="'account.common.current-password' | transloco"
+        [error]="errorKey(form.currentPassword) | transloco"
+        controlId="email-change-password"
+        required
+      >
+        <input
+          uiControl
+          [type]="showPassword() ? 'text' : 'password'"
+          autocomplete="current-password"
+          [formField]="form.currentPassword"
+        />
+        <button
+          uiFieldSuffix
+          type="button"
+          [attr.aria-label]="'account.common.show-password' | transloco"
+          [attr.aria-pressed]="showPassword()"
+          (click)="showPassword.set(!showPassword())"
+        >
+          @if (showPassword()) {
+          <svg lucideEyeOff [size]="20" aria-hidden="true"></svg>
+          } @else {
+          <svg lucideEye [size]="20" aria-hidden="true"></svg>
+          }
+        </button>
+      </ui-field>
+
+      <button ui-button type="submit" size="lg" [loading]="submitting()">
+        {{ 'account.email-change.submit' | transloco }}
+      </button>
+    </fieldset>
+  </form>
+  }
+</section>

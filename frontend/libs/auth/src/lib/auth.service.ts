@@ -97,6 +97,16 @@ export class AuthService {
     }
   }
 
+  /**
+   * Updates the signed-in member after a change of their profile (AUTH-05), so that the header shows
+   * the new name at once. Does nothing without a session.
+   */
+  updateUser(changes: Partial<Omit<AuthUser, 'id'>>): void {
+    this.session.update((session) =>
+      session ? { ...session, user: { ...session.user, ...changes } } : session,
+    );
+  }
+
   /** Forgets the session in this page only. */
   clear(): void {
     this.session.set(null);
