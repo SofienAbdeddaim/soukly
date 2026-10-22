@@ -196,6 +196,7 @@ Fill in each file. Every secret is generated separately for dev and for prod, fo
 | `S3_PUBLIC_ENDPOINT` | `https://s3.<DEV_HOST>` | same as `S3_ENDPOINT` |
 | `S3_REGION` | `garage` | storage region, for example `eu-marseille-1` (Oracle) or `fsn1` (Hetzner) |
 | `PHOTO_PUBLIC_BASE_URL` | `https://photos.<DEV_HOST>` | public URL of `listings/` (section 5) |
+| `LEGAL_CONTACT_EMAIL` | the prod mailbox (`privacy@<prod domain>`) during the Meta review | empty (`privacy@<host of PUBLIC_BASE_URL>`) or the mailbox |
 | `MAIL_*` | `mailpit`, `1025`, no credentials | SMTP provider (to be chosen) |
 
 `IMAGE_TAG` is the tag of the images to run: the full 40-character commit SHA built by the

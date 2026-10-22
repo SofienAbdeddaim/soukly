@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.soukly.user.account.AccountStatus;
 import com.soukly.user.account.UserAccount;
 import com.soukly.user.account.UserAccountRepository;
+import com.soukly.user.config.UserProperties;
 import com.soukly.user.mail.AccountMail;
 import com.soukly.user.verification.EmailVerificationTokens;
 import com.soukly.user.verification.TokenReason;
@@ -30,14 +31,16 @@ class RegistrationService {
     private final EmailVerificationTokens tokens;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
+    private final UserProperties properties;
     private final Clock clock;
 
     RegistrationService(UserAccountRepository users, EmailVerificationTokens tokens, PasswordEncoder passwordEncoder,
-            ApplicationEventPublisher events, Clock clock) {
+            ApplicationEventPublisher events, UserProperties properties, Clock clock) {
         this.users = users;
         this.tokens = tokens;
         this.passwordEncoder = passwordEncoder;
         this.events = events;
+        this.properties = properties;
         this.clock = clock;
     }
 
@@ -50,7 +53,8 @@ class RegistrationService {
 
         if (existing == null) {
             UserAccount account = users.save(UserAccount.pending(registration.email(), passwordHash,
-                    registration.displayName(), registration.phone(), registration.language(), now));
+                    registration.displayName(), registration.phone(), registration.language(), properties.termsVersion(),
+                    now));
             sendVerification(account, TokenReason.REGISTRATION);
             log.info("Registered user {}", account.id());
         } else if (existing.status() == AccountStatus.ACTIVE) {
@@ -61,7 +65,7 @@ class RegistrationService {
             // The latest registration wins: a stranger who registered this email first cannot keep their
             // password once the owner registers and verifies.
             existing.updateRegistration(passwordHash, registration.displayName(), registration.phone(),
-                    registration.language(), now);
+                    registration.language(), properties.termsVersion(), now);
             sendVerification(existing, TokenReason.RESEND);
             log.info("Registration renewed for pending user {}", existing.id());
         } else {

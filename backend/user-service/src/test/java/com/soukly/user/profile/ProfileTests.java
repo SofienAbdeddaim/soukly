@@ -73,6 +73,8 @@ class ProfileTests extends IntegrationTest {
                 .andExpect(jsonPath("$.displayName").value("Amira Ben Salah"))
                 .andExpect(jsonPath("$.phone").value("+21620123456"))
                 .andExpect(jsonPath("$.preferredLanguage").value("fr"))
+                // Created without a recorded version, like the accounts registered before LEG-01
+                .andExpect(jsonPath("$.termsVersion").doesNotExist())
                 .andExpect(jsonPath("$.createdAt").isNotEmpty());
     }
 

@@ -163,8 +163,9 @@ with `Cache-Control: no-store` and the cookie
 
 ## Profile and deletion of the account (AUTH-05)
 
-- **Profile** `{ id, email, pendingEmail, displayName, phone, preferredLanguage, createdAt }` (`phone` in E.164,
-  `pendingEmail` left out when no change waits). `PATCH` takes `application/merge-patch+json` (or JSON): a member
+- **Profile** `{ id, email, pendingEmail, displayName, phone, preferredLanguage, termsVersion, createdAt }` (`phone`
+  in E.164, `pendingEmail` left out when no change waits, `termsVersion` the version of the terms of use accepted at
+  registration (LEG-01), left out for accounts created before it was recorded). `PATCH` takes `application/merge-patch+json` (or JSON): a member
   left out keeps its value, `null` is refused (`displayName.required`…), other members (the email) are ignored. The
   rules and codes are the ones of the registration, plus `preferredLanguage.invalid`. `preferredLanguage` is the
   language of the emails; the screens follow the language of the URL. The phone number is read by listing-service at
@@ -277,6 +278,7 @@ only** and ignores every other type, known or not.
 | `PASSWORD_RESET_TOKEN_TTL`                            | `1h`                                                 | validity of a password reset link (AUTH-04)                                     |
 | `PASSWORD_RESETS_PER_HOUR`                            | `3`                                                  | reset links an account may receive per hour                                     |
 | `ACCOUNT_PURGE_AFTER`                                 | `30d`                                                | a deleted account is erased for good after this (AUTH-05)                       |
+| `LEGAL_TERMS_VERSION`                                 | `version` of `frontend/legal/<lang>/terms.md`        | version of the terms recorded at registration in `terms_version` (LEG-01)       |
 
 `REFRESH_COOKIE_SECURE` stays `true` everywhere, including locally: Chrome (89+) and Firefox (75+) accept a
 `Secure` cookie on `http://localhost`. Safari does not, so a developer testing in Safari over plain HTTP sets it to

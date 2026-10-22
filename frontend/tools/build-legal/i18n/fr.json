@@ -1,0 +1,22 @@
+{
+  "brand": "Soukly",
+  "skip-link": "Aller au contenu",
+  "languages": "Changer de langue",
+  "breadcrumb": {
+    "label": "Fil d'Ariane",
+    "home": "Accueil",
+    "legal": "Informations légales"
+  },
+  "version": "Version du {version}",
+  "effective": "en vigueur depuis le {date}",
+  "draft": "Texte provisoire, en cours de relecture juridique.",
+  "toc": "Sommaire",
+  "footer": {
+    "label": "Informations légales",
+    "terms": "Conditions",
+    "privacy": "Confidentialité",
+    "posting-rules": "Règles de publication",
+    "notice": "Mentions légales",
+    "data-deletion": "Supprimer mes données"
+  }
+}

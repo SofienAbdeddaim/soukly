@@ -44,13 +44,4 @@ test.describe('shell navigation', () => {
     await expect(page).toHaveURL('/fr');
     await expect(page.getByTestId('catalog-home')).toBeVisible();
   });
-
-  test('the footer links open the static pages of the shell', async ({ page }) => {
-    await page.goto('/');
-
-    await page.getByRole('contentinfo').getByRole('link', { name: 'Confidentialité' }).click();
-
-    await expect(page).toHaveURL('/fr/privacy');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Confidentialité');
-  });
 });

@@ -19,12 +19,11 @@
   },
   "footer": {
     "label": "روابط مفيدة",
-    "help": "المساعدة",
-    "terms": "شروط الاستخدام",
-    "privacy": "الخصوصية"
-  },
-  "static-page": {
-    "coming-soon": "سيتوفّر محتوى هذه الصفحة قريبًا."
+    "terms": "الشروط",
+    "privacy": "الخصوصية",
+    "posting-rules": "قواعد النشر",
+    "notice": "البيانات القانونية",
+    "data-deletion": "حذف بياناتي"
   },
   "errors": {
     "not-found": {

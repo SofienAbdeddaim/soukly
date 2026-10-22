@@ -1,0 +1,45 @@
+{
+  "name": "build-legal",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "tools/build-legal",
+  "tags": ["type:tool"],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "!{projectRoot}/**/*.test.mjs",
+        "{workspaceRoot}/legal/**/*",
+        "{workspaceRoot}/libs/ui/src/styles/**/*",
+        "{workspaceRoot}/libs/ui/src/assets/fonts/**/*"
+      ],
+      "outputs": ["{workspaceRoot}/dist/legal"],
+      "options": {
+        "command": "node tools/build-legal/build-legal.mjs --out dist/legal --contact-email privacy@localhost"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/**/*",
+        "{workspaceRoot}/legal/**/*",
+        "{workspaceRoot}/libs/ui/src/styles/**/*",
+        "{workspaceRoot}/../backend/user-service/src/main/resources/application.yml"
+      ],
+      "options": {
+        "command": "node --test tools/build-legal/build-legal.test.mjs"
+      }
+    },
+    "i18n-check": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": ["{projectRoot}/i18n/**/*", "{workspaceRoot}/tools/i18n-check/i18n-check.mjs"],
+      "options": {
+        "command": "node tools/i18n-check/i18n-check.mjs tools/build-legal/i18n"
+      }
+    }
+  }
+}

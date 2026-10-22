@@ -65,6 +65,19 @@ describe('RegisterPage', () => {
     expect(element.querySelector('.ui-field__prefix')?.textContent?.trim()).toBe('+216');
   });
 
+  it('links the terms checkbox to the terms of use and the privacy policy, in a new tab', async () => {
+    const { element } = await setup();
+    const links = Array.from(element.querySelectorAll('ui-checkbox a')).map((link) => [
+      link.textContent?.trim(),
+      link.getAttribute('href'),
+      link.getAttribute('target'),
+    ]);
+    expect(links).toEqual([
+      ["conditions d'utilisation", '/fr/legal/terms', '_blank'],
+      ['politique de confidentialité', '/fr/legal/privacy', '_blank'],
+    ]);
+  });
+
   it('refuses a 4-digit phone number when the field is left', async () => {
     const { element, type, input } = await setup();
     await type('register-phone', '1234');

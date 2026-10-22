@@ -4,7 +4,7 @@ import { shellI18nTesting } from '../../testing/shell-i18n-testing';
 import { Footer } from './footer';
 
 describe('Footer', () => {
-  it('links to the three footer pages, under the language prefix', async () => {
+  it('links to the five legal pages, under the language prefix', async () => {
     TestBed.configureTestingModule({
       imports: [Footer, shellI18nTesting()],
       providers: [provideRouter([])],
@@ -16,9 +16,11 @@ describe('Footer', () => {
     );
 
     expect(links).toEqual([
-      ['Aide', '/fr/help'],
-      ["Conditions d'utilisation", '/fr/terms'],
-      ['Confidentialité', '/fr/privacy'],
+      ['Conditions', '/fr/legal/terms'],
+      ['Confidentialité', '/fr/legal/privacy'],
+      ['Règles de publication', '/fr/legal/posting-rules'],
+      ['Mentions légales', '/fr/legal/notice'],
+      ['Supprimer mes données', '/fr/legal/data-deletion'],
     ]);
   });
 });

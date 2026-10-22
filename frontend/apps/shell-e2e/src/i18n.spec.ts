@@ -89,7 +89,7 @@ test.describe('languages', () => {
   });
 
   test('the switcher works with the keyboard and switches to right-to-left', async ({ page }) => {
-    await page.goto('/fr/help');
+    await page.goto('/fr/account/login');
     const toggle = page.getByTestId('language-switcher');
     await expect(toggle).toContainText('Français');
 
@@ -101,9 +101,9 @@ test.describe('languages', () => {
     await expect(page.getByRole('link', { name: 'العربية' })).toBeFocused();
     await page.keyboard.press('Enter');
 
-    await expect(page).toHaveURL('/ar/help');
+    await expect(page).toHaveURL('/ar/account/login');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('المساعدة');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('تسجيل الدخول');
     await expect(toggle).toContainText('العربية');
     expect(await hasHorizontalOverflow(page)).toBe(false);
 

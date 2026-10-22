@@ -59,8 +59,37 @@ pnpm prettier --check .
 | `apps/mfe-publish`                           | remote, publishing and management of listings (ANN, SOC): publish form in 5 steps and its confirmation (ANN-04), dev server proxies `/api` to the gateway | `pnpm nx serve mfe-publish` (http://localhost:4203)                                                                                          |
 | `apps/shell-e2e`                             | Playwright end-to-end tests of the shell and its remotes (Chromium)                                                                                       | `pnpm nx e2e shell-e2e` (starts the 4 dev servers, fakes the API), `pnpm nx run shell-e2e:e2e-stack` (against the local back end, see below) |
 | `tools/i18n-check`                           | translation key check, run by the `i18n-check` target of the shell and of each remote                                                                     | `pnpm nx run-many -t i18n-check`, `pnpm nx test i18n-check`                                                                                  |
+| `legal/`, `tools/build-legal`                | legal pages (LEG-01): Markdown texts and their generator to static HTML, see [Legal pages](#legal-pages)                                                  | `pnpm nx build build-legal` (into `dist/legal`), `pnpm nx test build-legal`                                                                  |
 
 The `@soukly/<lib>` aliases point to `libs/<lib>/src/index.ts` (`tsconfig.base.json`).
+
+### Legal pages
+
+Five pages in fr, ar and en, at stable addresses: `/{lang}/legal/terms`, `privacy`, `posting-rules`, `notice` and
+`data-deletion`. They are static HTML, readable without JavaScript, generated from `frontend/legal/{lang}/{slug}.md` by
+`tools/build-legal` (markdown-it with raw HTML disabled) with the header, footer, fonts and tokens of `libs/ui`.
+`pnpm nx serve shell` builds and serves them; in the front-end image, Caddy serves them before the fallback to the
+shell, and an unknown slug shows the 404 page of the shell.
+
+**Updating a text**: edit the Markdown of the 3 languages together, keep each `## Title {#anchor}` anchor (the same
+anchors in every language, links may point to them), and set `version` (and `effectiveDate`) to the new date. The
+front matter holds `title`, `version`, `effectiveDate` (`YYYY-MM-DD`) and `draft`: `draft: true` shows the banner
+"Provisional text, under legal review", to keep until the final text is reviewed. `{{contactEmail}}` becomes a link to
+the contact address: `LEGAL_CONTACT_EMAIL` of the front-end container, else `privacy@<host of PUBLIC_BASE_URL>`
+(`privacy@localhost` locally). When the **terms** change, change `LEGAL_TERMS_VERSION` of user-service to the same
+version (default in `application.yml`; `pnpm nx test build-legal` fails when they differ): it is recorded with each
+new account. Never rename a page: the addresses are declared to Meta.
+
+**Addresses to declare to Meta** (app settings, SOC-01), with the host of `PUBLIC_BASE_URL` (`DEV_HOST` during the
+review, then the prod host):
+
+| Meta field                    | Address                                  |
+| ----------------------------- | ---------------------------------------- |
+| Privacy policy URL            | `https://<PROD_HOST>/fr/legal/privacy`       |
+| User data deletion (URL)      | `https://<PROD_HOST>/fr/legal/data-deletion` |
+| Terms of service URL          | `https://<PROD_HOST>/fr/legal/terms`         |
+
+After each production deployment, these 3 addresses must answer `200`.
 
 ### Running the shell with its remotes
 

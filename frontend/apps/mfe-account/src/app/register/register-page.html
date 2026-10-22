@@ -86,12 +86,14 @@
       <ui-checkbox [error]="errorKey(form.acceptTerms) | transloco" controlId="register-terms">
         <input uiCheckboxControl type="checkbox" [formField]="form.acceptTerms" />
         {{ 'account.register.terms-before' | transloco }}<a
-          [routerLink]="'/terms' | localePath"
+          [href]="'/legal/terms' | localePath"
           target="_blank"
+          rel="noopener"
           >{{ 'account.register.terms-link' | transloco }}</a
         >{{ 'account.register.terms-middle' | transloco }}<a
-          [routerLink]="'/privacy' | localePath"
+          [href]="'/legal/privacy' | localePath"
           target="_blank"
+          rel="noopener"
           >{{ 'account.register.privacy-link' | transloco }}</a
         >{{ 'account.register.terms-after' | transloco }}
       </ui-checkbox>
