@@ -1,12 +1,13 @@
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { expectNoSeriousA11yViolations } from '../support/axe';
-import { verificationLink } from '../support/mailpit';
+import { lastSubject, resetPasswordLink, verificationLink } from '../support/mailpit';
 
 /**
- * AUTH-03 against the real stack: gateway, user-service, PostgreSQL and Mailpit (see
+ * AUTH-03 and AUTH-04 against the real stack: gateway, user-service, PostgreSQL and Mailpit (see
  * playwright.stack.config.mts). Every test uses a new email address.
  */
 const PASSWORD = 'Jasmin-de-Carthage-2026';
+const NEW_PASSWORD = 'Sidi-Bou-Said-bleu-42';
 
 function newEmail(): string {
   return `amira.${Date.now()}.${Math.floor(Math.random() * 1e6)}@example.tn`;
@@ -124,6 +125,62 @@ test.describe('account screens on the local stack', () => {
     await expect(alert).toHaveText('Email ou mot de passe incorrect.');
     await expect(page.getByTestId('login-error')).toBeFocused();
     await expect(page.locator('[aria-invalid="true"]')).toHaveCount(0);
+  });
+
+  test('forgotten password: link from Mailpit, new password, other devices signed out', async ({
+    page,
+    request,
+  }) => {
+    const email = await existingMember(page, request);
+    // Another device with an open session.
+    const otherDevice = await request.post('http://localhost:8080/api/users/login', {
+      data: { email, password: PASSWORD },
+    });
+    const otherCookie = otherDevice.headers()['set-cookie']?.match(/soukly_rt=[^;]+/)?.[0];
+    expect(otherCookie).toBeDefined();
+
+    await page.goto('/fr/account/login');
+    await page.getByLabel('Email').fill(email);
+    await page.getByRole('link', { name: 'Mot de passe oublié ?' }).click();
+    await expect(page.getByLabel('Email')).toHaveValue(email);
+    await page.getByRole('button', { name: 'Envoyer le lien' }).click();
+    await expect(page.getByTestId('sent-address')).toHaveText(email);
+
+    await page.goto(await resetPasswordLink(request, email));
+    await expect(page).toHaveURL('/fr/account/reset-password');
+    await page.getByRole('textbox', { name: 'Nouveau mot de passe' }).fill(NEW_PASSWORD);
+    await page.getByRole('button', { name: 'Enregistrer et me connecter' }).click();
+    await expect(page).toHaveURL('/fr');
+    await expect(page.getByText('Mot de passe modifié. Vous êtes connecté.')).toBeVisible();
+    await expect(page.getByTestId('user-name')).toHaveText('Amira B.');
+
+    const refresh = await request.post('http://localhost:8080/api/users/refresh', {
+      headers: { Origin: 'http://localhost:4200', Cookie: otherCookie as string },
+    });
+    expect(refresh.status()).toBe(401);
+    await lastSubject(request, email, /Votre mot de passe Soukly a été modifié/);
+    const oldPassword = await request.post('http://localhost:8080/api/users/login', {
+      data: { email, password: PASSWORD },
+    });
+    expect(oldPassword.status()).toBe(401);
+  });
+
+  test('a used reset link is no longer valid', async ({ page, request }) => {
+    const email = await existingMember(page, request);
+    const forgot = await request.post('http://localhost:8080/api/users/password/forgot', {
+      data: { email },
+    });
+    expect(forgot.status()).toBe(202);
+    const link = await resetPasswordLink(request, email);
+    await page.goto(link);
+    await page.getByRole('textbox', { name: 'Nouveau mot de passe' }).fill(NEW_PASSWORD);
+    await page.getByRole('button', { name: 'Enregistrer et me connecter' }).click();
+    await expect(page).toHaveURL('/fr');
+
+    await page.goto(link);
+    await page.getByRole('textbox', { name: 'Nouveau mot de passe' }).fill('Another-Strong-Pass-7');
+    await page.getByRole('button', { name: 'Enregistrer et me connecter' }).click();
+    await expect(page.getByTestId('reset-invalid')).toHaveText("Ce lien n'est plus valable");
   });
 
   test('the login page is in Arabic and mirrored, the email typed left to right', async ({

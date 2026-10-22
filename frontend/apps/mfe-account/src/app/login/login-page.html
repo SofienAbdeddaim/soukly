@@ -63,7 +63,11 @@
         </button>
       </ui-field>
 
-      <a class="login__forgot" [routerLink]="'/account/forgot-password' | localePath">
+      <a
+        class="login__forgot"
+        [routerLink]="'/account/forgot-password' | localePath"
+        [state]="forgotPasswordState()"
+      >
         {{ 'account.login.forgot-password' | transloco }}
       </a>
 

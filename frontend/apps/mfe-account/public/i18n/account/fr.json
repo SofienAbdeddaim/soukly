@@ -31,7 +31,8 @@
       "required": "Acceptez les conditions pour créer votre compte."
     },
     "too-many-requests": "Trop de demandes en peu de temps. Patientez un instant puis réessayez.",
-    "unexpected": "Une erreur est survenue. Vérifiez votre connexion puis réessayez."
+    "unexpected": "Une erreur est survenue. Vérifiez votre connexion puis réessayez.",
+    "too-many-attempts": "Trop de tentatives, réessayez dans quelques minutes."
   },
   "register": {
     "title": "Créer un compte",
@@ -204,5 +205,33 @@
       "link-failed": "Le lien n'a pas pu être copié.",
       "close": "Fermer"
     }
+  },
+  "forgot": {
+    "title": "Mot de passe oublié ?",
+    "text": "Saisissez l'email de votre compte. Nous vous enverrons un lien pour choisir un nouveau mot de passe.",
+    "submit": "Envoyer le lien",
+    "back-to-login": "Retour à la connexion"
+  },
+  "forgot-sent": {
+    "title": "Vérifiez votre email",
+    "text-before": "Si un compte existe pour",
+    "text-after": ", vous allez recevoir un lien pour choisir un nouveau mot de passe. Il est valable 1 heure.",
+    "no-address": "Si un compte existe pour cette adresse, vous allez recevoir un lien pour choisir un nouveau mot de passe. Il est valable 1 heure.",
+    "resend": "Renvoyer le lien",
+    "resent": "Lien renvoyé. Pensez à vérifier vos courriers indésirables."
+  },
+  "reset": {
+    "title": "Choisissez un nouveau mot de passe",
+    "other-devices": "Vous serez déconnecté de vos autres appareils, puis connecté directement ici.",
+    "new-password": "Nouveau mot de passe",
+    "password-hint": "8 caractères minimum. Évitez les mots de passe courants.",
+    "submit": "Enregistrer et me connecter",
+    "signed-in": "Mot de passe modifié. Vous êtes connecté.",
+    "close": "Fermer"
+  },
+  "invalid-link": {
+    "title": "Ce lien n'est plus valable",
+    "text": "Il a expiré, a déjà servi, ou un lien plus récent a été envoyé. Demandez-en un nouveau : il sera valable 1 heure.",
+    "new-link": "Demander un nouveau lien"
   }
 }

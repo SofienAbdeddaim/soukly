@@ -42,6 +42,18 @@ export class AuthService {
   }
 
   /**
+   * Chooses a new password with the token of a reset link (AUTH-04). user-service signs out every
+   * other device and opens a session for this one, exactly like `login`. Rejects with the
+   * `HttpErrorResponse` of the API (`reset-token-invalid`, `validation-failed`, `429`…).
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const response = await firstValueFrom(
+      this.http.post<SessionResponse>(SESSION_URLS.resetPassword, { token, newPassword }),
+    );
+    this.open(response);
+  }
+
+  /**
    * Renews the access token with the refresh cookie; resolves to false, with the session cleared,
    * when the cookie is missing, expired or revoked. Calls made while a refresh is running share it:
    * two refreshes in parallel with the same cookie would look like a stolen token to user-service,
