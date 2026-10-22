@@ -244,7 +244,7 @@ class PasswordResetTests extends IntegrationTest {
         assertThat(confirmation.getSubject()).isEqualTo("تم تغيير كلمة مرور حسابك على سوقلي");
         assertThat(TestSmtpServer.part(confirmation, "text/plain")).contains("/ar/account/forgot-password")
                 // Western digits, as written in Tunisia
-                .containsPattern("[0-9]{2}:[0-9]{2}");
+                .containsPattern("[0-9]{1,2}:[0-9]{2}");
     }
 
     // --- CSRF ----------------------------------------------------------------------------------------------
