@@ -82,6 +82,12 @@ export class LoginPage {
   /** Internal page to go back to after the login, if any. */
   protected readonly returnUrl = safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
 
+  /** The address typed, if valid, prefills the forgotten password page (navigation state only). */
+  protected forgotPasswordState(): { email: string } | undefined {
+    const email = this.model().email.trim();
+    return isEmailFormat(email) ? { email } : undefined;
+  }
+
   protected ceilMinutes(seconds: number): number {
     return Math.ceil(seconds / 60);
   }

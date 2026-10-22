@@ -31,7 +31,8 @@
       "required": "Accept the terms to create your account."
     },
     "too-many-requests": "Too many requests in a short time. Wait a moment, then try again.",
-    "unexpected": "Something went wrong. Check your connection, then try again."
+    "unexpected": "Something went wrong. Check your connection, then try again.",
+    "too-many-attempts": "Too many attempts, please try again in a few minutes."
   },
   "register": {
     "title": "Create an account",
@@ -204,5 +205,33 @@
       "link-failed": "The link could not be copied.",
       "close": "Close"
     }
+  },
+  "forgot": {
+    "title": "Forgot your password?",
+    "text": "Enter the email of your account. We will send you a link to choose a new password.",
+    "submit": "Send the link",
+    "back-to-login": "Back to sign in"
+  },
+  "forgot-sent": {
+    "title": "Check your email",
+    "text-before": "If an account exists for",
+    "text-after": ", you will receive a link to choose a new password. It is valid for 1 hour.",
+    "no-address": "If an account exists for this address, you will receive a link to choose a new password. It is valid for 1 hour.",
+    "resend": "Resend the link",
+    "resent": "Link sent again. Remember to check your spam folder."
+  },
+  "reset": {
+    "title": "Choose a new password",
+    "other-devices": "You will be signed out of your other devices, then signed in right here.",
+    "new-password": "New password",
+    "password-hint": "At least 8 characters. Avoid common passwords.",
+    "submit": "Save and sign me in",
+    "signed-in": "Password changed. You are signed in.",
+    "close": "Close"
+  },
+  "invalid-link": {
+    "title": "This link is no longer valid",
+    "text": "It has expired, has already been used, or a newer link was sent. Ask for a new one: it will be valid for 1 hour.",
+    "new-link": "Ask for a new link"
   }
 }

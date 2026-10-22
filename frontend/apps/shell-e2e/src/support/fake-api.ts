@@ -69,7 +69,14 @@ export async function fakeAccountApi(
         return route.fulfill({ status: 204 });
       case '/api/users/register':
       case '/api/users/verify-email/resend':
+      case '/api/users/password/forgot':
         return route.fulfill({ status: 202 });
+      case '/api/users/password/reset':
+        if (body?.['token'] !== 'valid-reset-token') {
+          return json(route, 400, problem('reset-token-invalid', 400));
+        }
+        api.signedIn = true;
+        return json(route, 200, session());
       case '/api/users/verify-email':
         return body?.['token'] === 'valid-token'
           ? route.fulfill({ status: 204 })

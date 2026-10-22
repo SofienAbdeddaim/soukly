@@ -55,6 +55,17 @@
   align-self: stretch;
 }
 
+.page__center {
+  align-self: center;
+}
+
+.page__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
 .form,
 .form__fields {
   display: flex;
@@ -89,11 +100,20 @@
   color: var(--color-danger);
 }
 
-.status {
+.status,
+.error {
   margin: 0;
   color: var(--color-success);
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.error:empty {
+  display: none;
 }
 
 .visually-hidden {

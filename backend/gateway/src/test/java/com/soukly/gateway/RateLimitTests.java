@@ -13,7 +13,7 @@ import org.springframework.test.web.reactive.server.WebTestClient.ResponseSpec;
 
 import com.soukly.gateway.support.GatewayIntegrationTest;
 
-// These tests use up the login, register, resend and search budgets of the shared gateway context: a fresh context
+// These tests use up the login, register, resend, password and search budgets of the shared gateway context: a fresh context
 // afterwards keeps later test classes (RoutingTests registers once) from getting a 429.
 @DirtiesContext
 class RateLimitTests extends GatewayIntegrationTest {
@@ -44,6 +44,20 @@ class RateLimitTests extends GatewayIntegrationTest {
         resend().expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
                 .expectHeader().exists(HttpHeaders.RETRY_AFTER);
         assertThat(USER_SERVICE.received()).hasSize(10);
+    }
+
+    @Test
+    void passwordForgotAndResetArePublicAndLimitedWithTheirOwnBudgets() {
+        for (String path : new String[] { "/api/users/password/forgot", "/api/users/password/reset" }) {
+            for (int i = 0; i < 10; i++) {
+                post(path).expectStatus().isOk();
+            }
+
+            post(path).expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS)
+                    .expectHeader().exists(HttpHeaders.RETRY_AFTER)
+                    .expectBody().jsonPath("$.type").isEqualTo("urn:soukly:problem:too-many-requests");
+        }
+        assertThat(USER_SERVICE.received()).hasSize(20);
     }
 
     @Test
@@ -90,7 +104,11 @@ class RateLimitTests extends GatewayIntegrationTest {
     }
 
     private ResponseSpec resend() {
-        return client.post().uri("/api/users/verify-email/resend")
+        return post("/api/users/verify-email/resend");
+    }
+
+    private ResponseSpec post(String path) {
+        return client.post().uri(path)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue("{}")
                 .exchange();

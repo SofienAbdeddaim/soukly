@@ -1,5 +1,6 @@
 package com.soukly.user.mail;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import com.soukly.user.account.Language;
@@ -33,6 +34,26 @@ public sealed interface AccountMail {
         @Override
         public String toString() {
             return "AccountExists[userId=" + userId + "]";
+        }
+    }
+
+    /** Link to choose a new password (AUTH-04); {@code token} is never stored or logged. */
+    record PasswordReset(UUID userId, String to, String displayName, Language language, String token)
+            implements AccountMail {
+
+        @Override
+        public String toString() {
+            return "PasswordReset[userId=" + userId + "]";
+        }
+    }
+
+    /** The password was reset at {@code changedAt}; tells the owner what to do if it was not them. */
+    record PasswordChanged(UUID userId, String to, String displayName, Language language, Instant changedAt)
+            implements AccountMail {
+
+        @Override
+        public String toString() {
+            return "PasswordChanged[userId=" + userId + "]";
         }
     }
 }

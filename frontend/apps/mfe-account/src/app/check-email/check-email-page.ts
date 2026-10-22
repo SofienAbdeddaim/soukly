@@ -1,8 +1,9 @@
-import { ChangeDetectionStrategy, Component, DOCUMENT, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LucideMail } from '@lucide/angular';
 import { LocalePathPipe } from '@soukly/i18n';
+import { navigationEmail } from '../shared/navigation-email';
 import { ResendEmail } from '../shared/resend-email';
 
 /**
@@ -41,16 +42,5 @@ import { ResendEmail } from '../shared/resend-email';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CheckEmailPage {
-  protected readonly email = emailOf(
-    inject(Router).currentNavigation()?.extras.state ?? inject(DOCUMENT).defaultView?.history.state,
-  );
-}
-
-/** The email of the navigation state: set by the registration page, then kept by the history. */
-function emailOf(state: unknown): string | null {
-  const email =
-    state !== null && typeof state === 'object'
-      ? (state as Record<string, unknown>)['email']
-      : null;
-  return typeof email === 'string' && email ? email : null;
+  protected readonly email = navigationEmail();
 }

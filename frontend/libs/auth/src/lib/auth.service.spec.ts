@@ -65,6 +65,34 @@ describe('AuthService', () => {
     expect(auth.isAuthenticated()).toBe(false);
   });
 
+  it('opens a session when a new password is chosen with a reset link', async () => {
+    const reset = auth.resetPassword('reset-token', 'Sidi-Bou-Said-bleu-42');
+    const request = http.expectOne('/api/users/password/reset');
+    expect(request.request.body).toEqual({
+      token: 'reset-token',
+      newPassword: 'Sidi-Bou-Said-bleu-42',
+    });
+    expect(request.request.withCredentials).toBe(true);
+    request.flush(sessionResponse('token-2'));
+
+    await reset;
+    expect(auth.isAuthenticated()).toBe(true);
+    expect(auth.accessToken()).toBe('token-2');
+  });
+
+  it('stays signed out when the reset link is refused', async () => {
+    const reset = auth.resetPassword('used-token', 'Sidi-Bou-Said-bleu-42');
+    http
+      .expectOne('/api/users/password/reset')
+      .flush(
+        { type: 'urn:soukly:problem:reset-token-invalid' },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+    await expect(reset).rejects.toMatchObject({ status: 400 });
+    expect(auth.isAuthenticated()).toBe(false);
+  });
+
   it('shares one refresh between concurrent callers', async () => {
     const first = auth.refresh();
     const second = auth.refresh();

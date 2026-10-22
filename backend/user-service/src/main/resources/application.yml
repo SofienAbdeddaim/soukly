@@ -48,6 +48,9 @@ soukly:
     mail-from: ${MAIL_FROM:no-reply@example.com}
     verification-token-ttl: 24h
     verification-resends-per-hour: 3
+    # Forgotten password (AUTH-04): validity of a reset link and links an account may receive per hour
+    password-reset-token-ttl: ${PASSWORD_RESET_TOKEN_TTL:1h}
+    password-resets-per-hour: ${PASSWORD_RESETS_PER_HOUR:3}
     # Consumer of the listing events (ANN-03): a failed message is retried 3 times, then sent to the DLQ
     listing-events:
       retries: 3

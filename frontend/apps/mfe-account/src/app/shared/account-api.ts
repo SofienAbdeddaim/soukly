@@ -15,8 +15,9 @@ export interface RegisterRequest {
 const USERS = `${API_PREFIX}/users`;
 
 /**
- * Registration and email verification calls of user-service (AUTH-01). The language of the emails
- * follows the `Accept-Language` header added by `acceptLanguageInterceptor`.
+ * Registration, email verification (AUTH-01) and forgotten password (AUTH-04) calls of
+ * user-service. The language of the emails follows the `Accept-Language` header added by
+ * `acceptLanguageInterceptor` (the reset emails use the language of the account).
  */
 @Injectable({ providedIn: 'root' })
 export class AccountApi {
@@ -35,5 +36,13 @@ export class AccountApi {
   /** `202` whatever the state of the account (at most 3 emails an hour are actually sent). */
   resendVerification(email: string): Promise<void> {
     return firstValueFrom(this.http.post<void>(`${USERS}/verify-email/resend`, { email }));
+  }
+
+  /**
+   * Asks for a password reset link (AUTH-04). `202` whether the email has an account or not (at
+   * most 3 links an hour are actually sent); the new password itself goes through `AuthService`.
+   */
+  forgotPassword(email: string): Promise<void> {
+    return firstValueFrom(this.http.post<void>(`${USERS}/password/forgot`, { email }));
   }
 }

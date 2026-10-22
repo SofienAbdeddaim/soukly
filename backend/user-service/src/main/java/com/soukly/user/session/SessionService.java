@@ -16,11 +16,12 @@ import com.soukly.user.account.AccountStatus;
 import com.soukly.user.account.UserAccount;
 import com.soukly.user.account.UserAccountRepository;
 import com.soukly.user.jwt.AccessTokens;
+import com.soukly.user.password.PasswordResets;
 import com.soukly.user.registration.EmailAddresses;
 import com.soukly.user.token.OpaqueTokens;
 
 /**
- * Login, refresh and logout.
+ * Login, refresh, logout and the password reset that signs in (AUTH-04).
  *
  * <ul>
  * <li>Login answers the same way, in the same time, for an unknown email and a wrong password: a password is
@@ -42,18 +43,21 @@ class SessionService {
     private final LoginThrottle throttle;
     private final AccessTokens accessTokens;
     private final PasswordEncoder passwordEncoder;
+    private final PasswordResets passwordResets;
     private final SessionProperties properties;
     private final Clock clock;
     /** Compared with when the email is unknown, so that the response takes as long as for a known email. */
     private final String dummyPasswordHash;
 
     SessionService(UserAccountRepository users, RefreshTokenRepository refreshTokens, LoginThrottle throttle,
-            AccessTokens accessTokens, PasswordEncoder passwordEncoder, SessionProperties properties, Clock clock) {
+            AccessTokens accessTokens, PasswordEncoder passwordEncoder, PasswordResets passwordResets,
+            SessionProperties properties, Clock clock) {
         this.users = users;
         this.refreshTokens = refreshTokens;
         this.throttle = throttle;
         this.accessTokens = accessTokens;
         this.passwordEncoder = passwordEncoder;
+        this.passwordResets = passwordResets;
         this.properties = properties;
         this.clock = clock;
         this.dummyPasswordHash = passwordEncoder.encode(OpaqueTokens.generate());
@@ -136,6 +140,23 @@ class SessionService {
             refreshTokens.revokeFamily(token.familyId(), clock.instant());
             log.info("User {} signed out", token.userId());
         });
+    }
+
+    /**
+     * Resets the password with a link token, then, in the same transaction, signs out every device (all session
+     * families revoked), clears the login failures and opens a new session for this device. The access tokens
+     * already issued stay valid until they expire (15 min at most), as after a logout.
+     */
+    @Transactional
+    public Session resetPassword(String token, String newPassword, String userAgent) {
+        UserAccount user = passwordResets.reset(token, newPassword);
+        Instant now = clock.instant();
+        int revoked = refreshTokens.revokeAllOfUser(user.id(), now);
+        throttle.reset(OpaqueTokens.sha256Hex(user.email()));
+        boolean firstLogin = user.recordLogin(now);
+        String refreshToken = issueRefreshToken(user.id(), UUID.randomUUID(), userAgent, now);
+        log.info("User {} signed in after a password reset, {} session token(s) revoked", user.id(), revoked);
+        return new Session(accessTokens.issue(user.id()), user, refreshToken, firstLogin);
     }
 
     private String issueRefreshToken(UUID userId, UUID familyId, String userAgent, Instant now) {

@@ -11,8 +11,9 @@ import com.soukly.gateway.config.GatewayProperties;
 import com.soukly.gateway.error.ProblemResponseWriter;
 
 /**
- * Limits {@code POST /api/users/login}, {@code POST /api/users/register} and
- * {@code POST /api/users/verify-email/resend} per client IP (each path has its own budget). Runs after
+ * Limits {@code POST /api/users/login}, {@code POST /api/users/register}, {@code POST /api/users/verify-email/resend}
+ * and the password reset paths {@code POST /api/users/password/forgot} and {@code /reset} (AUTH-04) per client IP
+ * (each path has its own budget). Runs after
  * {@code RequestIdFilter}, before security.
  */
 @Component
@@ -21,7 +22,8 @@ class AuthRateLimitFilter extends RateLimitFilter {
 
     AuthRateLimitFilter(GatewayProperties properties, ProblemResponseWriter problems) {
         super(ServerWebExchangeMatchers.pathMatchers(HttpMethod.POST, "/api/users/login", "/api/users/register",
-                "/api/users/verify-email/resend"), properties.rateLimit().authPerMinute(),
+                "/api/users/verify-email/resend", "/api/users/password/forgot", "/api/users/password/reset"),
+                properties.rateLimit().authPerMinute(),
                 new ClientIpResolver(properties.trustedProxies()), problems,
                 "Too many attempts. Please try again later.");
     }

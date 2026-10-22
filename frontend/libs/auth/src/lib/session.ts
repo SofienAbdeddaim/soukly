@@ -7,7 +7,7 @@ export interface AuthUser {
   preferredLanguage: Lang;
 }
 
-/** Body of a successful `login` or `refresh`; the refresh token stays in its HttpOnly cookie. */
+/** Body of a successful `login`, `refresh` or `resetPassword`; the refresh token stays in its HttpOnly cookie. */
 export interface SessionResponse {
   accessToken: string;
   tokenType: 'Bearer';
@@ -26,4 +26,6 @@ export const SESSION_URLS = {
   login: `${API_PREFIX}/users/login`,
   refresh: `${API_PREFIX}/users/refresh`,
   logout: `${API_PREFIX}/users/logout`,
+  /** Forgotten password (AUTH-04): answers like `login`. */
+  resetPassword: `${API_PREFIX}/users/password/reset`,
 } as const;

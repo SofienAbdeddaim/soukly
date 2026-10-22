@@ -22,6 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
 import com.soukly.user.internal.UserNotFoundException;
+import com.soukly.user.password.InvalidResetTokenException;
 import com.soukly.user.registration.InvalidRequestException;
 import com.soukly.user.registration.InvalidVerificationTokenException;
 import com.soukly.user.session.ForbiddenOriginException;
@@ -63,6 +64,13 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.BAD_REQUEST, "Invalid verification token",
                 "The verification token is unknown, expired or already used.", instance(request),
                 requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> invalidResetToken(InvalidResetTokenException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("reset-token-invalid"), HttpStatus.BAD_REQUEST,
+                "Invalid reset token", "The reset link is unknown, expired, already used or replaced.",
+                instance(request), requestId(request)));
     }
 
     @ExceptionHandler

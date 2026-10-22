@@ -1,5 +1,11 @@
 package com.soukly.user.mail;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.util.Locale;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -12,6 +18,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
+import com.soukly.user.account.Language;
 import com.soukly.user.config.UserProperties;
 
 import jakarta.mail.MessagingException;
@@ -25,6 +32,8 @@ import jakarta.mail.internet.MimeMessage;
 class AccountMailer {
 
     private static final Logger log = LoggerFactory.getLogger(AccountMailer.class);
+
+    private static final ZoneId TUNIS = ZoneId.of("Africa/Tunis");
 
     private final JavaMailSender sender;
     private final SpringTemplateEngine templates;
@@ -45,6 +54,8 @@ class AccountMailer {
         String template = switch (mail) {
             case AccountMail.Verification v -> "verification";
             case AccountMail.AccountExists e -> "account-exists";
+            case AccountMail.PasswordReset r -> "password-reset";
+            case AccountMail.PasswordChanged c -> "password-changed";
         };
         try {
             Context context = context(mail);
@@ -82,8 +93,26 @@ class AccountMailer {
                 context.setVariable("loginUrl", properties.frontUrl("/" + lang + "/account/login"));
                 context.setVariable("forgotPasswordUrl", properties.frontUrl("/" + lang + "/account/forgot-password"));
             }
+            case AccountMail.PasswordReset r -> {
+                context.setVariable("resetUrl", UriComponentsBuilder
+                        .fromUriString(properties.frontUrl("/" + lang + "/account/reset-password"))
+                        .queryParam("token", r.token()).build().toUriString());
+                context.setVariable("validityMinutes",
+                        String.valueOf(properties.passwordResetTokenTtl().toMinutes()));
+            }
+            case AccountMail.PasswordChanged c -> {
+                context.setVariable("changedAt", dateTime(c.changedAt(), mail.language()));
+                context.setVariable("forgotPasswordUrl", properties.frontUrl("/" + lang + "/account/forgot-password"));
+            }
         }
         return context;
+    }
+
+    /** Date and time in Tunis, with Western digits in Arabic as written in Tunisia (locale {@code ar-TN}). */
+    static String dateTime(Instant instant, Language language) {
+        Locale locale = Locale.forLanguageTag(language.code() + "-TN");
+        return DateTimeFormatter.ofLocalizedDateTime(FormatStyle.LONG, FormatStyle.SHORT).withLocale(locale)
+                .format(instant.atZone(TUNIS));
     }
 
     private static Throwable rootCause(Throwable e) {
