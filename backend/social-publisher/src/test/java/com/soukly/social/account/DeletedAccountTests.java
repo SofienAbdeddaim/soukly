@@ -22,13 +22,14 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.soukly.common.event.UserEvents;
 import com.soukly.social.support.IntegrationTest;
 import com.soukly.social.support.TestGraph;
+import com.soukly.social.support.TestInstagram;
 import com.soukly.social.support.TestJwks;
 import com.soukly.social.support.TestRedpanda;
 
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Deletion of the connections of a deleted account (SOC-01): {@code user.deleted} read from
+ * Deletion of the connections of a deleted account (SOC-01, SOC-02): {@code user.deleted} read from
  * {@code soukly.user-events}, revocation at Meta, deduplication by {@code eventId} and the DLQ.
  */
 class DeletedAccountTests extends IntegrationTest {
@@ -63,6 +64,33 @@ class DeletedAccountTests extends IntegrationTest {
         assertThat(count("oauth_states", member)).isZero();
         assertThat(count("social_connections", other)).isEqualTo(1);
         await().atMost(TIMEOUT).until(() -> TestGraph.revoked().contains(TestGraph.userId(code)));
+    }
+
+    @Test
+    void anInstagramAccountIsDeletedTooWithoutAFacebookRevocation() throws Exception {
+        String pageCode = connectPage(member);
+        String instagramCode = TestInstagram.business("sfax.auto");
+        String body = mockMvc.perform(post("/social/instagram/connect")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwks.token(member)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String state = UriComponentsBuilder.fromUriString(json.readTree(body).get("authorizeUrl").asString()).build()
+                .getQueryParams().getFirst("state");
+        mockMvc.perform(post("/social/instagram/callback")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + TestJwks.token(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\":\"" + instagramCode + "\",\"state\":\"" + state + "\"}"))
+                .andExpect(status().isOk());
+        assertThat(count("social_connections", member)).isEqualTo(2);
+        UUID eventId = UUID.randomUUID();
+
+        send(userDeleted(eventId, member));
+        awaitProcessed(eventId);
+
+        assertThat(count("social_connections", member)).isZero();
+        await().atMost(TIMEOUT).until(() -> TestGraph.revoked().contains(TestGraph.userId(pageCode)));
+        // Instagram Login has no revocation, and the Facebook one is never asked for an Instagram id
+        assertThat(TestGraph.revoked()).doesNotContain(TestInstagram.scopedId(instagramCode));
     }
 
     @Test

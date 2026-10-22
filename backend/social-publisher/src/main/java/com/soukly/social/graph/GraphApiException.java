@@ -1,8 +1,8 @@
-package com.soukly.social.facebook;
+package com.soukly.social.graph;
 
 /**
- * A Graph API call failed. The message names the operation and the HTTP status or the error class only: never the
- * URL (it may carry a token or the app secret) nor the response body.
+ * A Graph API call failed (Facebook or Instagram). The message names the operation and the HTTP status or the error
+ * class only: never the URL (it may carry a token or the app secret) nor the response body.
  */
 public class GraphApiException extends RuntimeException {
 

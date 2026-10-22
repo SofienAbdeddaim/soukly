@@ -22,10 +22,12 @@ import com.soukly.common.event.UserEvents;
 /**
  * Base of the integration tests: one Spring context for every class, a PostgreSQL container (Testcontainers) migrated
  * by Flyway and a Redpanda container for the user events ({@link TestRedpanda}). Access tokens are validated against
- * the simulated JWKS of {@link TestJwks}, and the Graph API of Meta is the fake of {@link TestGraph}: tests never call
- * the real one. Tests use a new account id each time instead of resetting the database.
+ * the simulated JWKS of {@link TestJwks}, the Graph API of Meta is the fake of {@link TestGraph} and Instagram the fake
+ * of {@link TestInstagram}: tests never call the real ones. Tests use a new account id each time instead of resetting
+ * the database.
  *
- * <p>The housekeeping task never runs on its own; the clock moves only when a test advances it ({@link MutableClock}).
+ * <p>The housekeeping and token refresh tasks never run on their own; the clock moves only when a test advances it
+ * ({@link MutableClock}).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -64,8 +66,16 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.facebook.graph-base-url", TestGraph::baseUrl);
         registry.add("soukly.social.facebook.dialog-base-url", () -> "https://www.facebook.example.test");
         registry.add("soukly.social.facebook.front-base-url", () -> FRONT_BASE_URL);
+        registry.add("soukly.social.instagram.app-id", () -> TestInstagram.APP_ID);
+        registry.add("soukly.social.instagram.app-secret", () -> TestInstagram.APP_SECRET);
+        registry.add("soukly.social.instagram.graph-version", () -> TestInstagram.VERSION);
+        registry.add("soukly.social.instagram.graph-base-url", TestInstagram::baseUrl);
+        registry.add("soukly.social.instagram.api-base-url", TestInstagram::baseUrl);
+        registry.add("soukly.social.instagram.dialog-base-url", () -> "https://www.instagram.example.test");
+        registry.add("soukly.social.instagram.front-base-url", () -> FRONT_BASE_URL);
         // Run by the tests only
         registry.add("soukly.social.facebook.purge-initial-delay", () -> "P1D");
+        registry.add("soukly.social.instagram.refresh-initial-delay", () -> "P1D");
         registry.add("soukly.social.user-events.retry-interval", () -> "100ms");
     }
 

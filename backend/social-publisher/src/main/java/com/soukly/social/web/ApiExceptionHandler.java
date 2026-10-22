@@ -1,6 +1,7 @@
 package com.soukly.social.web;
 
 import java.net.URI;
+import java.util.Locale;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,9 +22,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
-import com.soukly.social.facebook.FacebookNotConfiguredException;
-import com.soukly.social.facebook.OAuthFailedException;
 import com.soukly.social.facebook.PageSelectionNotFoundException;
+import com.soukly.social.oauth.NetworkNotConfiguredException;
+import com.soukly.social.oauth.OAuthFailedException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -42,7 +43,7 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler
     ResponseEntity<Object> oauthFailed(OAuthFailedException e, NativeWebRequest request) {
         ProblemDetail problem = ProblemDetails.create(ProblemDetails.type(e.failure().slug()), e.failure().status(),
-                e.failure().title(), e.failure().detail(), instance(request), requestId(request));
+                e.failure().title(), e.detail(), instance(request), requestId(request));
         if (e.lang() != null) {
             problem.setProperty(LANG, e.lang());
         }
@@ -56,11 +57,14 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 instance(request), requestId(request)));
     }
 
+    /** {@code facebook-not-configured} or {@code instagram-not-configured}. */
     @ExceptionHandler
-    ResponseEntity<Object> facebookNotConfigured(FacebookNotConfiguredException e, NativeWebRequest request) {
-        return problem(ProblemDetails.create(ProblemDetails.type("facebook-not-configured"),
-                HttpStatus.SERVICE_UNAVAILABLE, "Facebook not configured",
-                "Facebook cannot be connected in this environment yet.", instance(request), requestId(request)));
+    ResponseEntity<Object> networkNotConfigured(NetworkNotConfiguredException e, NativeWebRequest request) {
+        String name = e.network().displayName();
+        return problem(ProblemDetails.create(
+                ProblemDetails.type(e.network().name().toLowerCase(Locale.ROOT) + "-not-configured"),
+                HttpStatus.SERVICE_UNAVAILABLE, name + " not configured",
+                name + " cannot be connected in this environment yet.", instance(request), requestId(request)));
     }
 
     /** Missing or invalid access token (resource server); the reason is never echoed, it may describe the token. */
