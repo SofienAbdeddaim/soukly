@@ -105,6 +105,21 @@ class JwtValidationTests extends GatewayIntegrationTest {
     }
 
     @Test
+    void profilePathsNeedAToken() {
+        client.get().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
+        client.patch().uri("/api/users/me").contentType(MediaType.APPLICATION_JSON).bodyValue("{}").exchange()
+                .expectStatus().isUnauthorized();
+        client.post().uri("/api/users/me/password").contentType(MediaType.APPLICATION_JSON).bodyValue("{}")
+                .exchange().expectStatus().isUnauthorized();
+        client.post().uri("/api/users/me/email").contentType(MediaType.APPLICATION_JSON).bodyValue("{}").exchange()
+                .expectStatus().isUnauthorized();
+        client.delete().uri("/api/users/me/email-change").exchange().expectStatus().isUnauthorized();
+        client.delete().uri("/api/users/me").exchange().expectStatus().isUnauthorized();
+
+        assertThat(USER_SERVICE.received()).isEmpty();
+    }
+
+    @Test
     void jwksOfUserServiceIsNotExposed() {
         for (String path : new String[] { "/.well-known/jwks.json", "/api/.well-known/jwks.json",
                 "/api/users/.well-known/jwks.json" }) {

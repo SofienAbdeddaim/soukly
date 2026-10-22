@@ -1,0 +1,10 @@
+[(#{common.greeting(${displayName})})]
+
+[(#{email-change-requested.intro})]
+[(${newEmail})]
+
+[(#{email-change-requested.until})]
+
+[(#{email-change-requested.not-you})] [(#{email-change-requested.change-password})]: [(${forgotPasswordUrl})]
+
+[(#{common.signature})]

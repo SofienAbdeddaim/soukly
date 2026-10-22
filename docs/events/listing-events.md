@@ -69,7 +69,7 @@ The order of the members of a JSON object is not significant. Java classes of th
 | `listing.renewed` | an expired or deactivated listing, or one that expires soon, is put back online for 60 days (`POST /listings/{id}/renew`) | nobody in V1: `social-publisher` ignores it, a renewal is never posted again on the social networks |
 | `listing.updated` | the seller changed a `PUBLISHED` listing (`PATCH /listings/{id}` or its photos); visible at once | nobody in V1: `social-publisher` ignores it, a change is never posted again |
 | `listing.deactivated` | the seller deactivated a published listing (`POST /listings/{id}/deactivate`): hidden until a renewal | nobody in V1 |
-| `listing.deleted` | the seller deleted a listing that was published (`DELETE /listings/{id}`); a draft is erased without event | `social-publisher` (SOC-04, SOC-05): removes the posts of the listing |
+| `listing.deleted` | the seller deleted a listing that was published (`DELETE /listings/{id}`), or deleted their account (`user.deleted`, [`user-events.md`](user-events.md)); a draft is erased without event | `social-publisher` (SOC-04, SOC-05): removes the posts of the listing |
 | `listing.expiring-soon` | a published listing expires in less than 3 days, once per publication or renewal | `user-service` (reminder email) |
 | `listing.expired` | a published listing reached its expiry date and is no longer visible | nobody in V1 |
 
@@ -193,3 +193,4 @@ written by the seller and may be shown publicly; they are not considered persona
 | --- | --- |
 | ANN-03 | topics, envelope and the types `listing.published`, `listing.renewed`, `listing.expiring-soon`, `listing.expired` (`schemaVersion` 1) |
 | ANN-05 | new types `listing.updated`, `listing.deactivated`, `listing.deleted` (`schemaVersion` 1); `listing.renewed` also from a deactivated listing |
+| AUTH-05 | `listing.deleted` also for each listing of a deleted account; the outbox relay moved to `common` (same behavior), shared with the user events |

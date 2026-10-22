@@ -16,19 +16,35 @@ spring:
       ddl-auto: validate
   flyway:
     locations: classpath:db/migration
-  # Listing events (ANN-03): only listing.expiring-soon is handled, for the reminder email
+  # Listing events (ANN-03): only listing.expiring-soon is handled, for the reminder email. User events (AUTH-05) are
+  # produced by the outbox relay.
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+    admin:
+      # Topics are declared at startup (local and dev); a broker that is down does not prevent the start.
+      fail-fast: false
+      operation-timeout: 10s
     consumer:
       group-id: user-service
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     producer:
-      # Dead-letter messages only
+      # Dead-letter messages and the user events of the outbox relay (AUTH-05)
       acks: all
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        # A broker that is down must not hold the relay: the events stay in the outbox and leave at a later run.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
+  task:
+    scheduling:
+      pool:
+        # Outbox relay, session purge and account purge do not wait for each other
+        size: 3
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
@@ -51,6 +67,21 @@ soukly:
     # Forgotten password (AUTH-04): validity of a reset link and links an account may receive per hour
     password-reset-token-ttl: ${PASSWORD_RESET_TOKEN_TTL:1h}
     password-resets-per-hour: ${PASSWORD_RESETS_PER_HOUR:3}
+    # Profile (AUTH-05): validity of the link that confirms a new address, and changes an account may ask per hour
+    email-change-token-ttl: 24h
+    email-changes-per-hour: 3
+    # A deleted account is erased for good after this; to confirm with the legal notice (LEG-01)
+    account-purge-after: ${ACCOUNT_PURGE_AFTER:30d}
+    account-purge-cron: "0 45 3 * * *"
+    # User events (AUTH-05): outbox relay to soukly.user-events, same behavior as the one of listing-service (ANN-03)
+    outbox:
+      relay-interval: PT1S
+      relay-initial-delay: PT5S
+      batch-size: 100
+      send-timeout: 15s
+      retention: 7d
+      purge-interval: PT1H
+      partitions: 3
     # Consumer of the listing events (ANN-03): a failed message is retried 3 times, then sent to the DLQ
     listing-events:
       retries: 3

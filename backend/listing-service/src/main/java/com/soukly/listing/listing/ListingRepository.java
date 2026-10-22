@@ -130,6 +130,17 @@ class ListingRepository {
         jdbc.sql("DELETE FROM listings WHERE id = :id").param("id", id).update();
     }
 
+    /** Listings of an account that are not deleted yet, oldest first (deletion of the account, AUTH-05). */
+    List<UUID> idsOfOwner(UUID ownerId) {
+        return jdbc.sql("""
+                SELECT id FROM listings
+                WHERE owner_id = :owner AND status <> 'DELETED'
+                ORDER BY created_at, id""")
+                .param("owner", ownerId)
+                .query(UUID.class)
+                .list();
+    }
+
     /**
      * Locks at most {@code limit} listings deleted at {@code before} or earlier, skipping those another transaction
      * holds, for the purge (ANN-05).

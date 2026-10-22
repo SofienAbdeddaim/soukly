@@ -30,6 +30,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.jayway.jsonpath.JsonPath;
 import com.soukly.common.event.EventEnvelope;
 import com.soukly.common.event.ListingEvents;
+import com.soukly.common.outbox.OutboxRelay;
+import com.soukly.common.outbox.OutboxRepository;
 import com.soukly.listing.support.IntegrationTest;
 import com.soukly.listing.support.TestRedpanda;
 
@@ -75,8 +77,8 @@ class OutboxRelayTests extends IntegrationTest {
         OutboxProperties small = new OutboxProperties(properties.relayInterval(), properties.relayInitialDelay(),
                 7, properties.sendTimeout(), properties.retention(), properties.purgeInterval(),
                 properties.partitions());
-        OutboxRelay first = new OutboxRelay(repository, kafka, transaction, small, clock);
-        OutboxRelay second = new OutboxRelay(repository, kafka, transaction, small, clock);
+        OutboxRelay first = new OutboxRelay(ListingEvents.TOPIC, repository, kafka, transaction, small, clock);
+        OutboxRelay second = new OutboxRelay(ListingEvents.TOPIC, repository, kafka, transaction, small, clock);
 
         try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
             List<Future<Integer>> runs = executor.invokeAll(List.of(untilEmpty(first, listings),
@@ -106,8 +108,8 @@ class OutboxRelayTests extends IntegrationTest {
     void eventsWaitInTheOutboxWhileTheBrokerIsDownThenLeaveOnce() throws Exception {
         UUID listing = UUID.randomUUID();
         UUID eventId = new TransactionTemplate(transactions).execute(status -> write(listing, 1));
-        OutboxRelay unreachable = new OutboxRelay(repository, unreachableBroker(), new TransactionTemplate(
-                transactions), properties, clock);
+        OutboxRelay unreachable = new OutboxRelay(ListingEvents.TOPIC, repository, unreachableBroker(),
+                new TransactionTemplate(transactions), properties, clock);
 
         unreachable.relayAll();
         unreachable.relayAll();

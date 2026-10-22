@@ -15,13 +15,19 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
  * @param verificationResendsPerHour verification emails an account may receive per hour after the first one
  * @param passwordResetTokenTtl      validity of a password reset link (AUTH-04)
  * @param passwordResetsPerHour      password reset links an account may receive per hour
+ * @param emailChangeTokenTtl        validity of the confirmation link of a new address (AUTH-05)
+ * @param emailChangesPerHour        changes of address an account may ask per hour
+ * @param accountPurgeAfter          a deleted account is erased for good after this (AUTH-05)
  */
 @ConfigurationProperties("soukly.user")
 public record UserProperties(URI frontBaseUrl, String mailFrom,
         @DefaultValue("24h") Duration verificationTokenTtl,
         @DefaultValue("3") int verificationResendsPerHour,
         @DefaultValue("1h") Duration passwordResetTokenTtl,
-        @DefaultValue("3") int passwordResetsPerHour) {
+        @DefaultValue("3") int passwordResetsPerHour,
+        @DefaultValue("24h") Duration emailChangeTokenTtl,
+        @DefaultValue("3") int emailChangesPerHour,
+        @DefaultValue("30d") Duration accountPurgeAfter) {
 
     /** Returns the front-end URL of a path such as {@code /fr/account/login}, without a trailing slash issue. */
     public String frontUrl(String path) {

@@ -1,0 +1,11 @@
+[(#{common.greeting(${displayName})})]
+
+[(#{account-deleted.intro})]
+
+[(#{account-deleted.listings})]
+
+[(#{account-deleted.purge(${purgeDays})})]
+
+[(#{account-deleted.goodbye})]
+
+[(#{common.signature})]

@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.jayway.jsonpath.JsonPath;
 import com.soukly.common.event.ListingEvents;
-import com.soukly.listing.outbox.OutboxRelay;
+import com.soukly.common.outbox.OutboxRelay;
 import com.soukly.listing.support.IntegrationTest;
 import com.soukly.listing.support.TestJwks;
 import com.soukly.listing.support.TestListings;

@@ -1,7 +1,7 @@
 # user-service
 
 Accounts of Soukly: registration and email verification (AUTH-01), sign-in, sessions and the JWKS (AUTH-02), the
-forgotten password (AUTH-04), and the reminder email of the listings that expire soon (ANN-03). The screens are in `frontend/apps/mfe-account` (AUTH-03). Port 8081, package `com.soukly.user`, database `soukly_user` (user `user_svc`).
+forgotten password (AUTH-04), the profile and the deletion of the account (AUTH-05), and the reminder email of the listings that expire soon (ANN-03). The screens are in `frontend/apps/mfe-account` (AUTH-03). Port 8081, package `com.soukly.user`, database `soukly_user` (user `user_svc`).
 
 ## Endpoints
 
@@ -17,9 +17,21 @@ Exposed by the gateway under `/api` (`POST /api/users/register` reaches this ser
 | `POST /users/logout`              | cookie `soukly_rt` (optional), header `Origin`         | `204`, `403`                                                                  |
 | `POST /users/password/forgot`     | `{ email }`                                            | `202`, `400` (malformed email)                                                |
 | `POST /users/password/reset`      | `{ token, newPassword }`, header `Origin`              | `200` like `login`, `400` `reset-token-invalid` or `validation-failed`, `403` |
+| `POST /users/email/confirm`       | `{ token }`                                            | `204`, `400` `email-change-token-invalid`, `409` `email-taken`                |
 | `GET /.well-known/jwks.json`      | -                                                      | `200`; internal only, never routed by the gateway                             |
 
-These endpoints and `GET /actuator/health` are public. Every other path needs a valid access token: the service
+Profile of the signed-in account (AUTH-05), with an access token; the account is its subject:
+
+| Endpoint                        | Body                                                              | Answers                                                                       |
+| ------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `GET /users/me`                 | -                                                                 | `200` profile, `404` once deleted                                             |
+| `PATCH /users/me`               | JSON Merge Patch of `displayName`, `phone`, `preferredLanguage`   | `200` profile, `400` `validation-failed`                                      |
+| `POST /users/me/password`       | `{ currentPassword, newPassword }`, cookie `soukly_rt` (optional) | `204`, `400` `current-password-invalid` or `validation-failed`, `429`         |
+| `POST /users/me/email`          | `{ newEmail, currentPassword }`                                   | `202`, `400` `current-password-invalid` or `validation-failed`, `429`         |
+| `DELETE /users/me/email-change` | -                                                                 | `204`                                                                         |
+| `DELETE /users/me`              | `{ currentPassword }`, header `Origin`                            | `204` with the cookie deleted, `400` `current-password-invalid`, `403`, `429` |
+
+The endpoints of the first table and `GET /actuator/health` are public. Every other path needs a valid access token: the service
 validates it itself with its own keys, with the gateway's rules (RS256 only, `iss`, `exp` with 30 s of clock skew),
 as defense in depth. On a public path the `Authorization` header is ignored, so an expired token sent along with a
 refresh does not fail it.
@@ -149,6 +161,49 @@ with `Cache-Control: no-store` and the cookie
 - **Confirmation email** `password-changed`: date and time in Tunis, and a link to `/{lang}/account/forgot-password`
   in case it was not the owner. No device information in V1.
 
+## Profile and deletion of the account (AUTH-05)
+
+- **Profile** `{ id, email, pendingEmail, displayName, phone, preferredLanguage, createdAt }` (`phone` in E.164,
+  `pendingEmail` left out when no change waits). `PATCH` takes `application/merge-patch+json` (or JSON): a member
+  left out keeps its value, `null` is refused (`displayName.required`…), other members (the email) are ignored. The
+  rules and codes are the ones of the registration, plus `preferredLanguage.invalid`. `preferredLanguage` is the
+  language of the emails; the screens follow the language of the URL. The phone number is read by listing-service at
+  each "Show the number" (CATA-03), so the new one applies to every listing at once.
+- **Current password**: the password, email and deletion actions check it with the login throttling of AUTH-02, on
+  the same counter (a wrong current password counts as a failed login, 5 free failures then a growing delay, `429`
+  with `Retry-After`). A wrong one gives `400` type `urn:soukly:problem:current-password-invalid`.
+- **Change of password**: the rules of the registration on `newPassword`; then every session family of the account
+  but the one of the `soukly_rt` cookie sent with the request (path `/api/users`) is revoked, so the device that
+  asked stays signed in; the `password-changed` email of AUTH-04 is sent.
+- **Change of email**, in two steps. The request (`202`, empty body) replaces any previous one, shows the address in
+  `pendingEmail`, emails the link `{FRONT_BASE_URL}/{lang}/account/confirm-email?token=…` to the **new** address
+  (`email-change`, valid 24 h, single use, SHA-256 in `email_change_tokens`) and a notice to the **current** one
+  (`email-change-requested`, with a link to choose a new password). When the new address has an account, the answer
+  is the same and that address gets the `account-exists` email of AUTH-01 instead of the link. The current address
+  is refused (`email.unchanged`). At most 3 requests per hour and per account; beyond, nothing is sent and the answer
+  is the same. Until the confirmation, the login keeps the current address. `POST /users/email/confirm` is public
+  (the link may be opened on another device); an address taken since the request gives `409 email-taken`.
+- **Deletion**, in one transaction: status `DELETED`, `deleted_at`, the address moved to `deleted_email` (it is free
+  for a new registration at once; kept until the purge to handle fraud), every session family revoked, pending
+  verification, reset and email change links invalidated, and `user.deleted` written to the outbox. `Origin` is
+  checked as on `logout`, since the response deletes the cookie. A deleted account cannot sign in (`401
+invalid-credentials`, as an unknown email), its access tokens get `404` on `/users/me` until they expire, and the
+  internal endpoints answer `404`, so its listings are `410` (CATA-03). The `account-deleted` email goes to the
+  deleted address.
+- **Purge**: every day at 03:45 UTC (`soukly.user.account-purge-cron`), the accounts deleted for more than 30 days
+  (`ACCOUNT_PURGE_AFTER`) are erased for good with their tokens and sessions (`ON DELETE CASCADE`) and their login
+  failure counter, in batches of 100 locked with `FOR UPDATE SKIP LOCKED`. Their listings are erased by the purge of
+  listing-service. The 30 days are an assumption, to confirm with the legal notice (LEG-01) before production.
+
+## User events (AUTH-05)
+
+user-service produces `soukly.user-events` (contract: [`docs/events/user-events.md`](../../docs/events/user-events.md)):
+`user.deleted` only, with the account id and no personal data. It is written to `outbox_events` in the transaction of
+the deletion, then sent by the relay of `com.soukly.common.outbox`, the same code as listing-service's (ANN-03):
+every second, oldest first, key `userId`, marked sent once acknowledged, kept in the outbox while the broker is down;
+sent events are deleted after 7 days (`soukly.user.outbox.*`). user-service declares `soukly.user-events` (3
+partitions) and `soukly.user-events.dlq` at startup, locally and in dev; on the VM, `init-topics.sh` creates them.
+
 ## Signing keys
 
 - RSA, 2048 bits at least, private key in PEM PKCS#8 (`-----BEGIN PRIVATE KEY-----`) read from
@@ -171,7 +226,8 @@ with `Cache-Control: no-store` and the cookie
 - Sent after the transaction commits (nothing is sent when it fails), on a separate thread. A failed send is logged
   with the user id and the exception type only, and never fails the request: the user can ask for a resend.
 - Templates (Thymeleaf, HTML and plain text) in `src/main/resources/mail/`: `verification`, `account-exists`,
-  `password-reset`, `password-changed` and the shared `layout.html`. Texts in `mail/messages_{fr,ar,en}.properties`; Arabic emails have `dir="rtl"`.
+  `password-reset`, `password-changed`, `email-change`, `email-change-requested`, `account-deleted` and the shared
+  `layout.html`. Texts in `mail/messages_{fr,ar,en}.properties`; Arabic emails have `dir="rtl"`.
 - The SMTP health check is disabled: an SMTP outage must not mark the service down.
 - Exception: the expiry reminder (below) is sent synchronously by the event consumer, so that a failure is retried.
 
@@ -197,29 +253,30 @@ only** and ignores every other type, known or not.
 
 ## Configuration
 
-| Variable                                              | Local default                                        | Use                                                          |
-| ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
-| `SPRING_DATASOURCE_URL`                               | `jdbc:postgresql://localhost:5432/soukly_user`       | database                                                     |
-| `SPRING_DATASOURCE_USERNAME`                          | `user_svc`                                           | database user                                                |
-| `SPRING_DATASOURCE_PASSWORD`                          | `USER_SVC_DB_PASSWORD`                               | database password                                            |
-| `MAIL_HOST`, `MAIL_PORT`                              | `localhost`, `1025` (Mailpit)                        | SMTP server                                                  |
-| `MAIL_USERNAME`, `MAIL_PASSWORD`                      | empty                                                | SMTP credentials                                             |
-| `MAIL_FROM`                                           | `no-reply@example.com`                               | sender                                                       |
-| `FRONT_BASE_URL`                                      | `http://localhost:4200`                              | origin of the links in the emails                            |
-| `USER_SERVICE_PORT`                                   | `8081`                                               | HTTP port                                                    |
-| `JWT_PRIVATE_KEY_PATH`                                | `../../.secrets/jwt/jwt-private.pem`                 | active private key (PEM PKCS#8)                              |
-| `JWT_KEY_ID`                                          | `local`                                              | `kid` of the active key                                      |
-| `JWT_PREVIOUS_KEY_ID`, `JWT_PREVIOUS_PUBLIC_KEY_PATH` | empty                                                | previous key during a rotation                               |
-| `JWT_ISSUER`                                          | `soukly-user-service`                                | `iss` claim, same value on the gateway                       |
-| `ACCESS_TOKEN_TTL`                                    | `15m`                                                | lifetime of an access token                                  |
-| `REFRESH_TOKEN_TTL`                                   | `30d`                                                | lifetime of a refresh token, renewed by every refresh        |
-| `REFRESH_COOKIE_PATH`                                 | `/api/users`                                         | cookie path seen by the browser (the gateway removes `/api`) |
-| `REFRESH_COOKIE_SECURE`                               | `true`                                               | `Secure` attribute of the cookie, see below                  |
-| `ALLOWED_ORIGINS`                                     | `CORS_ALLOWED_ORIGINS`, else `http://localhost:4200` | origins allowed on `refresh`, `logout` and `password/reset`  |
-| `KAFKA_BOOTSTRAP_SERVERS`                             | `localhost:19092`                                    | Kafka API of Redpanda (listing events)                       |
-| `INTERNAL_API_TOKEN`                                  | empty (internal endpoints refused)                   | shared token of `/internal/**` (CATA-03)                     |
-| `PASSWORD_RESET_TOKEN_TTL`                            | `1h`                                                 | validity of a password reset link (AUTH-04)                  |
-| `PASSWORD_RESETS_PER_HOUR`                            | `3`                                                  | reset links an account may receive per hour                  |
+| Variable                                              | Local default                                        | Use                                                                             |
+| ----------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `SPRING_DATASOURCE_URL`                               | `jdbc:postgresql://localhost:5432/soukly_user`       | database                                                                        |
+| `SPRING_DATASOURCE_USERNAME`                          | `user_svc`                                           | database user                                                                   |
+| `SPRING_DATASOURCE_PASSWORD`                          | `USER_SVC_DB_PASSWORD`                               | database password                                                               |
+| `MAIL_HOST`, `MAIL_PORT`                              | `localhost`, `1025` (Mailpit)                        | SMTP server                                                                     |
+| `MAIL_USERNAME`, `MAIL_PASSWORD`                      | empty                                                | SMTP credentials                                                                |
+| `MAIL_FROM`                                           | `no-reply@example.com`                               | sender                                                                          |
+| `FRONT_BASE_URL`                                      | `http://localhost:4200`                              | origin of the links in the emails                                               |
+| `USER_SERVICE_PORT`                                   | `8081`                                               | HTTP port                                                                       |
+| `JWT_PRIVATE_KEY_PATH`                                | `../../.secrets/jwt/jwt-private.pem`                 | active private key (PEM PKCS#8)                                                 |
+| `JWT_KEY_ID`                                          | `local`                                              | `kid` of the active key                                                         |
+| `JWT_PREVIOUS_KEY_ID`, `JWT_PREVIOUS_PUBLIC_KEY_PATH` | empty                                                | previous key during a rotation                                                  |
+| `JWT_ISSUER`                                          | `soukly-user-service`                                | `iss` claim, same value on the gateway                                          |
+| `ACCESS_TOKEN_TTL`                                    | `15m`                                                | lifetime of an access token                                                     |
+| `REFRESH_TOKEN_TTL`                                   | `30d`                                                | lifetime of a refresh token, renewed by every refresh                           |
+| `REFRESH_COOKIE_PATH`                                 | `/api/users`                                         | cookie path seen by the browser (the gateway removes `/api`)                    |
+| `REFRESH_COOKIE_SECURE`                               | `true`                                               | `Secure` attribute of the cookie, see below                                     |
+| `ALLOWED_ORIGINS`                                     | `CORS_ALLOWED_ORIGINS`, else `http://localhost:4200` | origins allowed on `refresh`, `logout`, `password/reset` and `DELETE /users/me` |
+| `KAFKA_BOOTSTRAP_SERVERS`                             | `localhost:19092`                                    | Kafka API of Redpanda (listing and user events)                                 |
+| `INTERNAL_API_TOKEN`                                  | empty (internal endpoints refused)                   | shared token of `/internal/**` (CATA-03)                                        |
+| `PASSWORD_RESET_TOKEN_TTL`                            | `1h`                                                 | validity of a password reset link (AUTH-04)                                     |
+| `PASSWORD_RESETS_PER_HOUR`                            | `3`                                                  | reset links an account may receive per hour                                     |
+| `ACCOUNT_PURGE_AFTER`                                 | `30d`                                                | a deleted account is erased for good after this (AUTH-05)                       |
 
 `REFRESH_COOKIE_SECURE` stays `true` everywhere, including locally: Chrome (89+) and Firefox (75+) accept a
 `Secure` cookie on `http://localhost`. Safari does not, so a developer testing in Safari over plain HTTP sets it to
@@ -253,5 +310,8 @@ cd backend && ./mvnw -pl user-service -am verify    # Docker required (Testconta
 `SessionTests` and `JwksTests` cover the scenarios of AUTH-02 with RSA keys generated for the run and a clock the
 tests move (`MutableClock`) for expirations and delays. `ListingReminderTests` covers the consumer of ANN-03 against
 Redpanda (Testcontainers, same image as `docker-compose.yml`): reminder in the three languages, the same event
-delivered twice, other types and accounts ignored, DLQ after the retries and at once for a malformed message. The nominal scenario through the real gateway is in
-`backend/e2e-tests`.
+delivered twice, other types and accounts ignored, DLQ after the retries and at once for a malformed message.
+`ProfileTests` and `AccountDeletionTests` cover AUTH-05: profile update, password change with the other devices
+signed out, the email change from the request to the link, an address of another account, the deletion with
+`user.deleted` read back from Redpanda, and the purge. The nominal sign-in through the real gateway and the deletion
+of an account with its listings (user-service, listing-service and Redpanda) are in `backend/e2e-tests`.

@@ -115,7 +115,7 @@ curl http://localhost:8082/actuator/health        # {"status":"UP",...}
 
 Every service exposes `GET /actuator/health`.
 
-`backend/e2e-tests` holds end-to-end tests only: they start the packaged `gateway` and `user-service` jars as two processes in front of PostgreSQL (Testcontainers) and go through the gateway like the browser (AUTH-02: login, protected route, refresh, logout, forged token). `./mvnw verify` packages the services before running them; alone, run `./mvnw -pl e2e-tests -am verify`.
+`backend/e2e-tests` holds end-to-end tests only: they start the packaged service jars as processes in front of PostgreSQL and Redpanda (Testcontainers) and go through the gateway like the browser (AUTH-02: login, protected route, refresh, logout, forged token; AUTH-05: deletion of an account, whose listings listing-service deletes on `user.deleted`). `./mvnw verify` packages the services before running them; alone, run `./mvnw -pl e2e-tests -am verify`.
 
 ## user-service
 

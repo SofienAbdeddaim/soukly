@@ -67,6 +67,11 @@ public class EmailVerificationTokens {
                 .map(EmailVerificationToken::userId);
     }
 
+    /** Makes every usable token of the account expire now (deletion of the account, AUTH-05). */
+    public void expireAll(UUID userId) {
+        tokens.expireUsableTokens(userId, clock.instant());
+    }
+
     private static String hash(String token) {
         return OpaqueTokens.sha256Hex(token);
     }

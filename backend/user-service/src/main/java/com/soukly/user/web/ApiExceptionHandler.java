@@ -23,8 +23,11 @@ import com.soukly.common.error.ProblemDetails;
 import com.soukly.common.web.SouklyHeaders;
 import com.soukly.user.internal.UserNotFoundException;
 import com.soukly.user.password.InvalidResetTokenException;
+import com.soukly.user.profile.EmailTakenException;
+import com.soukly.user.profile.InvalidEmailChangeTokenException;
 import com.soukly.user.registration.InvalidRequestException;
 import com.soukly.user.registration.InvalidVerificationTokenException;
+import com.soukly.user.session.CurrentPasswordInvalidException;
 import com.soukly.user.session.ForbiddenOriginException;
 import com.soukly.user.session.RefreshCookies;
 import com.soukly.user.session.SessionException;
@@ -71,6 +74,27 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(ProblemDetails.create(ProblemDetails.type("reset-token-invalid"), HttpStatus.BAD_REQUEST,
                 "Invalid reset token", "The reset link is unknown, expired, already used or replaced.",
                 instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> currentPasswordInvalid(CurrentPasswordInvalidException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("current-password-invalid"), HttpStatus.BAD_REQUEST,
+                "Invalid current password", "The current password is incorrect.", instance(request),
+                requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> invalidEmailChangeToken(InvalidEmailChangeTokenException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("email-change-token-invalid"),
+                HttpStatus.BAD_REQUEST, "Invalid email change token",
+                "The confirmation link is unknown, expired, already used, replaced or cancelled.", instance(request),
+                requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> emailTaken(EmailTakenException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("email-taken"), HttpStatus.CONFLICT, "Email taken",
+                "Another account uses this email address now.", instance(request), requestId(request)));
     }
 
     @ExceptionHandler

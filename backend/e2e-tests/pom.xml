@@ -11,8 +11,8 @@
     </parent>
 
     <!--
-        End-to-end tests: the packaged gateway and user-service run as separate processes, in front of PostgreSQL
-        (Testcontainers). No production code and no image: only tests.
+        End-to-end tests: the packaged gateway, user-service and listing-service run as separate processes, in front of
+        PostgreSQL and Redpanda (Testcontainers). No production code and no image: only tests.
     -->
     <artifactId>e2e-tests</artifactId>
     <packaging>jar</packaging>
@@ -55,6 +55,20 @@
         </dependency>
 
         <dependency>
+            <groupId>com.soukly</groupId>
+            <artifactId>listing-service</artifactId>
+            <version>${project.version}</version>
+            <type>pom</type>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
@@ -62,6 +76,12 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Redpanda of the user and listing events (AUTH-05) -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-redpanda</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -92,6 +112,7 @@
                     <systemPropertyVariables>
                         <soukly.e2e.gateway-jar>${project.basedir}/../gateway/target/gateway-${project.version}.jar</soukly.e2e.gateway-jar>
                         <soukly.e2e.user-service-jar>${project.basedir}/../user-service/target/user-service-${project.version}.jar</soukly.e2e.user-service-jar>
+                        <soukly.e2e.listing-service-jar>${project.basedir}/../listing-service/target/listing-service-${project.version}.jar</soukly.e2e.listing-service-jar>
                         <soukly.e2e.logs>${project.build.directory}/e2e-logs</soukly.e2e.logs>
                     </systemPropertyVariables>
                 </configuration>

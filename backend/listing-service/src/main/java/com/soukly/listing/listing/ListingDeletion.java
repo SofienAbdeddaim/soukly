@@ -70,6 +70,21 @@ public class ListingDeletion {
     }
 
     /**
+     * Deletes every listing of an account that was deleted (AUTH-05, {@code user.deleted}), with the rules of
+     * {@link #delete}: drafts erased, other listings {@code DELETED} with {@code listing.deleted}.
+     *
+     * @return number of listings deleted or erased
+     */
+    @Transactional
+    public int deleteAllOf(UUID ownerId) {
+        // Waits for a draft being created by the account, then sees it
+        repository.lockOwner(ownerId);
+        List<UUID> ids = repository.idsOfOwner(ownerId);
+        ids.forEach(id -> delete(ownerId, id));
+        return ids.size();
+    }
+
+    /**
      * Erases for good the listings deleted for longer than {@link DeletionProperties#purgeAfter()}: their photos
      * (originals and WebP versions), their contact reveals and their row. The events already written are left as
      * they are. Each batch is one transaction that locks its listings with {@code SKIP LOCKED}, so several instances

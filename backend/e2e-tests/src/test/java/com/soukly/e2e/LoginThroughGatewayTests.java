@@ -2,25 +2,18 @@ package com.soukly.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.KeyPairGenerator;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import com.soukly.e2e.support.ServiceProcesses;
 import com.sun.net.httpserver.HttpServer;
 
 /**
@@ -51,13 +45,12 @@ class LoginThroughGatewayTests {
     private static final String PASSWORD = "Jasmin-de-Carthage-2026";
     private static final Pattern ACCESS_TOKEN = Pattern.compile("\"accessToken\"\\s*:\\s*\"([^\"]+)\"");
     private static final Pattern REFRESH_COOKIE = Pattern.compile("^soukly_rt=([^;]*)");
-    private static final Duration STARTUP_TIMEOUT = Duration.ofSeconds(120);
 
     private static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:18.6");
     private static final List<String> LISTING_AUTHORIZATIONS = new CopyOnWriteArrayList<>();
-    private static final List<Process> PROCESSES = new ArrayList<>();
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
 
+    private static ServiceProcesses services;
     private static HttpServer listingService;
     private static String gateway;
 
@@ -75,38 +68,40 @@ class LoginThroughGatewayTests {
         });
         listingService.start();
 
-        Path logs = Files.createDirectories(Path.of(System.getProperty("soukly.e2e.logs", "target/e2e-logs")));
-        int userServicePort = freePort();
-        int gatewayPort = freePort();
+        services = new ServiceProcesses("login");
+        int userServicePort = ServiceProcesses.freePort();
+        int gatewayPort = ServiceProcesses.freePort();
         String userService = "http://127.0.0.1:" + userServicePort;
         gateway = "http://127.0.0.1:" + gatewayPort;
 
-        start("user-service", Map.ofEntries(
+        services.start("user-service", Map.ofEntries(
                 Map.entry("USER_SERVICE_PORT", Integer.toString(userServicePort)),
                 Map.entry("SPRING_DATASOURCE_URL", POSTGRES.getJdbcUrl()),
                 Map.entry("SPRING_DATASOURCE_USERNAME", POSTGRES.getUsername()),
                 Map.entry("SPRING_DATASOURCE_PASSWORD", POSTGRES.getPassword()),
                 // Nothing is emailed in this scenario; an unreachable SMTP server never fails a request.
                 Map.entry("MAIL_HOST", "127.0.0.1"),
-                Map.entry("MAIL_PORT", Integer.toString(freePort())),
+                Map.entry("MAIL_PORT", Integer.toString(ServiceProcesses.freePort())),
                 Map.entry("JWT_KEY_ID", "e2e-key"),
-                Map.entry("JWT_PRIVATE_KEY_PATH", privateKey().toString()),
-                Map.entry("ALLOWED_ORIGINS", ORIGIN)), logs);
-        start("gateway", Map.of(
+                Map.entry("JWT_PRIVATE_KEY_PATH", ServiceProcesses.privateKey().toString()),
+                Map.entry("ALLOWED_ORIGINS", ORIGIN)));
+        services.start("gateway", Map.of(
                 "GATEWAY_PORT", Integer.toString(gatewayPort),
                 "USER_SERVICE_URL", userService,
                 "LISTING_SERVICE_URL", "http://127.0.0.1:" + listingService.getAddress().getPort(),
-                "SOCIAL_SERVICE_URL", "http://127.0.0.1:" + freePort(),
-                "CORS_ALLOWED_ORIGINS", ORIGIN), logs);
-        awaitHealthy(userService, "user-service", logs);
-        awaitHealthy(gateway, "gateway", logs);
+                "SOCIAL_SERVICE_URL", "http://127.0.0.1:" + ServiceProcesses.freePort(),
+                "CORS_ALLOWED_ORIGINS", ORIGIN));
+        services.awaitHealthy(userService, "user-service");
+        services.awaitHealthy(gateway, "gateway");
 
         createActiveAccount();
     }
 
     @AfterAll
     static void stopTheStack() {
-        PROCESSES.forEach(Process::destroy);
+        if (services != null) {
+            services.stopAll();
+        }
         if (listingService != null) {
             listingService.stop(0);
         }
@@ -190,62 +185,6 @@ class LoginThroughGatewayTests {
 
     // --- Stack ---------------------------------------------------------------------------------------------
 
-    private static void start(String name, Map<String, String> environment, Path logs) throws IOException {
-        Path jar = Path.of(System.getProperty("soukly.e2e." + name + "-jar"));
-        if (!Files.isRegularFile(jar)) {
-            throw new IllegalStateException(jar + " is missing: package the services first (./mvnw verify from "
-                    + "backend/ builds them before this module)");
-        }
-        String java = Path.of(System.getProperty("java.home"), "bin", "java").toString();
-        ProcessBuilder builder = new ProcessBuilder(java, "-Xmx384m", "-jar", jar.toString())
-                .redirectErrorStream(true)
-                .redirectOutput(logs.resolve(name + ".log").toFile());
-        builder.environment().putAll(environment);
-        PROCESSES.add(builder.start());
-    }
-
-    private static void awaitHealthy(String baseUrl, String name, Path logs) throws Exception {
-        Instant deadline = Instant.now().plus(STARTUP_TIMEOUT);
-        while (Instant.now().isBefore(deadline)) {
-            if (PROCESSES.stream().anyMatch(process -> !process.isAlive())) {
-                break;
-            }
-            try {
-                HttpResponse<String> health = HTTP.send(
-                        HttpRequest.newBuilder(URI.create(baseUrl + "/actuator/health")).GET().build(),
-                        HttpResponse.BodyHandlers.ofString());
-                if (health.statusCode() == 200) {
-                    return;
-                }
-            } catch (IOException notYetListening) {
-                // Still starting.
-            }
-            Thread.sleep(500);
-        }
-        throw new IllegalStateException(name + " did not start; see " + logs.resolve(name + ".log") + ":\n"
-                + tail(logs.resolve(name + ".log")));
-    }
-
-    private static String tail(Path log) throws IOException {
-        List<String> lines = Files.readAllLines(log);
-        return String.join("\n", lines.subList(Math.max(0, lines.size() - 40), lines.size()));
-    }
-
-    /** RSA 2048 private key in PEM PKCS#8, like scripts/gen-jwt-key.sh writes it. */
-    private static Path privateKey() throws Exception {
-        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(2048);
-        byte[] der = generator.generateKeyPair().getPrivate().getEncoded();
-        Path directory = Files.createTempDirectory("soukly-e2e-jwt");
-        directory.toFile().deleteOnExit();
-        Path file = directory.resolve("jwt-private.pem");
-        Files.writeString(file, "-----BEGIN PRIVATE KEY-----\n"
-                + Base64.getMimeEncoder(64, "\n".getBytes(StandardCharsets.US_ASCII)).encodeToString(der)
-                + "\n-----END PRIVATE KEY-----\n");
-        file.toFile().deleteOnExit();
-        return file;
-    }
-
     /** Inserted directly: registration and verification are covered by the user-service tests (AUTH-01). */
     private static void createActiveAccount() throws Exception {
         Timestamp now = Timestamp.from(Instant.now());
@@ -295,11 +234,5 @@ class LoginThroughGatewayTests {
         int signature = jwt.lastIndexOf('.') + 1;
         char replaced = jwt.charAt(signature) == 'A' ? 'B' : 'A';
         return jwt.substring(0, signature) + replaced + jwt.substring(signature + 1);
-    }
-
-    private static int freePort() throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
-            return socket.getLocalPort();
-        }
     }
 }

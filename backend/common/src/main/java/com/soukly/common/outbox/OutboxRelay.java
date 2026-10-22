@@ -1,4 +1,4 @@
-package com.soukly.listing.outbox;
+package com.soukly.common.outbox;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -20,13 +20,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaOperations;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.soukly.common.event.ListingEvents;
-
 /**
- * Sends the unsent events of the outbox to {@code soukly.listing-events}, oldest first, with the listing id as key,
+ * Sends the unsent events of the outbox to its topic, oldest first, with the aggregate id (listing, account) as key,
  * and marks them sent only once the broker acknowledged them. Several relays (instances) can run at the same time:
  * each locks its batch with {@code FOR UPDATE SKIP LOCKED}, and an event is only sent when every older unsent event
- * of its listing is in the same batch, so the events of a listing always leave in order.
+ * of its aggregate is in the same batch, so the events of an aggregate always leave in order.
+ *
+ * <p>Written for the listing events (ANN-03), shared with the user events of user-service (AUTH-05) without a change
+ * of behavior. Each service declares its relay and its schedule.
  *
  * <p>When the broker is unreachable, the events stay in the outbox with one more attempt and the type of the error,
  * and leave at a later run. Payloads are never logged.
@@ -35,14 +36,16 @@ public class OutboxRelay {
 
     private static final Logger log = LoggerFactory.getLogger(OutboxRelay.class);
 
+    private final String topic;
     private final OutboxRepository repository;
     private final KafkaOperations<String, String> kafka;
     private final TransactionTemplate transaction;
-    private final OutboxProperties properties;
+    private final OutboxSettings properties;
     private final Clock clock;
 
-    OutboxRelay(OutboxRepository repository, KafkaOperations<String, String> kafka, TransactionTemplate transaction,
-            OutboxProperties properties, Clock clock) {
+    public OutboxRelay(String topic, OutboxRepository repository, KafkaOperations<String, String> kafka,
+            TransactionTemplate transaction, OutboxSettings properties, Clock clock) {
+        this.topic = topic;
         this.repository = repository;
         this.kafka = kafka;
         this.transaction = transaction;
@@ -70,7 +73,7 @@ public class OutboxRelay {
         }
     }
 
-    /** Deletes the events sent more than {@link OutboxProperties#retention()} ago. */
+    /** Deletes the events sent more than {@link OutboxSettings#retention()} ago. */
     public int purgeSent() {
         int deleted = repository.deleteSentBefore(clock.instant().minus(properties.retention())
                 .truncatedTo(ChronoUnit.MICROS));
@@ -81,7 +84,7 @@ public class OutboxRelay {
     }
 
     /**
-     * The events of the batch that can leave now: for each listing, its events up to the first older unsent event
+     * The events of the batch that can leave now: for each aggregate, its events up to the first older unsent event
      * that another relay holds.
      */
     private List<OutboxEvent> inOrder(List<OutboxEvent> batch) {
@@ -112,7 +115,7 @@ public class OutboxRelay {
         for (OutboxEvent event : events) {
             CompletableFuture<?> future;
             try {
-                future = kafka.send(ListingEvents.TOPIC, event.aggregateId().toString(), event.payload());
+                future = kafka.send(topic, event.aggregateId().toString(), event.payload());
             } catch (RuntimeException e) {
                 future = CompletableFuture.failedFuture(e);
             }

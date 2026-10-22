@@ -25,7 +25,7 @@ import com.soukly.common.event.ListingEvents;
 /**
  * Base of the integration tests: one Spring context for every class, a PostgreSQL container (Testcontainers), an
  * in-memory SMTP server (GreenMail), JWT keys generated for the run (active {@code k2}, previous {@code k1}), a
- * Redpanda container for the listing events ({@link TestRedpanda}) and a clock that tests can move. Each test starts
+ * Redpanda container for the listing and user events ({@link TestRedpanda}) and a clock that tests can move. Each test starts
  * with empty tables, an empty mailbox and the clock at the real time.
  */
 @SpringBootTest
@@ -62,6 +62,11 @@ public abstract class IntegrationTest {
         registry.add("spring.kafka.bootstrap-servers", TestRedpanda::bootstrapServers);
         registry.add("soukly.user.listing-events.retry-interval", () -> "100ms");
         registry.add("soukly.user.internal-api.token", () -> INTERNAL_TOKEN);
+        // Run by the tests only
+        registry.add("soukly.user.outbox.relay-initial-delay", () -> "P1D");
+        registry.add("soukly.user.outbox.purge-interval", () -> "P1D");
+        registry.add("soukly.user.account-purge-cron", () -> "-");
+        registry.add("soukly.user.session.purge-cron", () -> "-");
     }
 
     @BeforeEach
@@ -69,7 +74,7 @@ public abstract class IntegrationTest {
         SMTP.ensureRunning();
         SMTP.purge();
         clock.reset();
-        jdbc.execute("TRUNCATE users, login_throttle, processed_events CASCADE");
+        jdbc.execute("TRUNCATE users, login_throttle, processed_events, outbox_events CASCADE");
     }
 
     /** Inserts an account directly, {@code ACTIVE} or {@code PENDING_VERIFICATION}, and returns its id. */

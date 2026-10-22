@@ -56,6 +56,9 @@ class AccountMailer {
             case AccountMail.AccountExists e -> "account-exists";
             case AccountMail.PasswordReset r -> "password-reset";
             case AccountMail.PasswordChanged c -> "password-changed";
+            case AccountMail.EmailChangeConfirmation c -> "email-change";
+            case AccountMail.EmailChangeRequested r -> "email-change-requested";
+            case AccountMail.AccountDeleted d -> "account-deleted";
         };
         try {
             Context context = context(mail);
@@ -104,6 +107,18 @@ class AccountMailer {
                 context.setVariable("changedAt", dateTime(c.changedAt(), mail.language()));
                 context.setVariable("forgotPasswordUrl", properties.frontUrl("/" + lang + "/account/forgot-password"));
             }
+            case AccountMail.EmailChangeConfirmation c -> {
+                context.setVariable("confirmUrl", UriComponentsBuilder
+                        .fromUriString(properties.frontUrl("/" + lang + "/account/confirm-email"))
+                        .queryParam("token", c.token()).build().toUriString());
+                context.setVariable("validityHours", String.valueOf(properties.emailChangeTokenTtl().toHours()));
+            }
+            case AccountMail.EmailChangeRequested r -> {
+                context.setVariable("newEmail", r.newEmail());
+                context.setVariable("forgotPasswordUrl", properties.frontUrl("/" + lang + "/account/forgot-password"));
+            }
+            case AccountMail.AccountDeleted d ->
+                context.setVariable("purgeDays", String.valueOf(properties.accountPurgeAfter().toDays()));
         }
         return context;
     }
