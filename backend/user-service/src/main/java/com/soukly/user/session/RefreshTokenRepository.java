@@ -22,6 +22,11 @@ interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
     @Query("update RefreshToken t set t.revokedAt = :now where t.familyId = :familyId and t.revokedAt is null")
     int revokeFamily(UUID familyId, Instant now);
 
+    /** Revokes every session of an account (password reset: every device is signed out). */
+    @Modifying
+    @Query("update RefreshToken t set t.revokedAt = :now where t.userId = :userId and t.revokedAt is null")
+    int revokeAllOfUser(UUID userId, Instant now);
+
     /** Deletes the tokens expired or revoked before {@code before}. */
     @Modifying
     @Query("delete from RefreshToken t where t.expiresAt < :before or t.revokedAt < :before")

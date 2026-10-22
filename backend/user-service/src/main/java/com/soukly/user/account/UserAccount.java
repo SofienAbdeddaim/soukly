@@ -95,6 +95,12 @@ public class UserAccount implements Persistable<UUID> {
         }
     }
 
+    /** Replaces the password hash (AUTH-04 reset). */
+    public void changePassword(String passwordHash, Instant now) {
+        this.passwordHash = passwordHash;
+        this.updatedAt = now;
+    }
+
     /**
      * Records a successful login.
      *

@@ -1,21 +1,23 @@
 # user-service
 
-Accounts of Soukly: registration and email verification (AUTH-01), sign-in, sessions and the JWKS (AUTH-02), and the
-reminder email of the listings that expire soon (ANN-03). The screens are in `frontend/apps/mfe-account` (AUTH-03). Port 8081, package `com.soukly.user`, database `soukly_user` (user `user_svc`).
+Accounts of Soukly: registration and email verification (AUTH-01), sign-in, sessions and the JWKS (AUTH-02), the
+forgotten password (AUTH-04), and the reminder email of the listings that expire soon (ANN-03). The screens are in `frontend/apps/mfe-account` (AUTH-03). Port 8081, package `com.soukly.user`, database `soukly_user` (user `user_svc`).
 
 ## Endpoints
 
 Exposed by the gateway under `/api` (`POST /api/users/register` reaches this service as `POST /users/register`).
 
-| Endpoint                          | Body                                                   | Answers                                                               |
-| --------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------- |
-| `POST /users/register`            | `{ email, password, displayName, phone, acceptTerms }` | `202`, `400`                                                          |
-| `POST /users/verify-email`        | `{ token }`                                            | `204`, `400`                                                          |
-| `POST /users/verify-email/resend` | `{ email }`                                            | `202`, `400` (malformed email)                                        |
-| `POST /users/login`               | `{ email, password }`                                  | `200`, `401` `invalid-credentials`, `403` `email-not-verified`, `429` |
-| `POST /users/refresh`             | cookie `soukly_rt`, header `Origin`                    | `200`, `401` `session-expired` or `session-revoked`, `403`            |
-| `POST /users/logout`              | cookie `soukly_rt` (optional), header `Origin`         | `204`, `403`                                                          |
-| `GET /.well-known/jwks.json`      | -                                                      | `200`; internal only, never routed by the gateway                     |
+| Endpoint                          | Body                                                   | Answers                                                                       |
+| --------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `POST /users/register`            | `{ email, password, displayName, phone, acceptTerms }` | `202`, `400`                                                                  |
+| `POST /users/verify-email`        | `{ token }`                                            | `204`, `400`                                                                  |
+| `POST /users/verify-email/resend` | `{ email }`                                            | `202`, `400` (malformed email)                                                |
+| `POST /users/login`               | `{ email, password }`                                  | `200`, `401` `invalid-credentials`, `403` `email-not-verified`, `429`         |
+| `POST /users/refresh`             | cookie `soukly_rt`, header `Origin`                    | `200`, `401` `session-expired` or `session-revoked`, `403`                    |
+| `POST /users/logout`              | cookie `soukly_rt` (optional), header `Origin`         | `204`, `403`                                                                  |
+| `POST /users/password/forgot`     | `{ email }`                                            | `202`, `400` (malformed email)                                                |
+| `POST /users/password/reset`      | `{ token, newPassword }`, header `Origin`              | `200` like `login`, `400` `reset-token-invalid` or `validation-failed`, `403` |
+| `GET /.well-known/jwks.json`      | -                                                      | `200`; internal only, never routed by the gateway                             |
 
 These endpoints and `GET /actuator/health` are public. Every other path needs a valid access token: the service
 validates it itself with its own keys, with the gateway's rules (RS256 only, `iss`, `exp` with 30 s of clock skew),
@@ -30,10 +32,10 @@ constant time; a user's access token does not open them. A missing or wrong toke
 gives `401`. Only `ACTIVE` accounts are answered; any other id is `404` `user-not-found`. An assumption of V1: mTLS or
 service JWTs in V2.
 
-| Endpoint | Answers |
-| --- | --- |
+| Endpoint                                  | Answers                                                                                                            |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | `GET /internal/users/{id}/public-profile` | `200` `{ displayName, memberSince }` (`memberSince` = month of the registration in Tunis, `2026-03`), `401`, `404` |
-| `GET /internal/users/{id}/contact` | `200` `{ phone }` (E.164) with `Cache-Control: no-store`, `401`, `404` |
+| `GET /internal/users/{id}/contact`        | `200` `{ phone }` (E.164) with `Cache-Control: no-store`, `401`, `404`                                             |
 
 ### Registration rules
 
@@ -127,6 +129,26 @@ with `Cache-Control: no-store` and the cookie
 - **Purge**: every day at 03:30 UTC, refresh tokens expired or revoked for more than 7 days and failure counters
   idle for a day are deleted.
 
+## Forgotten password (AUTH-04)
+
+- **Request** `forgot`: always `202` with an empty body, whatever the email. For an `ACTIVE` or
+  `PENDING_VERIFICATION` account, the unused links of the account stop working and a new one is emailed in the
+  account's language: `{FRONT_BASE_URL}/{lang}/account/reset-password?token=…`. At most 3 links per hour and per
+  account (`PASSWORD_RESETS_PER_HOUR`); beyond, nothing is sent and nothing tells the caller. The email leaves after
+  the commit, on another thread, so the response time does not depend on the account.
+- **Token**: 32 random bytes in Base64 URL, only its SHA-256 stored in `password_reset_tokens`; valid 1 hour
+  (`PASSWORD_RESET_TOKEN_TTL`), single use.
+- **Reset**: `Origin` checked as on `refresh`. An unknown, expired, used or replaced token gives `400` type
+  `urn:soukly:problem:reset-token-invalid` (one answer). A password that breaks a registration rule gives
+  `400 validation-failed` on the field `newPassword` (`password.length`, `password.too-common`,
+  `password.same-as-email`…) and the token stays usable. On success, in one transaction: new Argon2id hash, token
+  used and the other links invalidated, **every session family of the account revoked**, login failure counter
+  reset, a pending account activated (the link proves the mailbox), and a new session for this device. The answer
+  is the one of `login`, with the `soukly_rt` cookie. Access tokens already issued elsewhere stay valid until they
+  expire (15 min at most), as after a logout.
+- **Confirmation email** `password-changed`: date and time in Tunis, and a link to `/{lang}/account/forgot-password`
+  in case it was not the owner. No device information in V1.
+
 ## Signing keys
 
 - RSA, 2048 bits at least, private key in PEM PKCS#8 (`-----BEGIN PRIVATE KEY-----`) read from
@@ -148,8 +170,8 @@ with `Cache-Control: no-store` and the cookie
 
 - Sent after the transaction commits (nothing is sent when it fails), on a separate thread. A failed send is logged
   with the user id and the exception type only, and never fails the request: the user can ask for a resend.
-- Templates (Thymeleaf, HTML and plain text) in `src/main/resources/mail/`: `verification`, `account-exists` and
-  the shared `layout.html`. Texts in `mail/messages_{fr,ar,en}.properties`; Arabic emails have `dir="rtl"`.
+- Templates (Thymeleaf, HTML and plain text) in `src/main/resources/mail/`: `verification`, `account-exists`,
+  `password-reset`, `password-changed` and the shared `layout.html`. Texts in `mail/messages_{fr,ar,en}.properties`; Arabic emails have `dir="rtl"`.
 - The SMTP health check is disabled: an SMTP outage must not mark the service down.
 - Exception: the expiry reminder (below) is sent synchronously by the event consumer, so that a failure is retried.
 
@@ -193,9 +215,11 @@ only** and ignores every other type, known or not.
 | `REFRESH_TOKEN_TTL`                                   | `30d`                                                | lifetime of a refresh token, renewed by every refresh        |
 | `REFRESH_COOKIE_PATH`                                 | `/api/users`                                         | cookie path seen by the browser (the gateway removes `/api`) |
 | `REFRESH_COOKIE_SECURE`                               | `true`                                               | `Secure` attribute of the cookie, see below                  |
-| `ALLOWED_ORIGINS`                                     | `CORS_ALLOWED_ORIGINS`, else `http://localhost:4200` | origins allowed on `refresh` and `logout`                    |
+| `ALLOWED_ORIGINS`                                     | `CORS_ALLOWED_ORIGINS`, else `http://localhost:4200` | origins allowed on `refresh`, `logout` and `password/reset`  |
 | `KAFKA_BOOTSTRAP_SERVERS`                             | `localhost:19092`                                    | Kafka API of Redpanda (listing events)                       |
 | `INTERNAL_API_TOKEN`                                  | empty (internal endpoints refused)                   | shared token of `/internal/**` (CATA-03)                     |
+| `PASSWORD_RESET_TOKEN_TTL`                            | `1h`                                                 | validity of a password reset link (AUTH-04)                  |
+| `PASSWORD_RESETS_PER_HOUR`                            | `3`                                                  | reset links an account may receive per hour                  |
 
 `REFRESH_COOKIE_SECURE` stays `true` everywhere, including locally: Chrome (89+) and Firefox (75+) accept a
 `Secure` cookie on `http://localhost`. Safari does not, so a developer testing in Safari over plain HTTP sets it to

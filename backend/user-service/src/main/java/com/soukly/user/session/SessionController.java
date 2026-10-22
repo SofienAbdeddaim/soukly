@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.soukly.user.password.PasswordResetRequest;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
@@ -51,6 +53,15 @@ class SessionController {
         origins.check(request);
         sessions.logout(refreshToken);
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookies.clear()).build();
+    }
+
+    /** Password reset (AUTH-04): answers like a login, as the response sets the refresh cookie. */
+    @PostMapping("/password/reset")
+    ResponseEntity<SessionResponse> resetPassword(HttpServletRequest request,
+            @RequestBody PasswordResetRequest body,
+            @RequestHeader(name = HttpHeaders.USER_AGENT, required = false) String userAgent) {
+        origins.check(request);
+        return opened(sessions.resetPassword(body.token(), body.newPassword(), userAgent));
     }
 
     private ResponseEntity<SessionResponse> opened(Session session) {

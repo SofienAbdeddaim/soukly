@@ -13,17 +13,15 @@ import com.soukly.user.account.Language;
  * it breaks.
  */
 @Component
-class RegistrationValidator {
+public class RegistrationValidator {
 
-    static final int PASSWORD_MIN = 8;
-    static final int PASSWORD_MAX = 128;
     static final int DISPLAY_NAME_MIN = 2;
     static final int DISPLAY_NAME_MAX = 50;
 
-    private final CommonPasswords commonPasswords;
+    private final PasswordPolicy passwordPolicy;
 
-    RegistrationValidator(CommonPasswords commonPasswords) {
-        this.commonPasswords = commonPasswords;
+    RegistrationValidator(PasswordPolicy passwordPolicy) {
+        this.passwordPolicy = passwordPolicy;
     }
 
     /**
@@ -40,15 +38,7 @@ class RegistrationValidator {
         }
 
         String password = request.password();
-        if (password == null || password.isEmpty()) {
-            errors.add(new FieldError("password", "password.required"));
-        } else if (outside(password.codePointCount(0, password.length()), PASSWORD_MIN, PASSWORD_MAX)) {
-            errors.add(new FieldError("password", "password.length"));
-        } else if (commonPasswords.contains(password)) {
-            errors.add(new FieldError("password", "password.too-common"));
-        } else if (email != null && password.strip().equalsIgnoreCase(email)) {
-            errors.add(new FieldError("password", "password.same-as-email"));
-        }
+        passwordPolicy.violation(password, email).ifPresent(code -> errors.add(new FieldError("password", code)));
 
         String displayName = request.displayName() == null ? null : request.displayName().strip();
         if (displayName == null || displayName.isEmpty()) {
@@ -82,7 +72,7 @@ class RegistrationValidator {
      * @return the normalized email
      * @throws InvalidRequestException when the email is missing or malformed
      */
-    String validateEmail(String rawEmail) {
+    public String validateEmail(String rawEmail) {
         String email = EmailAddresses.normalize(rawEmail);
         if (email == null || email.isEmpty()) {
             throw new InvalidRequestException(List.of(new FieldError("email", "email.required")));

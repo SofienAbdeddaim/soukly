@@ -27,8 +27,8 @@ import com.soukly.user.internal.InternalApiProperties;
 import com.soukly.user.internal.InternalTokenFilter;
 
 /**
- * Access policy of user-service, the same as the gateway's (defense in depth): the endpoints of AUTH-01 and
- * AUTH-02, the JWKS and the health check are public; everything else needs a valid access token, validated with
+ * Access policy of user-service, the same as the gateway's (defense in depth): the endpoints of AUTH-01, AUTH-02
+ * and AUTH-04, the JWKS and the health check are public; everything else needs a valid access token, validated with
  * the service's own keys. Stateless: no HTTP session, no CSRF token (the cookie endpoints check {@code Origin}).
  *
  * <p>The service-to-service endpoints {@code /internal/**} (CATA-03) have their own chain: the shared token of
@@ -47,6 +47,8 @@ class SecurityConfig {
             post("/users/login"),
             post("/users/refresh"),
             post("/users/logout"),
+            post("/users/password/forgot"),
+            post("/users/password/reset"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/.well-known/jwks.json"),
             PathPatternRequestMatcher.pathPattern(HttpMethod.GET, "/actuator/health"),
             PathPatternRequestMatcher.pathPattern("/error"));

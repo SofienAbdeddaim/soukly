@@ -162,6 +162,23 @@ class LoginThroughGatewayTests {
         assertThat(afterLogout.statusCode()).isEqualTo(401);
     }
 
+    /** AUTH-04: both password paths are public on the gateway; the full flow is covered by user-service tests. */
+    @Test
+    void passwordResetPathsArePublicThroughTheGateway() throws Exception {
+        HttpResponse<String> forgot = send(post("/api/users/password/forgot")
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString("{\"email\":\"" + EMAIL + "\"}")));
+        assertThat(forgot.statusCode()).isEqualTo(202);
+
+        HttpResponse<String> reset = send(post("/api/users/password/reset")
+                .header("Content-Type", "application/json")
+                .header("Origin", ORIGIN)
+                .POST(HttpRequest.BodyPublishers.ofString(
+                        "{\"token\":\"unknown\",\"newPassword\":\"Sidi-Bou-Said-bleu-42\"}")));
+        assertThat(reset.statusCode()).isEqualTo(400);
+        assertThat(reset.body()).contains("urn:soukly:problem:reset-token-invalid");
+    }
+
     @Test
     void theJwksIsNotExposedByTheGateway() throws Exception {
         for (String path : List.of("/.well-known/jwks.json", "/api/.well-known/jwks.json")) {
