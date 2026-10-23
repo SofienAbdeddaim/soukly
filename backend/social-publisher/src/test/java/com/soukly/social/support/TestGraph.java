@@ -9,10 +9,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -22,6 +25,9 @@ import com.sun.net.httpserver.HttpServer;
  * Simulated Graph API of Meta on a local HTTP server, like {@link TestJwks}: the real API is never called by the tests.
  * A test registers what the person behind an OAuth code granted and manages ({@link #person}); the tokens this fake
  * hands out derive from the code, so a test can look for them in the database and the logs.
+ *
+ * <p>Publishing on a Page (SOC-04): unpublished photos, posts, permalinks and deletions are recorded per Page
+ * ({@link #calls}); a test can script the answers of the next publishing calls of a Page ({@link #failNext}).
  */
 public final class TestGraph {
 
@@ -33,6 +39,10 @@ public final class TestGraph {
 
     private static final Map<String, Person> PEOPLE = new ConcurrentHashMap<>();
     private static final List<String> REVOKED = new CopyOnWriteArrayList<>();
+    private static final List<PageCall> PAGE_CALLS = new CopyOnWriteArrayList<>();
+    private static final Map<String, Queue<Failure>> FAILURES = new ConcurrentHashMap<>();
+    private static final Set<String> POSTS = ConcurrentHashMap.newKeySet();
+    private static final AtomicInteger IDS = new AtomicInteger();
     private static final HttpServer SERVER = start();
 
     private TestGraph() {
@@ -86,6 +96,40 @@ public final class TestGraph {
         return "fbuser-" + code.substring("code-".length());
     }
 
+    /**
+     * A publishing call on a Page.
+     *
+     * @param kind   {@code photo}, {@code post}, {@code permalink} or {@code delete}
+     * @param params the form or query parameters, {@code access_token} included
+     */
+    public record PageCall(String kind, String pageId, Map<String, String> params) {
+    }
+
+    /** An answer of the next publishing call of a Page: an HTTP status and an {@code error} object. */
+    public record Failure(int status, int code, Integer subcode) {
+    }
+
+    /** Publishing calls on this Page, in order. */
+    public static List<PageCall> calls(String pageId) {
+        return PAGE_CALLS.stream().filter(call -> call.pageId().equals(pageId)).toList();
+    }
+
+    /** Publishing calls of this kind on this Page, in order. */
+    public static List<PageCall> calls(String pageId, String kind) {
+        return calls(pageId).stream().filter(call -> call.kind().equals(kind)).toList();
+    }
+
+    /** The next publishing calls on this Page answer these failures, one each, in order. */
+    public static void failNext(String pageId, Failure... failures) {
+        Queue<Failure> queue = FAILURES.computeIfAbsent(pageId, page -> new ConcurrentLinkedQueue<>());
+        queue.addAll(List.of(failures));
+    }
+
+    /** A post id of this Page that does not exist (any more): its deletion answers code 100, subcode 33. */
+    public static void forgetPost(String postId) {
+        POSTS.remove(postId);
+    }
+
     /** App-scoped ids whose permissions were revoked, in order. */
     public static List<String> revoked() {
         return List.copyOf(REVOKED);
@@ -122,6 +166,39 @@ public final class TestGraph {
                 }
                 REVOKED.add(path.split("/")[1]);
                 send(exchange, 200, "{\"success\":true}");
+            } else if (method.equals("POST") && path.matches("^/[^/]+/(photos|feed)$")) {
+                String pageId = path.split("/")[1];
+                Map<String, String> form = query(new String(exchange.getRequestBody().readAllBytes(),
+                        StandardCharsets.UTF_8));
+                boolean photo = path.endsWith("/photos");
+                PAGE_CALLS.add(new PageCall(photo ? "photo" : "post", pageId, form));
+                if (failed(exchange, pageId) || !ownsPage(exchange, form.get("access_token"), pageId)) {
+                    return;
+                }
+                if (photo) {
+                    send(exchange, 200, "{\"id\":\"photo-" + IDS.incrementAndGet() + "\"}");
+                } else {
+                    String postId = pageId + "_" + IDS.incrementAndGet();
+                    POSTS.add(postId);
+                    send(exchange, 200, "{\"id\":\"" + postId + "\"}");
+                }
+            } else if (path.matches("^/[^/_]+_[^/]+$") && (method.equals("GET") || method.equals("DELETE"))) {
+                String postId = path.substring(1);
+                String pageId = postId.substring(0, postId.indexOf('_'));
+                boolean delete = method.equals("DELETE");
+                PAGE_CALLS.add(new PageCall(delete ? "delete" : "permalink", pageId, query));
+                if (failed(exchange, pageId) || !ownsPage(exchange, query.get("access_token"), pageId)) {
+                    return;
+                }
+                if (!POSTS.contains(postId)) {
+                    send(exchange, 400, errorBody(100, 33, "Unsupported delete request"));
+                } else if (delete) {
+                    POSTS.remove(postId);
+                    send(exchange, 200, "{\"success\":true}");
+                } else {
+                    send(exchange, 200, "{\"permalink_url\":\"https://www.facebook.com/" + pageId + "/posts/"
+                            + postId.substring(pageId.length() + 1) + "\",\"id\":\"" + postId + "\"}");
+                }
             } else if (method.equals("GET") && path.startsWith("/me")) {
                 String code = codeOfLongToken(query.get("access_token"));
                 Person person = code == null ? null : PEOPLE.get(code);
@@ -206,6 +283,33 @@ public final class TestGraph {
             values.put(name, value);
         }
         return values;
+    }
+
+    /** Answers the next scripted failure of the Page, if any. */
+    private static boolean failed(HttpExchange exchange, String pageId) throws IOException {
+        Queue<Failure> queue = FAILURES.get(pageId);
+        Failure failure = queue == null ? null : queue.poll();
+        if (failure == null) {
+            return false;
+        }
+        // A message that quotes a token and an email address, as Meta never should: the logs must not show them
+        send(exchange, failure.status(), errorBody(failure.code(), failure.subcode(),
+                "Simulated failure for EAApage" + pageId + "secret-token-value contact seller@example.tn"));
+        return true;
+    }
+
+    /** A Page token of the fake ({@link #pageToken}) for this Page; otherwise answers 190. */
+    private static boolean ownsPage(HttpExchange exchange, String token, String pageId) throws IOException {
+        if (token != null && token.startsWith("EAApage" + pageId + "code-")) {
+            return true;
+        }
+        send(exchange, 400, errorBody(190, null, "Invalid OAuth access token"));
+        return false;
+    }
+
+    private static String errorBody(int code, Integer subcode, String message) {
+        return "{\"error\":{\"message\":\"" + message + "\",\"type\":\"OAuthException\",\"code\":" + code
+                + (subcode == null ? "" : ",\"error_subcode\":" + subcode) + ",\"fbtrace_id\":\"Atest\"}}";
     }
 
     private static void error(HttpExchange exchange, int status) throws IOException {

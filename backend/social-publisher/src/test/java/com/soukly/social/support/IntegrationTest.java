@@ -17,6 +17,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.soukly.common.event.ListingEvents;
 import com.soukly.common.event.UserEvents;
 
 /**
@@ -27,7 +28,7 @@ import com.soukly.common.event.UserEvents;
  * {@link TestReferentials}. Tests use a new account id each time instead of resetting
  * the database.
  *
- * <p>The housekeeping and token refresh tasks never run on their own; the clock moves only when a test advances it
+ * <p>The housekeeping, token refresh and publishing tasks never run on their own; the clock moves only when a test advances it
  * ({@link MutableClock}).
  */
 @SpringBootTest
@@ -78,10 +79,14 @@ public abstract class IntegrationTest {
         // Run by the tests only
         registry.add("soukly.social.facebook.purge-initial-delay", () -> "P1D");
         registry.add("soukly.social.instagram.refresh-initial-delay", () -> "P1D");
+        registry.add("soukly.social.posts.facebook.publish-initial-delay", () -> "P1D");
         registry.add("soukly.social.events.retry-interval", () -> "100ms");
+        // The pace per Page is kept (30 s, on the clock of the tests); the calls per minute are tested on their own
+        registry.add("soukly.social.posts.facebook.calls-per-minute", () -> "100000");
+        registry.add("soukly.social.posts.facebook.delete-retry-interval", () -> "10ms");
     }
 
-    /** The topics of user-service, which creates them outside the tests. */
+    /** The topics of user-service and listing-service, which create them outside the tests. */
     @TestConfiguration(proxyBeanMethods = false)
     static class TopicsConfig {
 
@@ -93,6 +98,16 @@ public abstract class IntegrationTest {
         @Bean
         NewTopic userEventsDlqTopic() {
             return TopicBuilder.name(UserEvents.DLQ_TOPIC).partitions(1).replicas(1).build();
+        }
+
+        @Bean
+        NewTopic listingEventsTopic() {
+            return TopicBuilder.name(ListingEvents.TOPIC).partitions(3).replicas(1).build();
+        }
+
+        @Bean
+        NewTopic listingEventsDlqTopic() {
+            return TopicBuilder.name(ListingEvents.DLQ_TOPIC).partitions(1).replicas(1).build();
         }
     }
 

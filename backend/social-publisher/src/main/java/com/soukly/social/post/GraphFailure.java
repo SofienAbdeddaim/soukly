@@ -50,7 +50,7 @@ record GraphFailure(Kind kind, String errorCode) {
             if (code == PERMISSION_DENIED || (code >= 200 && code <= 299)) {
                 return new GraphFailure(Kind.PERMISSION_MISSING, PERMISSION);
             }
-            if (THROTTLING.contains(code) || error.isTransient() || status >= 500 || status == 429) {
+            if (THROTTLING.contains(code) || Boolean.TRUE.equals(error.isTransient()) || status >= 500 || status == 429) {
                 return new GraphFailure(Kind.TEMPORARY, "meta-" + error.codes());
             }
             if (code == INVALID_PARAMETER && Integer.valueOf(OBJECT_DOES_NOT_EXIST).equals(error.subcode())) {

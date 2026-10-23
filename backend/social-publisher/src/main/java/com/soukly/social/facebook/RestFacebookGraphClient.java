@@ -23,6 +23,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.soukly.social.graph.GraphApiException;
 import com.soukly.social.graph.GraphError;
 
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
+
 /**
  * {@link FacebookGraphClient} over HTTP with {@link RestClient}: origin and version from {@link FacebookProperties}.
  * Tokens and the app secret go in the query string, as the Graph API documents it, except for the publishing calls
@@ -37,6 +40,9 @@ class RestFacebookGraphClient implements FacebookGraphClient {
 
     /** Tasks that allow posting on a Page; a Page without any of them is not offered. */
     private static final Set<String> POSTING_TASKS = Set.of("CREATE_CONTENT", "MANAGE");
+
+    /** Reads the error objects of Meta; the answers of the calls are read by the converters of RestClient. */
+    private static final JsonMapper ERRORS = JsonMapper.builder().build();
 
     private static final String ACCOUNT_FIELDS = "id,name,category,access_token,tasks,picture{url}";
 
@@ -230,9 +236,10 @@ class RestFacebookGraphClient implements FacebookGraphClient {
     /** The {@code error} object of the answer; {@code null} when the body is not the JSON of Meta. */
     private static GraphError error(RestClientResponseException e) {
         try {
-            ErrorResponse body = e.getResponseBodyAs(ErrorResponse.class);
-            return body == null ? null : body.error();
-        } catch (RuntimeException notJson) {
+            byte[] body = e.getResponseBodyAsByteArray();
+            ErrorResponse answer = body.length == 0 ? null : ERRORS.readValue(body, ErrorResponse.class);
+            return answer == null ? null : answer.error();
+        } catch (JacksonException notJson) {
             return null;
         }
     }

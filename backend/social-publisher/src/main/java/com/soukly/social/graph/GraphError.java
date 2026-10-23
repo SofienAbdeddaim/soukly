@@ -13,12 +13,12 @@ import com.soukly.social.caption.PersonalData;
  *
  * @param code      Meta error code, for example {@code 190} for an invalid token; {@code null} when absent
  * @param subcode   {@code error_subcode}, {@code null} when absent
- * @param isTransient {@code is_transient}: Meta says the same call may succeed later
+ * @param isTransient {@code is_transient}: Meta says the same call may succeed later; {@code null} when absent
  * @param message   message of Meta, cleaned by {@link #safeMessage}: safe to log
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record GraphError(Integer code, @JsonProperty("error_subcode") Integer subcode,
-        @JsonProperty("is_transient") boolean isTransient, String type, String message) {
+        @JsonProperty("is_transient") Boolean isTransient, String type, String message) {
 
     static final int MESSAGE_MAX = 200;
 
