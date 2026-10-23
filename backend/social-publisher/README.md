@@ -159,6 +159,65 @@ listing.deleted / user.deleted ──► PENDING → CANCELLED; PUBLISHED → DE
 | `max-photos` | `10` |
 | `delete-attempts` / `delete-retry-interval` | `3` / `5s` |
 
+## Publishing the listings on Instagram (SOC-05)
+
+When a listing is published with `INSTAGRAM` in `shareTo`, it is posted on the connected Instagram professional account
+of the seller as a **carousel of all its photos** (at most 10), or a single image for one photo, with the caption of
+`CaptionBuilder.buildForInstagram`. Same `social_posts` table and rules as Facebook (skips, deduplication, retries,
+cancellation, logs), with `network = INSTAGRAM`; the two rows of a listing shared on both networks live independently.
+
+```
+InstagramPublisher (every 10 s) ── lock a due INSTAGRAM row ── token decrypted
+   GET  /{ig-user-id}/content_publishing_limit?fields=quota_usage,config   reached → postponed 1 h, attempts unchanged
+   PhotoVariantService: listings/{l}/{p}/ig-1080.jpg (written once, from 1600.webp)
+   1 photo : POST /{ig-user-id}/media  image_url, caption
+   2 to 10 : POST /{ig-user-id}/media  image_url, is_carousel_item=true   (once per photo)
+             POST /{ig-user-id}/media  media_type=CAROUSEL, children=<ids>, caption
+   GET  /{container-id}?fields=status_code      until FINISHED, 5 readings 12 s apart at most
+   POST /{ig-user-id}/media_publish  creation_id=<container>
+   GET  /{media-id}?fields=permalink
+   └─► PUBLISHED (external_post_id = media id, permalink)
+```
+
+- **Instagram versions** (`photo` package, `PhotoVariantService`): Instagram publishes JPEG only. Each photo gets
+  `ig-1080.jpg` next to its WebP versions (same prefix, so listing-service deletes it with the photo, the listing or the
+  account): 1080 px wide, JPEG quality 85, no metadata (`keep=none`), proportions brought between **4:5 and 1.91:1 by
+  cream margins `#FFF8EC`, never by cropping** (`InstagramFrame`: a photo taller than 4:5 becomes 1080 × 1350 with
+  margins left and right, one wider than 1.91:1 becomes 1080 × 566 with margins above and below). libvips commands:
+  `vips thumbnail` to the exact size, `colourspace srgb`, `flatten` on cream when there is transparency, `embed` with
+  cream background into `ig-1080.jpg[Q=85,keep=none]`. An existing version is reused. The service reads and writes the
+  bucket of listing-service (`S3_*`), and Instagram fetches the versions from `PHOTO_PUBLIC_BASE_URL`: it must be public
+  HTTPS outside the local machine.
+- **Caption**: no `https://` link (not clickable on Instagram): the last but one line is
+  `Annonce complète sur {host of PUBLIC_BASE_URL}/r/{shortRef}` in the language of the post (`shortRef` of
+  `listing.published`, SOC-05), which the front end redirects to the listing with
+  `utm_source=instagram&utm_medium=social&utm_campaign=soukly_share`. Schemes typed in the title or the description are
+  removed, and at most 30 hashtags are kept (ours first). `POST /social/caption-preview` gives this variant with
+  `network: "INSTAGRAM"` and the `shortRef` of the draft.
+- **Errors** (`GraphFailure.ofInstagram`): the Instagram subcodes first, then the Graph API rules of SOC-04.
+
+  | Instagram answer | Effect |
+  | --- | --- |
+  | `9` / `2207042` (posts of the last 24 h reached), or `content_publishing_limit` reached | `PENDING`, postponed by `quota-retry-delay`, **no attempt counted** |
+  | container still `IN_PROGRESS` after 5 readings, `EXPIRED`, `9007` / `2207027`, `2207008`, `2207001`, `2207003`, `2207052` | `PENDING`, tried again after the `retry-delays` (`media-not-ready` or `meta-…`) |
+  | `36000`–`36004`, subcodes `2207004`, `2207005`, `2207009` (size, format, proportions) | `FAILED` `media-rejected` |
+  | container `ERROR` | `FAILED` `media-error` |
+  | photo missing from the bucket / not convertible | `FAILED` `photo-unavailable` / `photo-conversion-failed` |
+  | `190`, `102` | connection `NEEDS_RECONNECT`, post `FAILED` `needs-reconnect` |
+
+- **Removal**: the Instagram API with Instagram Login offers no deletion of a published media (Meta documents the
+  deletion endpoint for the Instagram API with Facebook Login only). `listing.deleted` cancels a `PENDING` row; a
+  `PUBLISHED` one stays `PUBLISHED` with `last_error_code = delete-unsupported`, which the "as far as possible" of the
+  account deletion screen covers. `user.deleted` deletes the rows with the connections, as for Facebook.
+
+| Setting (`soukly.social.posts.instagram.*`) | Default |
+| --- | --- |
+| `publish-interval` / `publish-initial-delay` | `PT10S` / `PT30S` |
+| `retry-delays` | `1m,5m,30m,2h,6h` |
+| `max-photos` | `10` |
+| `status-checks` / `status-interval` | `5` / `12s` |
+| `quota-retry-delay` | `1h` |
+
 ## Configuration
 
 | Variable                                  | Meaning                                                                                                                                   |
@@ -173,6 +232,9 @@ listing.deleted / user.deleted ──► PENDING → CANCELLED; PUBLISHED → DE
 | `USER_SERVICE_JWKS_URI`, `JWT_ISSUER`     | validation of the access tokens, as in the gateway                                                                                        |
 | `KAFKA_BOOTSTRAP_SERVERS`                 | Redpanda, for `user.deleted`                                                                                                              |
 | `LISTING_SERVICE_URL`                     | listing-service as this service reaches it, for the labels of the post texts (SOC-03), `http://localhost:8082` by default               |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | the bucket of the photos of listing-service, read and written for the Instagram versions (SOC-05); locally the root `.env` names the keys `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` |
+| `PHOTO_PUBLIC_BASE_URL`                   | public URL of the bucket root, the same as listing-service: Instagram fetches the JPEG versions from it                                   |
+| `VIPS_BIN_DIRECTORY`                      | directory of `vips` and `vipsheader` (package `libvips-tools`, in the image); empty = the `PATH`                                         |
 
 Running it locally (Docker infrastructure up, `.env` copied from `.env.example`):
 
@@ -228,3 +290,15 @@ The exact labels move often in the Meta developer dashboard: check them there.
    `permalink`. If Meta refuses the WebP photos, the row is `FAILED` `meta-324` (or another code): note it, a JPEG
    variant is then needed (`PhotoVariantService`, SOC-05).
 4. Delete the listing in "Mes annonces": the post disappears from the Page and the row is `DELETED`.
+
+### Publishing on Instagram (SOC-05)
+
+1. Same services as above in dev (public HTTPS photos), with `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET` and an
+   Instagram tester account connected.
+2. Publish a listing with 4 photos, one of them a panorama, and only "Partager sur Instagram" ticked: the preview shows
+   the caption with `soukly.tn/r/{ref}` (the dev host there).
+3. Within a minute, the account shows one carousel of the 4 photos, the panorama with cream margins above and below,
+   and the caption. In `soukly_social`, the row is `PUBLISHED` with its `permalink`; the bucket holds
+   `ig-1080.jpg` next to each `1600.webp`.
+4. Open `https://<dev host>/r/{ref}`: the listing opens, with `utm_source=instagram` in the address.
+5. Delete the listing: the row stays `PUBLISHED` with `delete-unsupported`; remove the post in the Instagram app.

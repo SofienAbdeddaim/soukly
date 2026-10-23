@@ -25,7 +25,7 @@ import com.soukly.common.event.UserEvents;
  * by Flyway and a Redpanda container for the user events ({@link TestRedpanda}). Access tokens are validated against
  * the simulated JWKS of {@link TestJwks}, the Graph API of Meta is the fake of {@link TestGraph} and Instagram the fake
  * of {@link TestInstagram}: tests never call the real ones. The referentials of listing-service are those of
- * {@link TestReferentials}. Tests use a new account id each time instead of resetting
+ * {@link TestReferentials}, the photos are in the Garage of {@link TestGarage}. Tests use a new account id each time instead of resetting
  * the database.
  *
  * <p>The housekeeping, token refresh and publishing tasks never run on their own; the clock moves only when a test advances it
@@ -42,6 +42,9 @@ public abstract class IntegrationTest {
         31, 32 });
 
     public static final String FRONT_BASE_URL = "https://soukly.example.test";
+
+    /** Public URL of the bucket of the photos: the photo URLs of the events start with it. */
+    public static final String PHOTO_BASE_URL = "https://photos.example.test";
 
     @Autowired
     protected MockMvc mockMvc;
@@ -76,10 +79,18 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.instagram.dialog-base-url", () -> "https://www.instagram.example.test");
         registry.add("soukly.social.instagram.front-base-url", () -> FRONT_BASE_URL);
         registry.add("soukly.social.listing-service.base-url", TestReferentials::baseUrl);
+        registry.add("soukly.social.storage.endpoint", TestGarage::endpoint);
+        registry.add("soukly.social.storage.region", () -> TestGarage.REGION);
+        registry.add("soukly.social.storage.bucket", () -> TestGarage.BUCKET);
+        registry.add("soukly.social.storage.access-key", () -> TestGarage.ACCESS_KEY);
+        registry.add("soukly.social.storage.secret-key", () -> TestGarage.SECRET_KEY);
+        registry.add("soukly.social.photos.public-base-url", () -> PHOTO_BASE_URL);
         // Run by the tests only
         registry.add("soukly.social.facebook.purge-initial-delay", () -> "P1D");
         registry.add("soukly.social.instagram.refresh-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.facebook.publish-initial-delay", () -> "P1D");
+        registry.add("soukly.social.posts.instagram.publish-initial-delay", () -> "P1D");
+        registry.add("soukly.social.posts.instagram.status-interval", () -> "10ms");
         registry.add("soukly.social.events.retry-interval", () -> "100ms");
         // The pace per Page is kept (30 s, on the clock of the tests); the calls per minute are tested on their own
         registry.add("soukly.social.posts.facebook.calls-per-minute", () -> "100000");

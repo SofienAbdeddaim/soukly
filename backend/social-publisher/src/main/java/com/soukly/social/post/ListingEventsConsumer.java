@@ -29,7 +29,7 @@ import tools.jackson.databind.json.JsonMapper;
  * Reads {@code soukly.listing-events} in the group {@code social-publisher} (SOC-04): {@code listing.published}
  * records the posts to publish, {@code listing.deleted} removes them. Every other type ({@code listing.updated},
  * {@code listing.renewed}, {@code listing.deactivated}, {@code listing.expired}...) is ignored in V1. Never calls Meta
- * for a publication: the task of {@link FacebookPublisher} does. A failure is retried, then the message goes to
+ * for a publication: the tasks of {@link FacebookPublisher} and {@link InstagramPublisher} do. A failure is retried, then the message goes to
  * {@code soukly.listing-events.dlq} ({@code EventsConfig}).
  */
 @Component
@@ -134,7 +134,7 @@ class ListingEventsConsumer {
                 text(data, "categoryCode"), text(data, "priceMode"),
                 price == null || !price.isNumber() ? null : price.asLong(),
                 negotiable != null && negotiable.asBoolean(), text(data, "governorateCode"),
-                text(data, "delegationCode"), photoUrls, uri(listingUrl, eventId), language));
+                text(data, "delegationCode"), photoUrls, uri(listingUrl, eventId), language, text(data, "shortRef")));
     }
 
     private static String text(JsonNode node, String member) {

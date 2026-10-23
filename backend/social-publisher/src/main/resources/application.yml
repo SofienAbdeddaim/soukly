@@ -120,3 +120,35 @@ soukly:
         # Removal of a post (listing or account deleted): attempts and pause between two attempts
         delete-attempts: 3
         delete-retry-interval: 5s
+      # Publication of the listings on the Instagram professional accounts (SOC-05)
+      instagram:
+        publish-interval: PT10S
+        publish-initial-delay: PT30S
+        retry-delays: 1m,5m,30m,2h,6h
+        # Photos of a carousel, in the seller's order (Instagram takes 10 at most)
+        max-photos: 10
+        # Status of a container read 5 times over less than a minute before trying the post again later
+        status-checks: 5
+        status-interval: 12s
+        # The account reached the posts Instagram allows through the API within 24 hours (moving window): the post
+        # waits, without counting an attempt, and the limit is read again after this delay
+        quota-retry-delay: 1h
+    # Instagram versions of the photos (SOC-05): JPEG written by social-publisher next to the WebP versions of
+    # listing-service, in the same bucket
+    photos:
+      # Public URL of the bucket root, the same as PHOTO_PUBLIC_BASE_URL of listing-service; Instagram fetches the
+      # JPEG versions from it, so it must be public and HTTPS outside the local machine
+      public-base-url: ${PHOTO_PUBLIC_BASE_URL:http://soukly-listings.web.localhost:3902}
+      jpeg-quality: 85
+      max-source-size: 10MB
+      conversion-timeout: 30s
+      max-concurrent-conversions: 2
+      # Directory of vips and vipsheader (package libvips-tools); empty = the PATH
+      vips-bin-directory: ${VIPS_BIN_DIRECTORY:}
+    # S3 API of the object storage, the bucket of listing-service: Garage locally (docker-compose.yml)
+    storage:
+      endpoint: ${S3_ENDPOINT:http://localhost:3900}
+      region: ${S3_REGION:garage}
+      bucket: ${S3_BUCKET:soukly-listings}
+      access-key: ${S3_ACCESS_KEY:${S3_ACCESS_KEY_ID:}}
+      secret-key: ${S3_SECRET_KEY:${S3_SECRET_ACCESS_KEY:}}

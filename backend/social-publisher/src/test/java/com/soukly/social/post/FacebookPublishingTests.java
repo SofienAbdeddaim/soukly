@@ -178,8 +178,9 @@ class FacebookPublishingTests extends IntegrationTest {
 
         assertThat(row(listing)).containsEntry("status", "SKIPPED").containsEntry("last_error_code",
                 "needs-reconnect");
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM social_posts WHERE listing_id = ?", Integer.class,
-                notShared)).isZero();
+        // Not shared on Facebook: no Facebook post (since SOC-05, its Instagram post is recorded on its own)
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM social_posts WHERE listing_id = ? AND network = "
+                + "'FACEBOOK'", Integer.class, notShared)).isZero();
         assertThat(TestGraph.calls(pageId)).isEmpty();
     }
 

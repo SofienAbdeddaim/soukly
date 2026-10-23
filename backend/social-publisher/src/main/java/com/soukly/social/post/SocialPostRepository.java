@@ -99,21 +99,22 @@ class SocialPostRepository {
      * Cancels the {@code PENDING} posts of a listing. Waits for a publication in progress (its row lock): a post just
      * published is then {@code PUBLISHED} and not cancelled.
      *
-     * @return the number of posts cancelled
+     * @return the network of each post cancelled
      */
-    int cancelPendingOfListing(UUID listingId) {
-        return jdbc.update("""
+    List<Network> cancelPendingOfListing(UUID listingId) {
+        return jdbc.query("""
                 UPDATE social_posts SET status = 'CANCELLED', next_attempt_at = NULL, updated_at = ?
-                WHERE listing_id = ? AND status = 'PENDING'
-                """, Timestamp.from(clock.instant()), listingId);
+                WHERE listing_id = ? AND status = 'PENDING' RETURNING network
+                """, (rs, row) -> Network.valueOf(rs.getString("network")), Timestamp.from(clock.instant()),
+                listingId);
     }
 
     /** Same as {@link #cancelPendingOfListing} for every listing of a member. */
-    int cancelPendingOfUser(UUID userId) {
-        return jdbc.update("""
+    List<Network> cancelPendingOfUser(UUID userId) {
+        return jdbc.query("""
                 UPDATE social_posts SET status = 'CANCELLED', next_attempt_at = NULL, updated_at = ?
-                WHERE user_id = ? AND status = 'PENDING'
-                """, Timestamp.from(clock.instant()), userId);
+                WHERE user_id = ? AND status = 'PENDING' RETURNING network
+                """, (rs, row) -> Network.valueOf(rs.getString("network")), Timestamp.from(clock.instant()), userId);
     }
 
     List<SocialPost> publishedOfListing(UUID listingId) {

@@ -23,8 +23,8 @@ class ListingPosts {
 
     private static final Logger log = LoggerFactory.getLogger(ListingPosts.class);
 
-    /** Networks published by this version: Instagram comes with SOC-05. */
-    private static final List<Network> PUBLISHED_NETWORKS = List.of(Network.FACEBOOK);
+    /** Networks published by this version: Facebook (SOC-04) and Instagram (SOC-05). */
+    private static final List<Network> PUBLISHED_NETWORKS = List.of(Network.FACEBOOK, Network.INSTAGRAM);
 
     static final String NOT_CONNECTED = "not-connected";
     static final String NEEDS_RECONNECT = "needs-reconnect";

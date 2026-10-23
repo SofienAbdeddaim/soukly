@@ -21,6 +21,11 @@ import com.soukly.social.graph.GraphApiException;
  * {@code PUBLISHED} post is deleted with the token of its account in at most {@code delete-attempts} attempts, then
  * becomes {@code DELETED}; when it cannot be, it stays {@code PUBLISHED} with the reason in {@code last_error_code}
  * and the error is logged. Every step is idempotent: a second delivery of the event finds nothing left to do.
+ *
+ * <p>Instagram (SOC-05): the Instagram API with Instagram Login offers no deletion of a published media (the deletion
+ * of the Instagram API is documented for Facebook Login only). A published Instagram post stays {@code PUBLISHED} with
+ * {@code delete-unsupported}; the seller removes it in the app, as the deletion screen of the account says ("as far
+ * as possible").
  */
 @Service
 @EnableConfigurationProperties(FacebookPostingProperties.class)
@@ -30,6 +35,7 @@ public class PostRemoval {
 
     static final String NOT_CONNECTED = "not-connected";
     static final String ACCOUNT_CHANGED = "account-changed";
+    static final String DELETE_UNSUPPORTED = "delete-unsupported";
 
     private final SocialPostRepository posts;
     private final SocialConnectionRepository connections;
@@ -48,20 +54,20 @@ public class PostRemoval {
 
     /** {@code listing.deleted}: cancels the posts to come, removes the published ones. */
     public void removeListing(UUID listingId) {
-        int cancelled = posts.cancelPendingOfListing(listingId);
-        if (cancelled > 0) {
-            log.info("Listing {} deleted: {} post(s) cancelled before publication", listingId, cancelled);
-            metrics.entered(Network.FACEBOOK, PostStatus.CANCELLED, cancelled);
+        List<Network> cancelled = posts.cancelPendingOfListing(listingId);
+        if (!cancelled.isEmpty()) {
+            log.info("Listing {} deleted: {} post(s) cancelled before publication", listingId, cancelled.size());
+            cancelled.forEach(network -> metrics.entered(network, PostStatus.CANCELLED));
         }
         remove(posts.publishedOfListing(listingId));
     }
 
     /** {@code user.deleted}, before the connections are deleted: same for every listing of the member. */
     public void removeUser(UUID userId) {
-        int cancelled = posts.cancelPendingOfUser(userId);
-        if (cancelled > 0) {
-            log.info("Account {} deleted: {} post(s) cancelled before publication", userId, cancelled);
-            metrics.entered(Network.FACEBOOK, PostStatus.CANCELLED, cancelled);
+        List<Network> cancelled = posts.cancelPendingOfUser(userId);
+        if (!cancelled.isEmpty()) {
+            log.info("Account {} deleted: {} post(s) cancelled before publication", userId, cancelled.size());
+            cancelled.forEach(network -> metrics.entered(network, PostStatus.CANCELLED));
         }
         remove(posts.publishedOfUser(userId));
     }
@@ -75,6 +81,9 @@ public class PostRemoval {
         for (SocialPost post : published) {
             if (post.network() == Network.FACEBOOK) {
                 removeFromFacebook(post);
+            } else if (post.network() == Network.INSTAGRAM) {
+                posts.markNotDeleted(post.id(), DELETE_UNSUPPORTED);
+                log.warn("Instagram post of listing {} not deleted: the API offers no deletion", post.listingId());
             }
         }
     }

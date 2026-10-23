@@ -95,8 +95,9 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: backend/**/pom.xml
-      # libvips command-line tools for the photo conversion of listing-service (ANN-02); the version is the
-      # one of the runner's Ubuntu release, the same as the base image of backend/Dockerfile (Ubuntu 24.04).
+      # libvips command-line tools for the photo conversion of listing-service (ANN-02) and the Instagram versions of
+      # social-publisher (SOC-05); the version is the one of the runner's Ubuntu release, the same as the base image
+      # of backend/Dockerfile (Ubuntu 24.04).
       - name: Install libvips
         run: |
           sudo apt-get update
