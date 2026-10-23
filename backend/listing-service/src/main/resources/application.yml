@@ -101,6 +101,11 @@ soukly:
       connect-timeout: 2s
       read-timeout: 3s
       profile-cache-ttl: 5m
+    # Service-to-service endpoints /internal/** of listing-service (SOC-06: statuses of listings for social-publisher),
+    # never routed by the gateway: callers send this shared token in X-Internal-Token. Empty = every internal
+    # request is refused.
+    internal-api:
+      token: ${INTERNAL_API_TOKEN:}
     # "Show the number" (CATA-03): distinct listings per member over a sliding window; an assumption of V1
     contact:
       max-listings: ${CONTACT_MAX_LISTINGS_PER_DAY:30}

@@ -206,7 +206,7 @@ Listings of Soukly (package `com.soukly.listing`, database `soukly_listing`): th
 | `POST /api/listings/{id}/photos/{photoId}/complete` (JWT)                                 | `200` READY photo, `400` `photo-rejected`, `404`                      |
 | `PUT /api/listings/{id}/photos/order`, `DELETE /api/listings/{id}/photos/{photoId}` (JWT) | `200`, `400`, `404` / `204`, `404`                                    |
 
-listing-service validates the access tokens again with the rules of the gateway, from the same `USER_SERVICE_JWKS_URI` and `JWT_ISSUER`. It reads the sellers from the internal endpoints of user-service (`/internal/**`, `USER_SERVICE_URL`), with the shared `INTERNAL_API_TOKEN` in `X-Internal-Token` (CATA-03); the gateway never routes `/internal/**`.
+listing-service validates the access tokens again with the rules of the gateway, from the same `USER_SERVICE_JWKS_URI` and `JWT_ISSUER`. It reads the sellers from the internal endpoints of user-service (`/internal/**`, `USER_SERVICE_URL`), with the shared `INTERNAL_API_TOKEN` in `X-Internal-Token` (CATA-03); the gateway never routes `/internal/**`. It answers the statuses of listings to social-publisher the same way (`/internal/listings/**`, SOC-06).
 
 ## social-publisher
 
@@ -226,7 +226,7 @@ Social networks of Soukly (package `com.soukly.social`, database `soukly_social`
 | `PATCH /api/social/connections/{network}`    | `{ autoShare }` (SOC-03)                     | `200` connection, `400` `validation-failed`, `404` `connection-not-found`                                                         |
 | `POST /api/social/caption-preview`           | fields of the draft, `publicUrl`, `language` | `200` `{ text, hashtags }` (SOC-03), `400` `validation-failed`, `503` `caption-unavailable`                                      |
 
-It needs `SOCIAL_TOKEN_ENC_KEY` (32 random bytes in base64, `openssl rand -base64 32`) to start, `META_APP_ID` / `META_APP_SECRET` to connect a Page and `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET` to connect an Instagram account (SOC-02). It consumes `user.deleted` (group `social-publisher`) to delete the connections of a deleted account.
+It needs `SOCIAL_TOKEN_ENC_KEY` (32 random bytes in base64, `openssl rand -base64 32`) to start, `META_APP_ID` / `META_APP_SECRET` to connect a Page and `INSTAGRAM_APP_ID` / `INSTAGRAM_APP_SECRET` to connect an Instagram account (SOC-02). It consumes `user.deleted` (group `social-publisher`) to delete the connections of a deleted account. It shows the status of each post on "My listings" (`/social/posts`, SOC-06) and produces `social.connection.needs-reconnect` on `soukly.social-events` ([contract](docs/events/social-events.md)), which user-service turns into an email.
 
 ## Gateway
 

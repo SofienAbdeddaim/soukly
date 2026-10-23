@@ -241,6 +241,9 @@ class FacebookPublishingTests extends IntegrationTest {
         assertThat(jdbc.queryForObject("SELECT status FROM social_connections WHERE user_id = ?", String.class,
                 member)).isEqualTo("NEEDS_RECONNECT");
         assertThat(TestGraph.calls(pageId)).hasSize(1);
+        // SOC-06: the member is told by email, through user-service
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM outbox_events WHERE aggregate_id = ? AND type = "
+                + "'social.connection.needs-reconnect'", Integer.class, member)).isEqualTo(1);
     }
 
     @Test

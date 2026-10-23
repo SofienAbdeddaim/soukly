@@ -28,8 +28,8 @@ import com.soukly.common.event.UserEvents;
  * {@link TestReferentials}, the photos are in the Garage of {@link TestGarage}. Tests use a new account id each time instead of resetting
  * the database.
  *
- * <p>The housekeeping, token refresh and publishing tasks never run on their own; the clock moves only when a test advances it
- * ({@link MutableClock}).
+ * <p>The housekeeping, token refresh, publishing and outbox relay tasks never run on their own; the clock moves only
+ * when a test advances it ({@link MutableClock}).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -79,6 +79,7 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.instagram.dialog-base-url", () -> "https://www.instagram.example.test");
         registry.add("soukly.social.instagram.front-base-url", () -> FRONT_BASE_URL);
         registry.add("soukly.social.listing-service.base-url", TestReferentials::baseUrl);
+        registry.add("soukly.social.listing-service.internal-api-token", () -> TestReferentials.INTERNAL_TOKEN);
         registry.add("soukly.social.storage.endpoint", TestGarage::endpoint);
         registry.add("soukly.social.storage.region", () -> TestGarage.REGION);
         registry.add("soukly.social.storage.bucket", () -> TestGarage.BUCKET);
@@ -92,6 +93,8 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.posts.instagram.publish-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.instagram.status-interval", () -> "10ms");
         registry.add("soukly.social.events.retry-interval", () -> "100ms");
+        registry.add("soukly.social.outbox.relay-initial-delay", () -> "P1D");
+        registry.add("soukly.social.outbox.purge-interval", () -> "P1D");
         // The pace per Page is kept (30 s, on the clock of the tests); the calls per minute are tested on their own
         registry.add("soukly.social.posts.facebook.calls-per-minute", () -> "100000");
         registry.add("soukly.social.posts.facebook.delete-retry-interval", () -> "10ms");

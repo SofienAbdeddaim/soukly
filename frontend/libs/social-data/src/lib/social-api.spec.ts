@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { AuthService, authInterceptor, sessionResponse } from '@soukly/auth';
 import { SocialConnection } from './models';
-import { SocialApi } from './social-api';
+import { RetryError, SocialApi } from './social-api';
 import { toFacebookFailure, toInstagramFailure } from './social-routes';
 
 const CONNECTION: SocialConnection = {
@@ -157,5 +157,42 @@ describe('SocialApi', () => {
       failure: 'instagram-not-professional',
     });
     expect(toInstagramFailure('facebook-no-page')).toBe('unknown');
+  });
+
+  it('reads the posts of listings in one request, and none without listing', async () => {
+    expect(await api.posts([])).toEqual([]);
+
+    const posts = api.posts(['l-1', 'l-2']);
+    const request = http.expectOne((r) => r.url === '/api/social/posts');
+    expect(request.request.params.get('listingIds')).toBe('l-1,l-2');
+    request.flush({ listings: [{ listingId: 'l-1', posts: [] }] });
+
+    expect(await posts).toEqual([{ listingId: 'l-1', posts: [] }]);
+  });
+
+  it('retries a post and turns a refusal into its reason', async () => {
+    const retried = api.retryPost('l-1', 'INSTAGRAM');
+    const request = http.expectOne('/api/social/posts/l-1/INSTAGRAM/retry');
+    expect(request.request.method).toBe('POST');
+    request.flush(
+      { type: 'urn:soukly:problem:retry-limit-reached', status: 409 },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    await expect(retried).rejects.toEqual(new RetryError('retry-limit-reached'));
+  });
+
+  it('reads the blocked posts of a network and relaunches them', async () => {
+    const blocked = api.blockedPosts('FACEBOOK');
+    const read = http.expectOne((r) => r.url === '/api/social/posts/blocked');
+    expect(read.request.params.get('network')).toBe('FACEBOOK');
+    read.flush({ network: 'FACEBOOK', total: 1, listings: [{ listingId: 'l-1', title: 'Vélo' }] });
+    expect((await blocked).total).toBe(1);
+
+    const relaunched = api.relaunchPosts('FACEBOOK');
+    const post = http.expectOne('/api/social/posts/relaunch');
+    expect(post.request.body).toEqual({ network: 'FACEBOOK' });
+    post.flush({ relaunched: 1 });
+    expect(await relaunched).toBe(1);
   });
 });

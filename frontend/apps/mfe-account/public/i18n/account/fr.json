@@ -455,6 +455,87 @@
     },
     "auto-share": "Cocher par défaut pour chaque nouvelle annonce",
     "auto-share-error": "Votre préférence n'a pas été enregistrée. Réessayez.",
-    "return": "Revenir à mon annonce"
+    "return": "Revenir à mon annonce",
+    "relaunch": {
+      "title": {
+        "FACEBOOK": "Page reliée à nouveau.",
+        "INSTAGRAM": "Compte relié à nouveau."
+      },
+      "text": {
+        "zero": "Aucune annonce n’a été bloquée sur {{ network }} pendant la coupure.",
+        "one": "{{ count }} annonce n’a pas été publiée sur {{ network }} pendant la coupure. La publier maintenant ?",
+        "two": "{{ count }} annonces n’ont pas été publiées sur {{ network }} pendant la coupure. Les publier maintenant ?",
+        "few": "{{ count }} annonces n’ont pas été publiées sur {{ network }} pendant la coupure. Les publier maintenant ?",
+        "many": "{{ count }} annonces n’ont pas été publiées sur {{ network }} pendant la coupure. Les publier maintenant ?",
+        "other": "{{ count }} annonces n’ont pas été publiées sur {{ network }} pendant la coupure. Les publier maintenant ?"
+      },
+      "others": {
+        "zero": "et aucune autre",
+        "one": "et {{ count }} autre",
+        "two": "et {{ count }} autres",
+        "few": "et {{ count }} autres",
+        "many": "et {{ count }} autres",
+        "other": "et {{ count }} autres"
+      },
+      "confirm": {
+        "zero": "Publier",
+        "one": "Publier l’annonce",
+        "two": "Publier les {{ count }} annonces",
+        "few": "Publier les {{ count }} annonces",
+        "many": "Publier les {{ count }} annonces",
+        "other": "Publier les {{ count }} annonces"
+      },
+      "dismiss": "Non merci",
+      "note": "Seules les annonces encore en ligne sont proposées.",
+      "error": "Les annonces n’ont pas pu être relancées. Réessayez.",
+      "done": {
+        "FACEBOOK": "Les annonces vont être publiées sur Facebook dans les prochaines minutes.",
+        "INSTAGRAM": "Les annonces vont être publiées sur Instagram dans les prochaines minutes."
+      }
+    }
+  },
+  "posts": {
+    "label": "Partage sur les réseaux",
+    "network": {
+      "FACEBOOK": "Facebook",
+      "INSTAGRAM": "Instagram"
+    },
+    "badge": {
+      "PUBLISHED": "{{ network }} · publié",
+      "PENDING": "{{ network }} · en cours",
+      "TO_RECONNECT": "{{ network }} · à relier",
+      "FAILED": "{{ network }} · échec"
+    },
+    "open": "{{ network }} : publié, ouvrir le post (nouvel onglet)",
+    "reconnect": {
+      "FACEBOOK": "Votre Page Facebook doit être reliée à nouveau.",
+      "INSTAGRAM": "Votre compte Instagram doit être relié à nouveau.",
+      "link": "Relier à nouveau"
+    },
+    "failed": "{{ network }} n’a pas publié l’annonce.",
+    "reason": {
+      "RETRIES_EXHAUSTED": "Le service n’a pas répondu après plusieurs essais.",
+      "MEDIA_REJECTED": "{{ network }} a refusé une des photos.",
+      "NOT_CONNECTED": "Le réseau n’était pas relié.",
+      "REJECTED": "{{ network }} a refusé la publication."
+    },
+    "retry": "Réessayer",
+    "retry-label": "Réessayer la publication sur {{ network }}",
+    "retries-left": {
+      "zero": "Aucun essai restant",
+      "one": "{{ count }} essai restant",
+      "two": "{{ count }} essais restants",
+      "few": "{{ count }} essais restants",
+      "many": "{{ count }} essais restants",
+      "other": "{{ count }} essais restants"
+    },
+    "impossible": "Publication impossible sur {{ network }} pour cette annonce.",
+    "toasts": {
+      "retried": "Nouvelle tentative lancée pour {{ network }}.",
+      "not-retryable": "Cette publication ne peut pas être relancée.",
+      "limit-reached": "Plus aucun essai possible sur {{ network }} pour cette annonce.",
+      "not-online": "L’annonce n’est plus en ligne : elle ne peut pas être publiée.",
+      "failed": "La nouvelle tentative n’a pas pu être lancée. Réessayez."
+    }
   }
 }

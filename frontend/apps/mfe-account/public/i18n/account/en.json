@@ -455,6 +455,87 @@
     },
     "auto-share": "Tick by default for every new listing",
     "auto-share-error": "Your preference was not saved. Try again.",
-    "return": "Back to my listing"
+    "return": "Back to my listing",
+    "relaunch": {
+      "title": {
+        "FACEBOOK": "Page connected again.",
+        "INSTAGRAM": "Account connected again."
+      },
+      "text": {
+        "zero": "No listing was blocked on {{ network }} during the outage.",
+        "one": "{{ count }} listing was not posted on {{ network }} during the outage. Post it now?",
+        "two": "{{ count }} listings were not posted on {{ network }} during the outage. Post them now?",
+        "few": "{{ count }} listings were not posted on {{ network }} during the outage. Post them now?",
+        "many": "{{ count }} listings were not posted on {{ network }} during the outage. Post them now?",
+        "other": "{{ count }} listings were not posted on {{ network }} during the outage. Post them now?"
+      },
+      "others": {
+        "zero": "and no other",
+        "one": "and {{ count }} other",
+        "two": "and {{ count }} others",
+        "few": "and {{ count }} others",
+        "many": "and {{ count }} others",
+        "other": "and {{ count }} others"
+      },
+      "confirm": {
+        "zero": "Post",
+        "one": "Post the listing",
+        "two": "Post the {{ count }} listings",
+        "few": "Post the {{ count }} listings",
+        "many": "Post the {{ count }} listings",
+        "other": "Post the {{ count }} listings"
+      },
+      "dismiss": "No thanks",
+      "note": "Only listings still online are offered.",
+      "error": "The listings could not be posted again. Please try again.",
+      "done": {
+        "FACEBOOK": "The listings will be posted on Facebook in the next few minutes.",
+        "INSTAGRAM": "The listings will be posted on Instagram in the next few minutes."
+      }
+    }
+  },
+  "posts": {
+    "label": "Shared on social networks",
+    "network": {
+      "FACEBOOK": "Facebook",
+      "INSTAGRAM": "Instagram"
+    },
+    "badge": {
+      "PUBLISHED": "{{ network }} · posted",
+      "PENDING": "{{ network }} · in progress",
+      "TO_RECONNECT": "{{ network }} · to connect",
+      "FAILED": "{{ network }} · failed"
+    },
+    "open": "{{ network }}: posted, open the post (new tab)",
+    "reconnect": {
+      "FACEBOOK": "Your Facebook Page needs to be connected again.",
+      "INSTAGRAM": "Your Instagram account needs to be connected again.",
+      "link": "Connect again"
+    },
+    "failed": "{{ network }} did not post the listing.",
+    "reason": {
+      "RETRIES_EXHAUSTED": "The service did not answer after several tries.",
+      "MEDIA_REJECTED": "{{ network }} refused one of the photos.",
+      "NOT_CONNECTED": "The network was not connected.",
+      "REJECTED": "{{ network }} refused the post."
+    },
+    "retry": "Try again",
+    "retry-label": "Try again to post on {{ network }}",
+    "retries-left": {
+      "zero": "No tries left",
+      "one": "{{ count }} try left",
+      "two": "{{ count }} tries left",
+      "few": "{{ count }} tries left",
+      "many": "{{ count }} tries left",
+      "other": "{{ count }} tries left"
+    },
+    "impossible": "This listing cannot be posted on {{ network }}.",
+    "toasts": {
+      "retried": "New try started for {{ network }}.",
+      "not-retryable": "This post cannot be tried again.",
+      "limit-reached": "No more tries on {{ network }} for this listing.",
+      "not-online": "The listing is no longer online: it cannot be posted.",
+      "failed": "The new try could not start. Please try again."
+    }
   }
 }

@@ -18,6 +18,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { LucideArrowLeft, LucidePlus } from '@lucide/angular';
 import { LocalePathPipe, LocaleService, localizePath } from '@soukly/i18n';
 import { ListingsApi, OwnListingCard } from '@soukly/listing-data';
+import { RetryFailure, SocialNetwork } from '@soukly/social-data';
 import { ToastService, UiAlert, UiButton, UiSkeleton, UiToastType } from '@soukly/ui';
 import { combineLatest, firstValueFrom, map, take } from 'rxjs';
 import { DeleteChoice, DeleteDialog, DeleteDialogData } from './delete-dialog';
@@ -25,9 +26,19 @@ import { ListingTabs } from './listing-tabs';
 import { MyListingsStore } from './my-listings-store';
 import { ListingCommand, OwnListingItem } from './own-listing-item';
 import { statusOf, Tab, tabOf } from './own-listing-state';
+import { SocialPostsStore } from './social-posts-store';
 
 /** How long the "Undo" of a deactivation stays offered (ANN-05: 5 seconds). */
 export const UNDO_DURATION_MS = 5000;
+
+/** Toast of a refused "Try again" (SOC-06). */
+const RETRY_TOASTS: Record<RetryFailure, string> = {
+  'not-retryable': 'posts.toasts.not-retryable',
+  'retry-limit-reached': 'posts.toasts.limit-reached',
+  'listing-not-online': 'posts.toasts.not-online',
+  'post-not-found': 'posts.toasts.failed',
+  unknown: 'posts.toasts.failed',
+};
 
 /**
  * "My listings" (`/{lang}/account/listings`, ANN-05): the listings of the member by tab (online,
@@ -36,6 +47,9 @@ export const UNDO_DURATION_MS = 5000;
  *
  * Deactivating needs no confirmation, but its toast offers "Undo" for 5 seconds; deleting asks
  * first in an alert dialog, which offers to deactivate instead when the listing is online.
+ *
+ * Each card shows where it was posted on the networks (SOC-06), read once the cards are shown:
+ * drafts were never posted, so they are not asked for.
  */
 @Component({
   selector: 'app-my-listings-page',
@@ -51,13 +65,14 @@ export const UNDO_DURATION_MS = 5000;
     ListingTabs,
     OwnListingItem,
   ],
-  providers: [MyListingsStore],
+  providers: [MyListingsStore, SocialPostsStore],
   templateUrl: './my-listings-page.html',
   styleUrl: './my-listings-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MyListingsPage {
   protected readonly store = inject(MyListingsStore);
+  protected readonly posts = inject(SocialPostsStore);
   private readonly api = inject(ListingsApi);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -89,6 +104,40 @@ export class MyListingsPage {
         void this.store.open(status);
       });
     });
+    effect(() => {
+      if (this.store.state() !== 'ready') {
+        return;
+      }
+      const ids = this.store
+        .items()
+        .filter((card) => card.status !== 'DRAFT')
+        .map((card) => card.id);
+      untracked(() => void this.posts.load(ids));
+    });
+  }
+
+  /** "Try again" on a failed post: a toast says it is queued, or why not. */
+  protected async retryPost(card: OwnListingCard, network: SocialNetwork): Promise<void> {
+    const outcome = await this.posts.retry(card.id, network);
+    const networkName = await firstValueFrom(this.translate(`posts.network.${network}`)).catch(
+      () => network,
+    );
+    if (outcome.ok) {
+      this.toast('posts.toasts.retried', 'success', undefined, { network: networkName });
+    } else {
+      this.toast(RETRY_TOASTS[outcome.failure], 'error', undefined, { network: networkName });
+    }
+  }
+
+  protected postsLoading(card: OwnListingCard): boolean {
+    return card.status !== 'DRAFT' && this.posts.state() === 'loading';
+  }
+
+  protected retryingNetwork(card: OwnListingCard): SocialNetwork | null {
+    const retrying = this.posts.retrying();
+    return retrying?.startsWith(`${card.id}:`)
+      ? (retrying.slice(card.id.length + 1) as SocialNetwork)
+      : null;
   }
 
   protected select(tab: Tab): void {
@@ -224,17 +273,18 @@ export class MyListingsPage {
     }
   }
 
-  private translate(key: string) {
-    return this.transloco.selectTranslate<string>(key, {}, 'account').pipe(take(1));
+  private translate(key: string, params: Record<string, unknown> = {}) {
+    return this.transloco.selectTranslate<string>(key, params, 'account').pipe(take(1));
   }
 
   private toast(
     key: string,
     type: UiToastType,
     action?: { key: string; run: () => void; duration: number },
+    params?: Record<string, unknown>,
   ): void {
     combineLatest([
-      this.translate(key),
+      this.translate(key, params),
       this.translate('listings.toasts.close'),
       this.translate(action?.key ?? 'listings.toasts.close'),
     ]).subscribe(([message, closeLabel, actionLabel]) =>

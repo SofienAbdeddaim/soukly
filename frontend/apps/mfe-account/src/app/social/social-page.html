@@ -13,12 +13,20 @@
 >
   <p class="social__intro">{{ 'account.social.intro' | transloco }}</p>
 
-  @if (connected()) {
+  @if (relaunch(); as blocked) {
+  <app-relaunch-banner
+    [blocked]="blocked"
+    [busy]="relaunching()"
+    [failed]="relaunchFailed()"
+    (confirmed)="confirmRelaunch()"
+    (dismissed)="dismissRelaunch()"
+  />
+  } @if (connected() && relaunch()?.network !== 'FACEBOOK') {
   <ui-alert type="success" data-testid="facebook-connected">
     <strong>{{ 'account.social.connected.title' | transloco }}</strong>
     {{ 'account.social.connected.text' | transloco }}
   </ui-alert>
-  } @if (instagramConnected()) {
+  } @if (instagramConnected() && relaunch()?.network !== 'INSTAGRAM') {
   <ui-alert type="success" data-testid="instagram-connected">
     <strong>{{ 'account.social.instagram-connected.title' | transloco }}</strong>
     {{ 'account.social.instagram-connected.text' | transloco }}

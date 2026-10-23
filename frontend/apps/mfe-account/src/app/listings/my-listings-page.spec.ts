@@ -10,6 +10,7 @@ import {
   OwnListingStatus,
   TEST_ID,
 } from '@soukly/listing-data';
+import { PostStatusView } from '@soukly/social-data';
 import { ToastService } from '@soukly/ui';
 import { BehaviorSubject } from 'rxjs';
 import { accountI18nTesting, accountTestingProviders } from '../testing/account-testing';
@@ -28,6 +29,18 @@ const SOON = ownListingCard({
   expiresAt: inDays(1.5),
   contactRevealsCount: 1,
 });
+
+function post(overrides: Partial<PostStatusView>): PostStatusView {
+  return {
+    network: 'FACEBOOK',
+    status: 'PUBLISHED',
+    badge: 'PUBLISHED',
+    retryable: false,
+    manualRetriesLeft: 3,
+    updatedAt: '2026-10-21T09:00:00Z',
+    ...overrides,
+  };
+}
 
 describe('MyListingsPage', () => {
   let http: HttpTestingController;
@@ -78,8 +91,16 @@ describe('MyListingsPage', () => {
     expectMine(status).flush({ items, counts });
   }
 
+  function expectPosts(): TestRequest {
+    return http.expectOne((request) => request.url === '/api/social/posts');
+  }
+
   afterEach(() => {
     vi.useRealTimers();
+    // The pills of the cards (SOC-06) are read after every list; the tests below look at them.
+    http
+      .match((request) => request.url === '/api/social/posts')
+      .forEach((request) => request.flush({ listings: [] }));
     http.verify();
     document.querySelectorAll('.cdk-overlay-container').forEach((node) => node.remove());
   });
@@ -294,5 +315,198 @@ describe('MyListingsPage', () => {
     expect(text(byTestId('tab-online'))).toBe('منشورة 3');
     expect(text(byTestId('own-listing-primary'))).toBe('تعديل');
     expect(text(byTestId('own-listing-price'))).toContain('د.ت.');
+  });
+
+  describe('posts on the networks (SOC-06)', () => {
+    it('shows a pill per network, a link to a published post, nothing without post', async () => {
+      const { render, all, text, byTestId } = await setup();
+      flushMine('PUBLISHED', [ONLINE, SOON]);
+      await render();
+
+      expect(byTestId('post-badges-loading')).not.toBeNull();
+      const request = expectPosts();
+      expect(request.request.params.get('listingIds')).toBe(`${ONLINE.id},${SOON.id}`);
+      request.flush({
+        listings: [
+          {
+            listingId: ONLINE.id,
+            posts: [
+              post({ permalink: 'https://www.facebook.com/123_456' }),
+              post({ network: 'INSTAGRAM', status: 'PENDING', badge: 'PENDING' }),
+            ],
+          },
+        ],
+      });
+      await render();
+
+      const [first, second] = all('own-listing');
+      const badges = [...first.querySelectorAll('[data-testid=post-badge]')];
+      expect(badges.map((badge) => text(badge))).toEqual([
+        'f Facebook · publié ↗',
+        'IG Instagram · en cours',
+      ]);
+      expect(badges[0].getAttribute('href')).toBe('https://www.facebook.com/123_456');
+      expect(badges[0].getAttribute('target')).toBe('_blank');
+      expect(badges[0].getAttribute('aria-label')).toBe(
+        'Facebook : publié, ouvrir le post (nouvel onglet)',
+      );
+      expect(second.querySelector('[data-testid=post-badges]')).toBeNull();
+      expect(byTestId('post-badges-loading')).toBeNull();
+    });
+
+    it('offers "Try again" on a failure, then shows it in progress with a toast', async () => {
+      const { render, byTestId, text, show } = await setup();
+      flushMine('PUBLISHED', [ONLINE]);
+      await render();
+      const failed = post({
+        network: 'INSTAGRAM',
+        status: 'FAILED',
+        badge: 'FAILED',
+        reason: 'RETRIES_EXHAUSTED',
+        retryable: true,
+      });
+      expectPosts().flush({ listings: [{ listingId: ONLINE.id, posts: [failed] }] });
+      await render();
+
+      expect(text(byTestId('post-badge'))).toBe('IG Instagram · échec');
+      expect(text(byTestId('post-failure'))).toContain(
+        'Instagram n’a pas publié l’annonce. Le service n’a pas répondu après plusieurs essais.',
+      );
+      expect(text(byTestId('post-retries-left'))).toBe('3 essais restants');
+
+      byTestId('post-retry').click();
+      await render();
+      const retry = http.expectOne(`/api/social/posts/${ONLINE.id}/INSTAGRAM/retry`);
+      expect(retry.request.method).toBe('POST');
+      retry.flush(
+        post({ network: 'INSTAGRAM', status: 'PENDING', badge: 'PENDING', manualRetriesLeft: 2 }),
+      );
+      await render();
+      await render();
+
+      expect(text(byTestId('post-badge'))).toBe('IG Instagram · en cours');
+      expect(byTestId('post-failure')).toBeNull();
+      expect(show.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({
+          type: 'success',
+          message: 'Nouvelle tentative lancée pour Instagram.',
+        }),
+      );
+    });
+
+    it('says why a retry is refused, and when no try is left', async () => {
+      const { render, byTestId, text, show } = await setup();
+      flushMine('PUBLISHED', [ONLINE]);
+      await render();
+      const failed = post({
+        status: 'FAILED',
+        badge: 'FAILED',
+        reason: 'MEDIA_REJECTED',
+        retryable: true,
+        manualRetriesLeft: 1,
+      });
+      expectPosts().flush({ listings: [{ listingId: ONLINE.id, posts: [failed] }] });
+      await render();
+      expect(text(byTestId('post-failure'))).toContain('Facebook a refusé une des photos.');
+      expect(text(byTestId('post-retries-left'))).toBe('1 essai restant');
+
+      byTestId('post-retry').click();
+      await render();
+      http
+        .expectOne(`/api/social/posts/${ONLINE.id}/FACEBOOK/retry`)
+        .flush(
+          { type: 'urn:soukly:problem:retry-limit-reached', status: 409 },
+          { status: 409, statusText: 'Conflict' },
+        );
+      await render();
+      expectPosts().flush({
+        listings: [
+          { listingId: ONLINE.id, posts: [{ ...failed, retryable: false, manualRetriesLeft: 0 }] },
+        ],
+      });
+      await render();
+      await render();
+
+      expect(byTestId('post-retry')).toBeNull();
+      expect(text(byTestId('post-impossible'))).toBe(
+        'Publication impossible sur Facebook pour cette annonce.',
+      );
+      expect(show.mock.calls.at(-1)?.[0]).toEqual(
+        expect.objectContaining({
+          type: 'error',
+          message: 'Plus aucun essai possible sur Facebook pour cette annonce.',
+        }),
+      );
+    });
+
+    it('links a network to connect again to "My networks", without "Try again"', async () => {
+      const { render, byTestId, text } = await setup();
+      flushMine('PUBLISHED', [ONLINE]);
+      await render();
+      expectPosts().flush({
+        listings: [
+          {
+            listingId: ONLINE.id,
+            posts: [
+              post({ status: 'SKIPPED', badge: 'TO_RECONNECT', errorCode: 'needs-reconnect' }),
+            ],
+          },
+        ],
+      });
+      await render();
+
+      expect(text(byTestId('post-badge'))).toBe('f Facebook · à relier');
+      expect(text(byTestId('post-reconnect'))).toBe(
+        'Votre Page Facebook doit être reliée à nouveau. Relier à nouveau',
+      );
+      expect(byTestId('post-reconnect').querySelector('a')?.getAttribute('href')).toBe(
+        '/fr/account/social',
+      );
+      expect(byTestId('post-retry')).toBeNull();
+    });
+
+    it('hides the pills when they cannot be read, the list staying', async () => {
+      const { render, byTestId, all } = await setup();
+      flushMine('PUBLISHED', [ONLINE]);
+      await render();
+      expectPosts().flush(null, { status: 503, statusText: 'Service Unavailable' });
+      await render();
+
+      expect(all('own-listing')).toHaveLength(1);
+      expect(byTestId('post-badges')).toBeNull();
+      expect(byTestId('post-badges-loading')).toBeNull();
+    });
+
+    it('is in Arabic', async () => {
+      const { render, byTestId, all, text } = await setup(null, 'ar');
+      flushMine('PUBLISHED', [ONLINE]);
+      await render();
+      expectPosts().flush({
+        listings: [
+          {
+            listingId: ONLINE.id,
+            posts: [
+              post({ permalink: 'https://www.facebook.com/123_456' }),
+              post({
+                network: 'INSTAGRAM',
+                status: 'FAILED',
+                badge: 'FAILED',
+                reason: 'REJECTED',
+                retryable: true,
+                manualRetriesLeft: 1,
+              }),
+            ],
+          },
+        ],
+      });
+      await render();
+
+      expect(all('post-badge').map((badge) => text(badge))).toEqual([
+        'f فيسبوك · منشور ↗',
+        'IG إنستغرام · فشل',
+      ]);
+      expect(text(byTestId('post-retry'))).toBe('إعادة المحاولة');
+      expect(text(byTestId('post-retries-left'))).toBe('محاولة واحدة متبقية');
+    });
   });
 });

@@ -31,8 +31,16 @@ spring:
         request.timeout.ms: 5000
         delivery.timeout.ms: 10000
     admin:
+      # The social events topics are declared at startup (local and dev, SOC-06); a broker that is down does not
+      # prevent the start.
       fail-fast: false
       operation-timeout: 10s
+  task:
+    scheduling:
+      pool:
+        # Publishers, token refresh, housekeeping and the outbox relay do not wait for each other; each task runs once
+        # at a time on its own
+        size: 4
 
 management:
   endpoints:
@@ -95,16 +103,37 @@ soukly:
       refresh-initial-delay: PT10M
     # Labels of the categories and places for the post texts (SOC-03): public referential endpoints of listing-service,
     # reached directly, never through the gateway
+    # Statuses of the listings (SOC-06): internal endpoints /internal/listings/**, with the shared X-Internal-Token
     listing-service:
       base-url: ${LISTING_SERVICE_URL:http://localhost:8082}
+      internal-api-token: ${INTERNAL_API_TOKEN:}
       labels-cache-ttl: 1h
     # Consumers of the user events (AUTH-05) and of the listing events (SOC-04): a failed message is retried 3 times,
     # then sent to the DLQ of its topic
     events:
       retries: 3
       retry-interval: 2s
+    # Social events (SOC-06): outbox relay to soukly.social-events, same behavior as the ones of listing-service
+    # (ANN-03) and user-service (AUTH-05)
+    outbox:
+      relay-interval: PT1S
+      relay-initial-delay: PT5S
+      batch-size: 100
+      send-timeout: 15s
+      retention: 7d
+      purge-interval: PT1H
+      partitions: 3
+    # Email "connect again" (SOC-06), sent by user-service on social.connection.needs-reconnect: at most one per
+    # connection within this delay
+    reconnect-notice:
+      interval: 24h
     # Publication of the listings on the Facebook Pages (SOC-04)
     posts:
+      # What the seller can do on "My listings" (SOC-06): "Try again" per post, and the age of the posts blocked by a
+      # connection problem that are offered again after a reconnection
+      follow-up:
+        max-manual-retries: 3
+        relaunch-window: 30d
       facebook:
         # The task takes the PENDING posts that are due every publish-interval
         publish-interval: PT10S

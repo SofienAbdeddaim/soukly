@@ -1,4 +1,4 @@
-package com.soukly.user.listing;
+package com.soukly.user.event;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -7,9 +7,9 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** Deduplication of the consumed events by {@code eventId}. */
+/** Deduplication of the consumed events (listing and social events) by {@code eventId}. */
 @Repository
-class ProcessedEvents {
+public class ProcessedEvents {
 
     private final JdbcTemplate jdbc;
 
@@ -22,7 +22,7 @@ class ProcessedEvents {
      *
      * @return {@code false} when it was processed already: its effect must not happen again
      */
-    boolean markProcessed(UUID eventId, Instant now) {
+    public boolean markProcessed(UUID eventId, Instant now) {
         return jdbc.update("INSERT INTO processed_events (event_id, processed_at) VALUES (?, ?) ON CONFLICT DO NOTHING",
                 eventId, Timestamp.from(now)) == 1;
     }

@@ -348,4 +348,99 @@ describe('SocialPage', () => {
       expect(element().querySelector('[data-testid=social-return]')).toBeNull();
     });
   });
+
+  describe('relaunch after connecting again (SOC-06)', () => {
+    const titles = [
+      'Canapé d’angle en velours',
+      'Table basse en olivier',
+      'Lampe berbère en cuivre',
+    ];
+    const blocked = (count: number) => ({
+      network: 'FACEBOOK',
+      total: count,
+      listings: Array.from({ length: count }, (_, i) => ({
+        listingId: `l-${i}`,
+        title: titles[i] ?? `Annonce ${i + 1}`,
+      })),
+    });
+
+    async function connectedAgain(count: number) {
+      const page = await setup('/fr/account/social?facebook=connected', [SFAX_AUTO]);
+      const read = page.http.expectOne((request) => request.url === '/api/social/posts/blocked');
+      expect(read.request.params.get('network')).toBe('FACEBOOK');
+      read.flush(blocked(count));
+      await settle();
+      await page.harness.fixture.whenStable();
+      const banner = () =>
+        page.element().querySelector('[data-testid=relaunch-banner]') as HTMLElement | null;
+      return { ...page, banner };
+    }
+
+    it('offers to post the listings blocked meanwhile, then posts them', async () => {
+      const { harness, http, element, banner } = await connectedAgain(3);
+      const show = vi.spyOn(TestBed.inject(ToastService), 'show').mockReturnValue(1);
+
+      expect(banner()?.getAttribute('role')).toBe('status');
+      expect(banner()?.textContent).toContain(
+        'Page reliée à nouveau. 3 annonces n’ont pas été publiées sur Facebook pendant la coupure. Les publier maintenant ?',
+      );
+      const items = [...(banner()?.querySelectorAll('li') ?? [])].map((li) =>
+        li.textContent?.trim(),
+      );
+      expect(items).toEqual(titles);
+      expect(element().querySelector('[data-testid=facebook-connected]')).toBeNull();
+
+      const confirm = banner()?.querySelector('[data-testid=relaunch-confirm]') as HTMLElement;
+      expect(confirm.textContent?.trim()).toBe('Publier les 3 annonces');
+      confirm.click();
+      const relaunch = http.expectOne('/api/social/posts/relaunch');
+      expect(relaunch.request.body).toEqual({ network: 'FACEBOOK' });
+      relaunch.flush({ relaunched: 3 });
+      await settle();
+      await harness.fixture.whenStable();
+
+      expect(banner()).toBeNull();
+      expect(show.mock.calls.at(-1)?.[0].message).toBe(
+        'Les annonces vont être publiées sur Facebook dans les prochaines minutes.',
+      );
+    });
+
+    it('lists 5 titles at most, and "No thanks" changes nothing', async () => {
+      const { harness, http, banner } = await connectedAgain(7);
+
+      const items = [...(banner()?.querySelectorAll('li') ?? [])].map((li) =>
+        li.textContent?.trim(),
+      );
+      expect(items).toHaveLength(6);
+      expect(items.at(-1)).toBe('et 2 autres');
+
+      (banner()?.querySelector('[data-testid=relaunch-dismiss]') as HTMLElement).click();
+      await harness.fixture.whenStable();
+      expect(banner()).toBeNull();
+      http.expectNone('/api/social/posts/relaunch');
+    });
+
+    it('shows no banner after a first connection', async () => {
+      const { element, banner } = await connectedAgain(0);
+
+      expect(banner()).toBeNull();
+      expect(element().querySelector('[data-testid=facebook-connected]')).not.toBeNull();
+    });
+
+    it('is in Arabic', async () => {
+      const page = await setup('/ar/account/social?instagram=connected', [SFAX_INSTAGRAM], 'ar');
+      page.http
+        .expectOne((request) => request.url === '/api/social/posts/blocked')
+        .flush({ ...blocked(1), network: 'INSTAGRAM' });
+      await settle();
+      await page.harness.fixture.whenStable();
+
+      const banner = page.element().querySelector('[data-testid=relaunch-banner]');
+      expect(banner?.textContent).toContain('تم ربط الحساب من جديد.');
+      expect(banner?.textContent).toContain('لم يُنشر إعلان واحد على إنستغرام أثناء الانقطاع.');
+      expect(banner?.querySelector('[data-testid=relaunch-confirm]')?.textContent?.trim()).toBe(
+        'نشر الإعلان',
+      );
+    });
+  });
 });

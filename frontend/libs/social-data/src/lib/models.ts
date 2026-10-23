@@ -104,3 +104,55 @@ export type InstagramFailure =
 export type InstagramCallbackOutcome =
   | { kind: 'connected'; lang: string; connection: SocialConnection }
   | { kind: 'failed'; lang: string | null; failure: InstagramFailure };
+
+/** Status of a post of a listing on one network (SOC-04, SOC-05). */
+export type PostStatus = 'PENDING' | 'PUBLISHED' | 'FAILED' | 'SKIPPED' | 'CANCELLED' | 'DELETED';
+
+/** The pill shown on "My listings" (SOC-06), computed by social-publisher. */
+export type PostBadge = 'PUBLISHED' | 'PENDING' | 'TO_RECONNECT' | 'FAILED';
+
+/**
+ * Why a post failed, never the raw message of Meta: the retries gave up, a photo was refused, the
+ * network was not connected (then connected again), or the network refused the post.
+ */
+export type PostFailureReason =
+  'RETRIES_EXHAUSTED' | 'MEDIA_REJECTED' | 'NOT_CONNECTED' | 'REJECTED';
+
+/** A post of a listing, as `GET /social/posts` returns it (SOC-06). */
+export interface PostStatusView {
+  network: SocialNetwork;
+  status: PostStatus;
+  badge: PostBadge;
+  /** Set on a `FAILED` badge only. */
+  reason?: PostFailureReason;
+  /** Link of the post, on a `PUBLISHED` badge only. */
+  permalink?: string;
+  errorCode?: string;
+  retryable: boolean;
+  manualRetriesLeft: number;
+  /** ISO instant. */
+  updatedAt: string;
+}
+
+/** The posts of one listing, Facebook first; a listing without post is not in the answer. */
+export interface ListingPosts {
+  listingId: string;
+  posts: PostStatusView[];
+}
+
+/** A listing still online whose post was blocked while the network was not connected. */
+export interface BlockedListing {
+  listingId: string;
+  title: string | null;
+}
+
+/** The listings that can be posted again after a reconnection (SOC-06). */
+export interface BlockedListings {
+  network: SocialNetwork;
+  total: number;
+  listings: BlockedListing[];
+}
+
+/** Stable reasons of a refused retry, the problem types of social-publisher, plus `unknown`. */
+export type RetryFailure =
+  'not-retryable' | 'retry-limit-reached' | 'listing-not-online' | 'post-not-found' | 'unknown';

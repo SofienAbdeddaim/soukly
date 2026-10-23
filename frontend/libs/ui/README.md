@@ -57,6 +57,7 @@ Defined once in [`src/styles/tokens.css`](src/styles/tokens.css), on `:root`, on
 | `--color-success`                                | `#1B6E45`                             | success toast                                                        | `text-success`                |
 | `--color-success-surface`                        | `#E8F3EC`                             | background of a success alert, `success` badge                       | `bg-success-surface`          |
 | `--color-warning-surface`                        | `#FCE8B8` light saffron               | `warning` badge (listing that expires soon, ANN-05)                  | `bg-warning-surface`          |
+| `--color-pending-surface`                        | `#ECE7F5` light lavender              | `pending` badge (post being published, SOC-06)                       | `bg-pending-surface`          |
 
 Other tokens: `--font-display` (Lalezar, `h1`/`h2` headings), `--font-body` (Rubik 400, 500, 600); `--radius-sm` 6px, `--radius-md` 10px, `--radius-lg` 14px, `--radius-full`; `--shadow-card`, `--shadow-overlay`; `--focus-ring` (double ring: a background-coloured gap then an indigo ring, visible on light backgrounds and on indigo); `--control-height` 44px and `--control-height-lg` 52px. Spacing follows the default Tailwind scale.
 
@@ -89,6 +90,7 @@ Ratios computed with the WCAG 2.x formula on the `tokens.css` values (2026-10-15
 | `success` on `success-surface`  | success alert                               | 5.49  | OK                |
 | `text` on `success-surface`     | `success` badge (ANN-05)                    | 13.28 | OK                |
 | `text` on `warning-surface`     | `warning` badge (ANN-05)                    | 12.50 | OK                |
+| `text` on `pending-surface`     | `pending` badge (SOC-06)                    | 12.46 | OK                |
 | `text` on `danger-surface`      | `danger` badge (ANN-05)                     | 13.21 | OK                |
 | `accent` on `brand`             | welcome text on indigo (AUTH-03)            | 8.12  | OK                |
 | `border-strong` on `surface`    | field border, `ghost` button (non-text)     | 3.75  | OK (3:1)          |

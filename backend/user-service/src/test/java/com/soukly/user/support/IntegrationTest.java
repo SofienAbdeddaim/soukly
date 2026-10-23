@@ -21,6 +21,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.soukly.common.event.ListingEvents;
+import com.soukly.common.event.SocialEvents;
 
 /**
  * Base of the integration tests: one Spring context for every class, a PostgreSQL container (Testcontainers), an
@@ -90,7 +91,7 @@ public abstract class IntegrationTest {
         return id;
     }
 
-    /** The topics of listing-service, which creates them outside the tests. */
+    /** The topics of listing-service and social-publisher, which create them outside the tests. */
     @TestConfiguration(proxyBeanMethods = false)
     static class TopicsConfig {
 
@@ -102,6 +103,16 @@ public abstract class IntegrationTest {
         @Bean
         NewTopic listingEventsDlqTopic() {
             return TopicBuilder.name(ListingEvents.DLQ_TOPIC).partitions(1).replicas(1).build();
+        }
+
+        @Bean
+        NewTopic socialEventsTopic() {
+            return TopicBuilder.name(SocialEvents.TOPIC).partitions(3).replicas(1).build();
+        }
+
+        @Bean
+        NewTopic socialEventsDlqTopic() {
+            return TopicBuilder.name(SocialEvents.DLQ_TOPIC).partitions(1).replicas(1).build();
         }
     }
 

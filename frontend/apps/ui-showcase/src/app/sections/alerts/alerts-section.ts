@@ -5,7 +5,7 @@ import { ShowcaseSection } from '../../layout/showcase-section/showcase-section'
 
 /**
  * ui-alert: info, success and error. Not live here, so the page does not announce them on load.
- * ui-badge: its four tones.
+ * ui-badge: its five tones.
  */
 @Component({
   selector: 'app-alerts-section',
@@ -19,7 +19,8 @@ import { ShowcaseSection } from '../../layout/showcase-section/showcase-section'
         <ui-badge tone="success">{{ t().badges[0] }}</ui-badge>
         <ui-badge tone="warning">{{ t().badges[1] }}</ui-badge>
         <ui-badge tone="danger">{{ t().badges[2] }}</ui-badge>
-        <ui-badge>{{ t().badges[3] }}</ui-badge>
+        <ui-badge tone="pending">{{ t().badges[3] }}</ui-badge>
+        <ui-badge>{{ t().badges[4] }}</ui-badge>
       </p>
     </app-showcase-section>
   `,

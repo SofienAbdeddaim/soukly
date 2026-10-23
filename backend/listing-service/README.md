@@ -609,6 +609,21 @@ and ignores every other type.
   `soukly.user-events.dlq` with the cause in the `kafka_dlt-*` headers. A message that does not follow the contract
   goes to the DLQ at once. The logs name the account by id only.
 
+## Internal statuses of listings (SOC-06)
+
+social-publisher checks that a listing is online before it puts a post back in the queue ("Try again", relaunch after a
+reconnection). The endpoints `/internal/**` have their own security chain, as in user-service: the shared
+`INTERNAL_API_TOKEN` in `X-Internal-Token` (compared in constant time), never a user's access token; a missing or wrong
+token, or an empty `INTERNAL_API_TOKEN`, is `401`. The gateway never routes them.
+
+| Endpoint | Answer |
+| --- | --- |
+| `GET /internal/listings/{id}/status` | `{ id, status, online }`, `404` for an unknown id |
+| `POST /internal/listings/statuses` `{ ids: [...] }` | `{ statuses: [{ id, status, online }] }` for at most 50 ids; unknown ids are left out |
+
+`online` is true for a `PUBLISHED` listing before its expiry; a `PUBLISHED` listing past its expiry answers `EXPIRED`,
+as the search and the listing page see it.
+
 ## Data
 
 Flyway migrations in `src/main/resources/db/migration`:
@@ -679,7 +694,7 @@ Write a **new** migration (`V5__…`, never edit a released one: Flyway checks t
 | `LISTING_CLOCK_OFFSET` | `PT0S` | local manual tests only: moves the business clock forward (`P58D`) |
 | `SEARCH_CURSOR_SECRET` | empty (random key per start) | signs the search cursors |
 | `USER_SERVICE_URL` | `http://localhost:8081` | user-service as this service reaches it (internal endpoints, CATA-03) |
-| `INTERNAL_API_TOKEN` | empty | shared token sent in `X-Internal-Token` to user-service |
+| `INTERNAL_API_TOKEN` | empty | shared token sent in `X-Internal-Token` to user-service, and expected on `/internal/**` (SOC-06) |
 | `CONTACT_MAX_LISTINGS_PER_DAY` | `30` | distinct listings whose number a member may see per 24 hours |
 
 Photo limits and timings are under `soukly.listing.photos.*` in `application.yml` (10 photos, 5 MB, 50 megapixels,

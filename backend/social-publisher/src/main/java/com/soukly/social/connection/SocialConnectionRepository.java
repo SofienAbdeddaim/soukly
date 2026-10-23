@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -156,10 +157,26 @@ public class SocialConnectionRepository {
                 userId, network.name()).stream().findFirst();
     }
 
-    /** The network refused the token: the member must connect again ({@link #save} clears it). */
-    public void markNeedsReconnect(UUID id) {
-        jdbc.update("UPDATE social_connections SET status = 'NEEDS_RECONNECT', updated_at = ? WHERE id = ?",
-                Timestamp.from(clock.instant()), id);
+    /**
+     * The network refused the token: the member must connect again ({@link #save} clears it). Only a connected account
+     * changes; {@code reconnect_notified_at} becomes {@code now} when the last email "connect again" is older than
+     * {@code noticeInterval} (or there was none), in the same statement, so two changes at once never both notify.
+     * Use {@link ConnectionHealth#needsReconnect}, which writes the event too.
+     *
+     * @return the change; empty when the connection was not {@code CONNECTED} (already to reconnect, or deleted)
+     */
+    Optional<NeedsReconnectChange> markNeedsReconnect(UUID id, Duration noticeInterval) {
+        Timestamp now = Timestamp.from(clock.instant());
+        Timestamp notifiedBefore = Timestamp.from(clock.instant().minus(noticeInterval));
+        return jdbc.query("""
+                UPDATE social_connections SET status = 'NEEDS_RECONNECT', updated_at = ?,
+                    reconnect_notified_at = CASE WHEN reconnect_notified_at IS NULL OR reconnect_notified_at <= ?
+                        THEN ? ELSE reconnect_notified_at END
+                WHERE id = ? AND status = 'CONNECTED'
+                RETURNING user_id, network, display_name, reconnect_notified_at = ? AS send_email
+                """, (rs, row) -> new NeedsReconnectChange(rs.getObject("user_id", UUID.class),
+                Network.valueOf(rs.getString("network")), rs.getString("display_name"), rs.getBoolean("send_email")),
+                now, notifiedBefore, now, id, now).stream().findFirst();
     }
 
     private static Timestamp timestamp(Instant instant) {

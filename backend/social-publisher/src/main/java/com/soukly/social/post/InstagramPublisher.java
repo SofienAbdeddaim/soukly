@@ -20,6 +20,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.soukly.social.caption.CaptionBuilder;
 import com.soukly.social.caption.CaptionUnavailableException;
 import com.soukly.social.caption.ReferentialLabels;
+import com.soukly.social.connection.ConnectionHealth;
 import com.soukly.social.connection.ConnectionStatus;
 import com.soukly.social.connection.Network;
 import com.soukly.social.connection.PublishingAccount;
@@ -69,6 +70,7 @@ public class InstagramPublisher {
 
     private final SocialPostRepository posts;
     private final SocialConnectionRepository connections;
+    private final ConnectionHealth connectionHealth;
     private final InstagramGraphClient instagram;
     private final InstagramProperties instagramProperties;
     private final InstagramPostingProperties properties;
@@ -82,11 +84,12 @@ public class InstagramPublisher {
     private final AtomicBoolean running = new AtomicBoolean();
 
     InstagramPublisher(SocialPostRepository posts, SocialConnectionRepository connections,
-            InstagramGraphClient instagram, InstagramProperties instagramProperties,
+            ConnectionHealth connectionHealth, InstagramGraphClient instagram, InstagramProperties instagramProperties,
             InstagramPostingProperties properties, CaptionBuilder captions, ReferentialLabels labels,
             PhotoVariantService variants, PostMetrics metrics, TransactionTemplate transactions, Clock clock) {
         this.posts = posts;
         this.connections = connections;
+        this.connectionHealth = connectionHealth;
         this.instagram = instagram;
         this.instagramProperties = instagramProperties;
         this.properties = properties;
@@ -194,7 +197,7 @@ public class InstagramPublisher {
                 case TEMPORARY -> attempts.temporaryFailure(post, failure.errorCode(),
                         FacebookPublisher.elapsed(start));
                 case TOKEN_INVALID -> {
-                    connections.markNeedsReconnect(account.id());
+                    connectionHealth.needsReconnect(account.id());
                     yield attempts.failed(post, failure.errorCode(), FacebookPublisher.elapsed(start));
                 }
                 default -> attempts.failed(post, failure.errorCode(), FacebookPublisher.elapsed(start));

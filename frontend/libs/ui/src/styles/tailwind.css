@@ -34,6 +34,7 @@
   --color-success: var(--color-success);
   --color-success-surface: var(--color-success-surface);
   --color-warning-surface: var(--color-warning-surface);
+  --color-pending-surface: var(--color-pending-surface);
   --color-transparent: transparent;
   --color-current: currentcolor;
 

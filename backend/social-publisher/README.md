@@ -218,6 +218,53 @@ InstagramPublisher (every 10 s) ── lock a due INSTAGRAM row ── token dec
 | `status-checks` / `status-interval` | `5` / `12s` |
 | `quota-retry-delay` | `1h` |
 
+## Publication statuses on "My listings" (SOC-06)
+
+The seller sees, on each listing of "My listings", where it was published and what failed, and can act on it
+(`post` package: `SocialPostController`, `PostFollowUp`, `PostBadges`).
+
+| Endpoint (JWT) | Effect |
+| --- | --- |
+| `GET /social/posts?listingIds=a,b` | the posts of these listings (50 ids at most), Facebook first: `{ listings: [{ listingId, posts: [{ network, status, badge, reason, permalink, errorCode, retryable, manualRetriesLeft, updatedAt }] }] }`. Listings of other members and listings without a badge are left out, never revealed. |
+| `POST /social/posts/{listingId}/{network}/retry` | "Try again" a `FAILED` post: `PENDING`, due now, `attempts = 0`, one more `manual_retries`; the publishers of SOC-04/05 take it with the same content and pace. Answers the post as `GET` does. |
+| `GET /social/posts/blocked?network=FACEBOOK` | the posts of this network blocked by `needs-reconnect` or `permission-missing`, created less than 30 days ago, whose listing is still online: `{ network, total, listings: [{ listingId, title }] }` |
+| `POST /social/posts/relaunch` `{ network }` | puts those posts back in the queue (`attempts = 0`, no manual attempt counted): `{ relaunched: N }` |
+
+Badges (`PostBadges`):
+
+| Row | `badge` |
+| --- | --- |
+| `PUBLISHED` | `PUBLISHED`, with `permalink` |
+| `PENDING` | `PENDING` |
+| `FAILED` / `SKIPPED` with `needs-reconnect` or `permission-missing`, network not connected again since | `TO_RECONNECT` (no "Try again") |
+| the same, network connected again after the row was blocked | `FAILED`, `reason: NOT_CONNECTED`, can be tried again |
+| `FAILED`, other code | `FAILED`, `reason`: `MEDIA_REJECTED` (`media-rejected`), `RETRIES_EXHAUSTED` (every automatic attempt used: `attempts` ≥ 1 + the `retry-delays` of the network), `REJECTED` otherwise |
+| `SKIPPED` `not-connected`, `CANCELLED`, `DELETED` | none |
+
+- `retryable` is true for a `FAILED` badge with manual attempts left (3 per post, V5 `manual_retries`). The message of
+  Meta is never returned: only the stable `errorCode` and `reason`.
+- Problems (`409`): `not-retryable` (not a failure that can be tried again: published, pending, to reconnect),
+  `retry-limit-reached`, `listing-not-online`, `network-not-connected` (relaunch before the reconnection);
+  `404 post-not-found` for a listing of another member or without a post on this network; `503
+  listing-service-unavailable` when the status of the listing cannot be read (nothing changes).
+- **Listing online**: checked before any post goes back to the queue, with the internal endpoints of listing-service
+  (`GET /internal/listings/{id}/status`, `POST /internal/listings/statuses` by batches of 50) and the shared
+  `INTERNAL_API_TOKEN` in `X-Internal-Token`; never routed by the gateway.
+- **Email "connect again"** (`connection/ConnectionHealth`): when a connection goes from `CONNECTED` to
+  `NEEDS_RECONNECT` (invalid token at a publication or a removal, Instagram token that cannot be refreshed),
+  `social.connection.needs-reconnect` is written to the outbox (V5 `outbox_events`, relay of `common`) in the same
+  transaction, at most once per connection within 24 hours (`reconnect_notified_at`, `soukly.social.reconnect-notice.interval`).
+  user-service sends the email; this service never sends one. Contract:
+  [`docs/events/social-events.md`](../../docs/events/social-events.md). The topic `soukly.social-events` and its DLQ
+  are declared at startup.
+
+| Setting | Default |
+| --- | --- |
+| `soukly.social.posts.follow-up.max-manual-retries` | `3` |
+| `soukly.social.posts.follow-up.relaunch-window` | `30d` |
+| `soukly.social.reconnect-notice.interval` | `24h` |
+| `soukly.social.outbox.*` | relay every second, batches of 100, sent events kept 7 days |
+
 ## Configuration
 
 | Variable                                  | Meaning                                                                                                                                   |
@@ -230,8 +277,9 @@ InstagramPublisher (every 10 s) ── lock a due INSTAGRAM row ── token dec
 | `INSTAGRAM_TOKEN_REFRESH_BEFORE`          | the daily task refreshes the Instagram tokens that expire within this delay, `10d` by default                                            |
 | `FRONT_BASE_URL` (else `PUBLIC_BASE_URL`) | origin of the redirect URIs `{FRONT_BASE_URL}/oauth/facebook/callback` and `/oauth/instagram/callback`                                  |
 | `USER_SERVICE_JWKS_URI`, `JWT_ISSUER`     | validation of the access tokens, as in the gateway                                                                                        |
-| `KAFKA_BOOTSTRAP_SERVERS`                 | Redpanda, for `user.deleted`                                                                                                              |
-| `LISTING_SERVICE_URL`                     | listing-service as this service reaches it, for the labels of the post texts (SOC-03), `http://localhost:8082` by default               |
+| `KAFKA_BOOTSTRAP_SERVERS`                 | Redpanda, for `user.deleted`, the listing events and the social events (SOC-06)                                                          |
+| `LISTING_SERVICE_URL`                     | listing-service as this service reaches it, for the labels of the post texts (SOC-03) and the statuses of the listings (SOC-06), `http://localhost:8082` by default |
+| `INTERNAL_API_TOKEN`                      | shared token sent in `X-Internal-Token` to the internal endpoints of listing-service (SOC-06)                                            |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | the bucket of the photos of listing-service, read and written for the Instagram versions (SOC-05); locally the root `.env` names the keys `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` |
 | `PHOTO_PUBLIC_BASE_URL`                   | public URL of the bucket root, the same as listing-service: Instagram fetches the JPEG versions from it                                   |
 | `VIPS_BIN_DIRECTORY`                      | directory of `vips` and `vipsheader` (package `libvips-tools`, in the image); empty = the `PATH`                                         |

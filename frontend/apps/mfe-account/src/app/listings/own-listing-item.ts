@@ -13,9 +13,11 @@ import {
 } from '@lucide/angular';
 import { LocalDatePipe, LocaleService, PricePipe } from '@soukly/i18n';
 import { OwnListingCard } from '@soukly/listing-data';
-import { UiBadge, UiButton } from '@soukly/ui';
+import { PostStatusView, SocialNetwork } from '@soukly/social-data';
+import { UiBadge, UiButton, UiSkeleton } from '@soukly/ui';
 import { pluralKey } from '../shared/plural';
 import { badgeOf, primaryActionOf } from './own-listing-state';
+import { SocialPostBadges } from './social-post-badges';
 
 /** Actions of a card handled by the page; the links (edit, continue, view) navigate on their own. */
 export type ListingCommand = 'renew' | 'share' | 'deactivate' | 'delete';
@@ -23,6 +25,7 @@ export type ListingCommand = 'renew' | 'share' | 'deactivate' | 'delete';
 /**
  * One listing on "My listings" (ANN-05): cover, title, price, state pill, numbers shown, the main
  * action of its state and the "⋯" menu (CDK menu: arrow keys, Escape, focus back on the button).
+ * Under them, where the listing was posted on the networks (SOC-06).
  */
 @Component({
   selector: 'app-own-listing-item',
@@ -43,6 +46,8 @@ export type ListingCommand = 'renew' | 'share' | 'deactivate' | 'delete';
     LucideTrash,
     UiBadge,
     UiButton,
+    UiSkeleton,
+    SocialPostBadges,
   ],
   templateUrl: './own-listing-item.html',
   styleUrl: './own-listing-item.css',
@@ -56,6 +61,13 @@ export class OwnListingItem {
   /** An action of this card is running: its buttons wait. */
   readonly busy = input(false);
   readonly requested = output<ListingCommand>();
+  /** Posts of the listing on the networks (SOC-06); empty when none, or when they could not be read. */
+  readonly posts = input<PostStatusView[]>([]);
+  /** The posts are being read: a discreet skeleton. */
+  readonly postsLoading = input(false);
+  /** The network of this listing being queued again. */
+  readonly retryingNetwork = input<SocialNetwork | null>(null);
+  readonly retryPost = output<SocialNetwork>();
 
   private readonly locale = inject(LocaleService);
 

@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import com.soukly.social.connection.ConnectionHealth;
 import com.soukly.social.connection.ExpiringToken;
 import com.soukly.social.connection.Network;
 import com.soukly.social.connection.SocialConnectionRepository;
@@ -33,15 +34,18 @@ public class InstagramTokenRefresher {
     private static final Logger log = LoggerFactory.getLogger(InstagramTokenRefresher.class);
 
     private final SocialConnectionRepository connections;
+    private final ConnectionHealth connectionHealth;
     private final InstagramGraphClient instagram;
     private final InstagramProperties properties;
     private final TransactionTemplate transactions;
     private final Clock clock;
     private final AtomicBoolean running = new AtomicBoolean();
 
-    InstagramTokenRefresher(SocialConnectionRepository connections, InstagramGraphClient instagram,
+    InstagramTokenRefresher(SocialConnectionRepository connections, ConnectionHealth connectionHealth,
+            InstagramGraphClient instagram,
             InstagramProperties properties, TransactionTemplate transactions, Clock clock) {
         this.connections = connections;
+        this.connectionHealth = connectionHealth;
         this.instagram = instagram;
         this.properties = properties;
         this.transactions = transactions;
@@ -96,7 +100,7 @@ public class InstagramTokenRefresher {
     private Outcome refresh(ExpiringToken token) {
         if (!token.expiresAt().isAfter(clock.instant())) {
             // An expired token cannot be refreshed any more
-            connections.markNeedsReconnect(token.id());
+            connectionHealth.needsReconnect(token.id());
             log.info("Instagram token of {} expired: to reconnect", token.userId());
             return new Outcome(token, Kind.NEEDS_RECONNECT);
         }
@@ -108,7 +112,7 @@ public class InstagramTokenRefresher {
         } catch (GraphApiException e) {
             HttpStatus status = HttpStatus.resolve(e.status());
             if (status != null && status.is4xxClientError() && status != HttpStatus.TOO_MANY_REQUESTS) {
-                connections.markNeedsReconnect(token.id());
+                connectionHealth.needsReconnect(token.id());
                 log.info("Instagram token of {} refused ({}): to reconnect", token.userId(), e.getMessage());
                 return new Outcome(token, Kind.NEEDS_RECONNECT);
             }
