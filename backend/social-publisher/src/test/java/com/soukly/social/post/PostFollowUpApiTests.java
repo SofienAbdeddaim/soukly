@@ -9,11 +9,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.sql.Timestamp;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,9 +43,26 @@ class PostFollowUpApiTests extends IntegrationTest {
 
     private UUID member;
 
+    /** Every account whose rows this test inserted. */
+    private final Set<UUID> seeded = new HashSet<>();
+
     @BeforeEach
     void member() {
         member = UUID.randomUUID();
+        seeded.add(member);
+    }
+
+    /**
+     * The rows inserted here hold a partial content: they must not reach the publishing task of the tests that run
+     * after this class.
+     */
+    @AfterEach
+    void removeSeededRows() {
+        seeded.forEach(user -> {
+            jdbc.update("DELETE FROM social_posts WHERE user_id = ?", user);
+            jdbc.update("DELETE FROM social_connections WHERE user_id = ?", user);
+        });
+        seeded.clear();
     }
 
     @Test
@@ -265,6 +285,7 @@ class PostFollowUpApiTests extends IntegrationTest {
 
     private void insert(UUID listing, UUID user, Network network, String status, String code, int attempts,
             int manualRetries) {
+        seeded.add(user);
         Timestamp now = Timestamp.from(clock.instant());
         jdbc.update("""
                 INSERT INTO social_posts (id, listing_id, user_id, network, status, content, attempts, last_error_code,
