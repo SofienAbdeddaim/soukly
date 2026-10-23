@@ -23,6 +23,7 @@ import com.soukly.social.caption.CaptionInput;
 import com.soukly.social.caption.CaptionLanguage;
 import com.soukly.social.caption.CaptionUnavailableException;
 import com.soukly.social.caption.ReferentialLabels;
+import com.soukly.social.connection.ConnectionHealth;
 import com.soukly.social.connection.ConnectionStatus;
 import com.soukly.social.connection.Network;
 import com.soukly.social.connection.PublishingAccount;
@@ -58,6 +59,7 @@ public class FacebookPublisher {
 
     private final SocialPostRepository posts;
     private final SocialConnectionRepository connections;
+    private final ConnectionHealth connectionHealth;
     private final FacebookGraphClient facebook;
     private final FacebookProperties facebookProperties;
     private final FacebookPostingProperties properties;
@@ -70,11 +72,12 @@ public class FacebookPublisher {
     private final AtomicBoolean running = new AtomicBoolean();
 
     FacebookPublisher(SocialPostRepository posts, SocialConnectionRepository connections,
-            FacebookGraphClient facebook, FacebookProperties facebookProperties,
+            ConnectionHealth connectionHealth, FacebookGraphClient facebook, FacebookProperties facebookProperties,
             FacebookPostingProperties properties, CaptionBuilder captions, ReferentialLabels labels,
             PostMetrics metrics, TransactionTemplate transactions, Clock clock) {
         this.posts = posts;
         this.connections = connections;
+        this.connectionHealth = connectionHealth;
         this.facebook = facebook;
         this.facebookProperties = facebookProperties;
         this.properties = properties;
@@ -167,7 +170,7 @@ public class FacebookPublisher {
             return switch (failure.kind()) {
                 case TEMPORARY -> attempts.temporaryFailure(post, failure.errorCode(), elapsed(start));
                 case TOKEN_INVALID -> {
-                    connections.markNeedsReconnect(page.id());
+                    connectionHealth.needsReconnect(page.id());
                     yield attempts.failed(post, failure.errorCode(), elapsed(start));
                 }
                 default -> attempts.failed(post, failure.errorCode(), elapsed(start));

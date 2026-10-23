@@ -227,10 +227,11 @@ partitions) and `soukly.user-events.dlq` at startup, locally and in dev; on the 
 - Sent after the transaction commits (nothing is sent when it fails), on a separate thread. A failed send is logged
   with the user id and the exception type only, and never fails the request: the user can ask for a resend.
 - Templates (Thymeleaf, HTML and plain text) in `src/main/resources/mail/`: `verification`, `account-exists`,
-  `password-reset`, `password-changed`, `email-change`, `email-change-requested`, `account-deleted` and the shared
+  `password-reset`, `password-changed`, `email-change`, `email-change-requested`, `account-deleted`, `social-reconnect` and the shared
   `layout.html`. Texts in `mail/messages_{fr,ar,en}.properties`; Arabic emails have `dir="rtl"`.
 - The SMTP health check is disabled: an SMTP outage must not mark the service down.
-- Exception: the expiry reminder (below) is sent synchronously by the event consumer, so that a failure is retried.
+- Exception: the expiry reminder and the email "connect again" (below) are sent synchronously by the event consumers,
+  so that a failure is retried.
 
 ## Listing events (ANN-03)
 
@@ -251,6 +252,21 @@ only** and ignores every other type, known or not.
   error messages and logs name the account by id, never by address. A message of the DLQ is replayed by producing its
   value again to `soukly.listing-events` (for example from Redpanda Console).
 - `processed_events` keeps every id; at V1 volumes (a few rows per listing) no purge is needed yet.
+
+## Social events (SOC-06)
+
+user-service consumes `soukly.social-events` (contract: [`docs/events/social-events.md`](../../docs/events/social-events.md))
+in the consumer group `user-service`. It handles **`social.connection.needs-reconnect` only** and ignores every other
+type.
+
+- **Email** `social-reconnect` (templates `mail/social-reconnect.{html,txt}`, texts in the three languages): "Connect
+  your Facebook Page again" or "Connect your Instagram account again", in the preferred language of the member, with
+  the name of the Page or account when the event has it, a generic reason, a "Connect again" button to
+  `{FRONT_BASE_URL}/{lang}/account/social` and a reminder that the listings stay online on Soukly. Nothing is sent to
+  an unknown or non-`ACTIVE` account. social-publisher already limits the events to one per connection within 24
+  hours.
+- **Deduplication and errors**: the same as the listing events (`event` package: `ProcessedEvents`,
+  `EventsConfig`): `processed_events` in the transaction of the email, 3 retries, then `soukly.social-events.dlq`.
 
 ## Configuration
 

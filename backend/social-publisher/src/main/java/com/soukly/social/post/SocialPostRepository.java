@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -144,6 +145,76 @@ class SocialPostRepository {
     /** Deletes every post row of a member (account deleted). */
     int deleteAll(UUID userId) {
         return jdbc.update("DELETE FROM social_posts WHERE user_id = ?", userId);
+    }
+
+    private static final String ROW_COLUMNS = "listing_id, network, status, permalink, last_error_code, attempts, "
+            + "manual_retries, created_at, updated_at, content->>'title' AS title";
+
+    /** The posts of these listings that belong to the member (SOC-06); a listing of another member gives nothing. */
+    List<PostRow> rowsOfListings(UUID userId, Collection<UUID> listingIds) {
+        if (listingIds.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM social_posts WHERE user_id = ? AND listing_id = ANY (?) "
+                + "ORDER BY listing_id, network", this::row, userId, listingIds.toArray(UUID[]::new));
+    }
+
+    Optional<PostRow> row(UUID userId, UUID listingId, Network network) {
+        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM social_posts WHERE user_id = ? AND listing_id = ? "
+                + "AND network = ?", this::row, userId, listingId, network.name()).stream().findFirst();
+    }
+
+    /**
+     * The posts of the member on this network blocked by a connection problem ({@code codes}) and created after
+     * {@code since}, the oldest first.
+     */
+    List<PostRow> blocked(UUID userId, Network network, Collection<String> codes, Instant since) {
+        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM social_posts WHERE user_id = ? AND network = ? "
+                + "AND status IN ('FAILED', 'SKIPPED') AND last_error_code = ANY (?) AND created_at > ? "
+                + "ORDER BY created_at, listing_id", this::row, userId, network.name(),
+                codes.toArray(String[]::new), Timestamp.from(since));
+    }
+
+    /**
+     * "Try again" (SOC-06): the post goes back to {@code PENDING}, due now, with its attempts reset and one more manual
+     * attempt, if it is still {@code FAILED} or {@code SKIPPED} and has a manual attempt left.
+     *
+     * @return {@code false} when the row changed in the meantime: nothing is done
+     */
+    boolean retryByHand(UUID userId, UUID listingId, Network network, int maxManualRetries) {
+        Timestamp now = Timestamp.from(clock.instant());
+        return jdbc.update("""
+                UPDATE social_posts SET status = 'PENDING', attempts = 0, next_attempt_at = ?, last_error_code = NULL,
+                    manual_retries = manual_retries + 1, updated_at = ?
+                WHERE user_id = ? AND listing_id = ? AND network = ? AND status IN ('FAILED', 'SKIPPED')
+                    AND manual_retries < ?
+                """, now, now, userId, listingId, network.name(), maxManualRetries) == 1;
+    }
+
+    /**
+     * "Publish them now" after a reconnection (SOC-06): these blocked posts go back to {@code PENDING}, due now, with
+     * their attempts reset, without counting a manual attempt.
+     *
+     * @return the posts put back in the queue
+     */
+    int relaunch(UUID userId, Network network, Collection<UUID> listingIds, Collection<String> codes) {
+        if (listingIds.isEmpty()) {
+            return 0;
+        }
+        Timestamp now = Timestamp.from(clock.instant());
+        return jdbc.update("""
+                UPDATE social_posts SET status = 'PENDING', attempts = 0, next_attempt_at = ?, last_error_code = NULL,
+                    updated_at = ?
+                WHERE user_id = ? AND network = ? AND listing_id = ANY (?) AND status IN ('FAILED', 'SKIPPED')
+                    AND last_error_code = ANY (?)
+                """, now, now, userId, network.name(), listingIds.toArray(UUID[]::new), codes.toArray(String[]::new));
+    }
+
+    private PostRow row(ResultSet rs, int row) throws SQLException {
+        return new PostRow(rs.getObject("listing_id", UUID.class), Network.valueOf(rs.getString("network")),
+                PostStatus.valueOf(rs.getString("status")), rs.getString("permalink"), rs.getString("last_error_code"),
+                rs.getInt("attempts"), rs.getInt("manual_retries"), rs.getTimestamp("created_at").toInstant(),
+                rs.getTimestamp("updated_at").toInstant(), rs.getString("title"));
     }
 
     private SocialPost post(ResultSet rs, int row) throws SQLException {

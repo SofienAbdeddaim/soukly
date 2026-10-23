@@ -27,6 +27,9 @@ import com.soukly.social.connection.ConnectionNotFoundException;
 import com.soukly.social.facebook.PageSelectionNotFoundException;
 import com.soukly.social.oauth.NetworkNotConfiguredException;
 import com.soukly.social.oauth.OAuthFailedException;
+import com.soukly.social.post.ListingStatusUnavailableException;
+import com.soukly.social.post.PostActionRefusedException;
+import com.soukly.social.post.PostNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -94,6 +97,31 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 ProblemDetails.type(e.network().name().toLowerCase(Locale.ROOT) + "-not-configured"),
                 HttpStatus.SERVICE_UNAVAILABLE, name + " not configured",
                 name + " cannot be connected in this environment yet.", instance(request), requestId(request)));
+    }
+
+    @ExceptionHandler
+    ResponseEntity<Object> postNotFound(PostNotFoundException e, NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("post-not-found"), HttpStatus.NOT_FOUND,
+                "Post not found", "This listing has no post on this network.", instance(request),
+                requestId(request)));
+    }
+
+    /** Type {@code not-retryable}, {@code retry-limit-reached}, {@code listing-not-online} or the network one. */
+    @ExceptionHandler
+    ResponseEntity<Object> postActionRefused(PostActionRefusedException e, NativeWebRequest request) {
+        PostActionRefusedException.Reason reason = e.reason();
+        return problem(ProblemDetails.create(ProblemDetails.type(reason.slug()), HttpStatus.CONFLICT, reason.title(),
+                reason.detail(), instance(request), requestId(request)));
+    }
+
+    /** listing-service did not say whether the listing is online: nothing was put back in the queue. */
+    @ExceptionHandler
+    ResponseEntity<Object> listingStatusUnavailable(ListingStatusUnavailableException e,
+            NativeWebRequest request) {
+        return problem(ProblemDetails.create(ProblemDetails.type("listing-service-unavailable"),
+                HttpStatus.SERVICE_UNAVAILABLE, "Listing status unavailable",
+                "The status of the listing cannot be read right now. Try again.", instance(request),
+                requestId(request)));
     }
 
     /** Missing or invalid access token (resource server); the reason is never echoed, it may describe the token. */

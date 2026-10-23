@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import com.soukly.common.event.EventEnvelope;
 import com.soukly.common.event.ListingEvents;
+import com.soukly.user.event.InvalidEventException;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
@@ -21,7 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Reads {@code soukly.listing-events} in the group {@code user-service} and handles {@code listing.expiring-soon}
  * only: the reminder email of the seller. Every other type is ignored. A failure is retried, then the message goes to
- * {@code soukly.listing-events.dlq} ({@code ListingEventsConfig}).
+ * {@code soukly.listing-events.dlq} ({@code EventsConfig}).
  */
 @Component
 class ListingEventsConsumer {

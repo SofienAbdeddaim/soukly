@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
+import com.soukly.social.connection.ConnectionHealth;
 import com.soukly.social.connection.Network;
 import com.soukly.social.connection.PublishingAccount;
 import com.soukly.social.connection.SocialConnectionRepository;
@@ -39,14 +40,16 @@ public class PostRemoval {
 
     private final SocialPostRepository posts;
     private final SocialConnectionRepository connections;
+    private final ConnectionHealth connectionHealth;
     private final FacebookGraphClient facebook;
     private final FacebookPostingProperties properties;
     private final PostMetrics metrics;
 
-    PostRemoval(SocialPostRepository posts, SocialConnectionRepository connections, FacebookGraphClient facebook,
-            FacebookPostingProperties properties, PostMetrics metrics) {
+    PostRemoval(SocialPostRepository posts, SocialConnectionRepository connections, ConnectionHealth connectionHealth,
+            FacebookGraphClient facebook, FacebookPostingProperties properties, PostMetrics metrics) {
         this.posts = posts;
         this.connections = connections;
+        this.connectionHealth = connectionHealth;
         this.facebook = facebook;
         this.properties = properties;
         this.metrics = metrics;
@@ -116,7 +119,7 @@ public class PostRemoval {
                 log.warn("Facebook post of listing {} not deleted (attempt {}): {} {}", post.listingId(), attempt,
                         e.getMessage(), e.error() == null ? "" : e.error().message());
                 if (failure.kind() == GraphFailure.Kind.TOKEN_INVALID) {
-                    connections.markNeedsReconnect(account.get().id());
+                    connectionHealth.needsReconnect(account.get().id());
                     break;
                 }
                 if (failure.kind() != GraphFailure.Kind.TEMPORARY) {
