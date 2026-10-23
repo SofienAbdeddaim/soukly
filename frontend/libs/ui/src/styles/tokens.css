@@ -16,6 +16,7 @@
   --soukly-indigo-400: #8a7f9c;
   --soukly-indigo-700: #4a3f66;
   --soukly-lavender-100: #e6dcf5;
+  --soukly-lavender-50: #ece7f5;
   --soukly-cream-50: #fff8ec;
   --soukly-cream-100: #fff3dd;
   --soukly-cream-200: #f0e3cc;
@@ -58,6 +59,8 @@
   --color-success: var(--soukly-green-700);
   --color-success-surface: var(--soukly-green-50);
   --color-warning-surface: var(--soukly-saffron-100);
+  /* Something running in the background, for example a post being published (SOC-06) */
+  --color-pending-surface: var(--soukly-lavender-50);
   /* Border of a card that needs attention (decorative: the text says why) */
   --color-warning-border: var(--soukly-saffron-400);
   --color-facebook: var(--soukly-facebook-blue);
