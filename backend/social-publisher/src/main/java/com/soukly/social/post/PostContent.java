@@ -11,8 +11,10 @@ import java.util.List;
  * @param photoUrls  public URLs of the 1600 px versions, in the seller's order
  * @param listingUrl page of the listing in {@code language}, without the tracking parameters
  * @param language   {@code shareLanguage}: {@code fr}, {@code ar} or {@code en}
+ * @param shortRef   short reference of the listing, for the Instagram caption (SOC-05); {@code null} in the rows
+ *                   recorded before
  */
 record PostContent(String title, String description, String categoryCode, String priceMode, Long price,
         boolean negotiable, String governorateCode, String delegationCode, List<URI> photoUrls, URI listingUrl,
-        String language) {
+        String language, String shortRef) {
 }

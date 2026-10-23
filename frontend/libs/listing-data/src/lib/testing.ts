@@ -113,6 +113,7 @@ export function publicListing(overrides: Partial<PublicListing> = {}): PublicLis
       displayName: 'Mohamed B.',
       memberSince: '2026-03',
     },
+    shortRef: '8F3C2K9A',
     ...overrides,
   };
 }

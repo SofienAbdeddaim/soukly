@@ -94,7 +94,7 @@ class PublicationApiTests extends IntegrationTest {
         // Exactly the members of the contract: no name, email or phone number of the seller
         assertThat(names(data)).containsExactlyInAnyOrder("title", "description", "categoryCode", "kind",
                 "priceMode", "price", "currency", "negotiable", "governorateCode", "delegationCode",
-                "coverPhotoUrl", "photoUrls", "publicUrls", "shareTo", "expiresAt", "shareLanguage");
+                "coverPhotoUrl", "photoUrls", "publicUrls", "shareTo", "expiresAt", "shareLanguage", "shortRef");
         assertThat(data.get("title").asString()).isEqualTo("Canapé d'angle en cuir");
         assertThat(data.get("description").asString()).startsWith("Canapé d'angle en cuir marron");
         assertThat(data.get("categoryCode").asString()).isEqualTo("home.furniture");

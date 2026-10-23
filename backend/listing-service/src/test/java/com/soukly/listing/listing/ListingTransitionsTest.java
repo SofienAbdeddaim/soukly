@@ -99,6 +99,6 @@ class ListingTransitionsTest {
                 Map.of());
         Instant publishedAt = status == ListingStatus.DRAFT ? null : NOW.minus(Duration.ofDays(10));
         return new Listing(UUID.randomUUID(), UUID.randomUUID(), status, content, 1, NOW, NOW, publishedAt,
-                expiresAt, null, null);
+                expiresAt, null, null, "8F3C2K9A");
     }
 }

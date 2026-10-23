@@ -180,6 +180,78 @@ class CaptionBuilderTest {
                 .contains("25 000 000 DT", "2019", "62 000 km");
     }
 
+    @Test
+    void anInstagramCaptionHasTheShortAddressInsteadOfTheLink() {
+        CaptionInput input = new CaptionInput("Peugeot 208 diesel, première main", DESCRIPTION, CaptionInput.FIXED,
+                32_000L, true, "Voitures", "Sfax", "Sakiet Ezzit",
+                URI.create("https://exemple.test/fr/listings/8f3c2a10"), CaptionLanguage.FR);
+
+        Caption caption = builder.buildForInstagram(input, "8F3C2K9A");
+
+        assertThat(plain(caption.text())).isEqualTo("""
+                Peugeot 208 diesel, première main
+                32 000 DT · Négociable
+                Sfax, Sakiet Ezzit
+
+                Première main, carnet d'entretien complet chez le concessionnaire.
+
+                Annonce complète sur exemple.test/r/8F3C2K9A
+                #Soukly #Sfax #Voitures""");
+        assertThat(caption.text()).doesNotContain("https://").doesNotContain("http://");
+    }
+
+    @Test
+    void theInstagramAddressIsInTheLanguageOfTheText() {
+        assertThat(builder.buildForInstagram(car(CaptionLanguage.AR, "سيارات", "صفاقس", null), "8F3C2K9A").text())
+                .contains("\nالإعلان كاملًا على soukly.example/r/8F3C2K9A\n#Soukly #صفاقس #سيارات");
+        assertThat(builder.buildForInstagram(car(CaptionLanguage.EN, "Cars", "Sfax", null), "8F3C2K9A").text())
+                .contains("\nFull listing on soukly.example/r/8F3C2K9A\n#Soukly #Sfax #Cars");
+    }
+
+    @Test
+    void theHostKeepsItsPortAndAListingWithoutReferenceGetsTheHostAlone() {
+        CaptionInput local = new CaptionInput("Studio", null, null, null, false, null, null, null,
+                URI.create("http://localhost:4200/fr/listings/8f3c2a10"), CaptionLanguage.FR);
+
+        assertThat(builder.buildForInstagram(local, "8F3C2K9A").text())
+                .contains("Annonce complète sur localhost:4200/r/8F3C2K9A");
+        assertThat(builder.buildForInstagram(car(CaptionLanguage.FR, "Voitures", "Sfax", null), null).text())
+                .contains("\nAnnonce complète sur soukly.example\n#Soukly");
+    }
+
+    @Test
+    void anInstagramCaptionNeverCarriesALinkNorPersonalData() {
+        CaptionInput input = new CaptionInput("Golf 7 https://example.org/golf", "Photos : https://example.org/a "
+                + "et HTTP://example.org/b, appelez le 20 123 456 ou seller@example.tn", CaptionInput.FIXED, 25_000L,
+                false, "Voitures", "Sfax", null, URL, CaptionLanguage.FR);
+
+        String text = builder.buildForInstagram(input, "8F3C2K9A").text();
+
+        assertThat(text).doesNotContainIgnoringCase("http://").doesNotContainIgnoringCase("https://")
+                .doesNotContain("20 123 456").doesNotContain("seller@example.tn").contains("example.org/golf");
+    }
+
+    @Test
+    void anInstagramCaptionHasAtMostThirtyHashtags() {
+        String typed = java.util.stream.IntStream.rangeClosed(1, 40).mapToObj(i -> "#tag" + i)
+                .collect(java.util.stream.Collectors.joining(" "));
+        CaptionInput input = new CaptionInput("Vélo #vtt", typed, CaptionInput.FIXED, 300L, false, "Vélos", "Sfax",
+                null, URL, CaptionLanguage.FR);
+
+        String text = builder.buildForInstagram(input, "8F3C2K9A").text();
+
+        assertThat(java.util.regex.Pattern.compile("#(?=[\\p{L}\\p{N}_])").matcher(text).results().count())
+                .isEqualTo(CaptionBuilder.INSTAGRAM_MAX_HASHTAGS);
+        assertThat(text).contains("#vtt", "#tag26 tag27", "#Soukly #Sfax #Vélos");
+        assertThat(CaptionBuilder.length(text)).isLessThanOrEqualTo(2_200);
+    }
+
+    @Test
+    void theFacebookTextKeepsItsLink() {
+        assertThat(builder.build(car(CaptionLanguage.FR, "Voitures", "Sfax", null)).text())
+                .contains("Voir l'annonce : https://soukly.example/fr/listings/8f3c2a10");
+    }
+
     private static CaptionInput car(CaptionLanguage language, String category, String governorate,
             String delegation) {
         return new CaptionInput("Peugeot 208 diesel, première main", DESCRIPTION, CaptionInput.FIXED, 32_000L, true,

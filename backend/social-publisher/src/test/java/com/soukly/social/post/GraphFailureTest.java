@@ -57,6 +57,37 @@ class GraphFailureTest {
         assertThat(failure.errorCode()).isEqualTo(errorCode);
     }
 
+    @ParameterizedTest
+    @CsvSource({
+        // status, code, subcode, kind, last_error_code
+        "400, 9, 2207042, QUOTA, quota-reached",
+        "400, 9007, 2207027, TEMPORARY, meta-9007/2207027",
+        "400, -1, 2207008, TEMPORARY, meta--1/2207008",
+        "500, -1, 2207001, TEMPORARY, meta--1/2207001",
+        "400, -2, 2207003, TEMPORARY, meta--2/2207003",
+        "400, 9004, 2207052, TEMPORARY, meta-9004/2207052",
+        "400, 36003, 2207009, REJECTED, media-rejected",
+        "400, 36000, , REJECTED, media-rejected",
+        "400, 9004, 2207005, REJECTED, media-rejected",
+        "400, -1, 2207004, REJECTED, media-rejected",
+        "400, 190, , TOKEN_INVALID, needs-reconnect",
+        "400, 10, , PERMISSION_MISSING, permission-missing",
+        "400, 100, , REJECTED, meta-100"
+    })
+    void classifiesTheErrorsOfInstagram(int status, int code, Integer subcode, Kind kind, String errorCode) {
+        GraphFailure failure = GraphFailure.ofInstagram(new GraphApiException("Instagram media publish answered "
+                + status, status, new GraphError(code, subcode, null, "OAuthException", "message")));
+
+        assertThat(failure.kind()).isEqualTo(kind);
+        assertThat(failure.errorCode()).isEqualTo(errorCode);
+    }
+
+    @Test
+    void anInstagramWithoutAnswerIsUnavailable() {
+        assertThat(GraphFailure.ofInstagram(new GraphApiException("Instagram media publish failed", 0)))
+                .isEqualTo(new GraphFailure(Kind.TEMPORARY, "instagram-unavailable"));
+    }
+
     @Test
     void anErrorWithoutCodeIsClassifiedByItsStatus() {
         GraphFailure failure = GraphFailure.of(new GraphApiException("Graph API post creation answered 500", 500,

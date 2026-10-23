@@ -77,6 +77,7 @@ but every answer lists what is still missing. Package `com.soukly.listing.listin
 | `POST /api/listings` | `{ categoryCode, …optional fields }` | `201` + `Location` + `ETag`, `400`, `401`, `409` `draft-limit-reached` |
 | `PATCH /api/listings/{id}` | JSON Merge Patch (`application/merge-patch+json` or `application/json`), `If-Match` | `200` + `ETag`, `400`, `401`, `404`, `412` `version-conflict`, `428` `if-match-required` |
 | `GET /api/listings/{id}` | bearer token of the owner | `200` + `ETag`, `404` |
+| `GET /api/listings/by-ref/{ref}` | none (public) | `200` `{ id }`, `404` `listing-not-found` |
 
 - **Access**: the owner is the `sub` of the access token. The service validates the token again with the rules of the
   gateway (RS256 only, JWKS of user-service, `iss`, `exp` with 30 s of clock skew, `sub` must be an account id).
@@ -94,6 +95,12 @@ but every answer lists what is still missing. Package `com.soukly.listing.listin
   The comparison is strong: a weak tag `W/"4"` never matches.
 - **Nothing is saved when a request has an error**: the version is unchanged.
 - Answers carry `Cache-Control: no-store`: a draft is private.
+- **Short reference** (SOC-05): every listing gets `shortRef` at its creation, 8 characters among
+  `23456789ABCDEFGHJKLMNPQRSTUVWXYZ` (no `0`, `O`, `1`, `I`), unique, drawn again on a collision. It is written in the
+  Instagram captions (`soukly.tn/r/8F3C2K9A`), shown on the listing page and carried by `listing.published`.
+  `GET /api/listings/by-ref/{ref}` is public and reads the reference in any case; it answers the id of a published,
+  expired or deactivated listing, `404` for a draft, a deleted listing or an unknown reference. The listings created
+  before V14 got one in the migration; a listing created by the previous version after it gets one when published.
 
 ### Fields
 
@@ -237,6 +244,10 @@ converts it with **libvips** to two WebP versions without any metadata. Package 
    the GPS position, XMP, IPTC, ICC profile). The original is deleted from `incoming/` and the photo becomes `READY`,
    last of the listing. The conversion runs in the request (30 s at most) and outside any database transaction.
    Completing a photo again answers it again (`READY` as is, `REJECTED` with the same code), so a retry is safe.
+
+When the listing is posted on Instagram (SOC-05), social-publisher writes a third version next to them,
+`…/ig-1080.jpg` (JPEG 1080 px wide, cream margins). Deleting a photo, a listing or an account deletes it with the two
+others.
 
 A photo answers `{ id, status, url, thumbnailUrl, width, height, position }` (`width` and `height` of the 1600
 version). `GET /api/listings/{id}` lists the READY photos in `photos`, cover first, without `status`.

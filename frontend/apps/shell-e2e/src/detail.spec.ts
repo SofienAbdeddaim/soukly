@@ -7,6 +7,7 @@ import {
   GONE_ID,
   OWN_ID,
   PUBLIC_ID,
+  PUBLIC_REF,
   publicDetail,
 } from './support/fake-detail-api';
 import { fakeListingApi } from './support/fake-listing-api';
@@ -167,6 +168,28 @@ test.describe('listing page, mobile (390px)', () => {
   test('draft of someone else: "Listing not found"', async ({ page }) => {
     await fakeBackEnd(page);
     await page.goto('/fr/listings/44444444-4444-4444-8444-444444444444');
+
+    await expect(page.getByTestId('listing-not-found')).toBeVisible();
+  });
+
+  test('short reference: shown on the page, /r/{ref} opens it with the Instagram tracking', async ({
+    page,
+  }) => {
+    await fakeBackEnd(page);
+    await page.goto(`/r/${PUBLIC_REF.toLowerCase()}`);
+
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/fr/listings/${PUBLIC_ID}\\?utm_source=instagram&utm_medium=social&utm_campaign=soukly_share$`,
+        'u',
+      ),
+    );
+    await expect(page.getByTestId('short-ref')).toHaveText(`Réf. ${PUBLIC_REF}`);
+  });
+
+  test('unknown short reference: "Listing not found"', async ({ page }) => {
+    await fakeBackEnd(page);
+    await page.goto('/r/ZZZZZZZZ');
 
     await expect(page.getByTestId('listing-not-found')).toBeVisible();
   });

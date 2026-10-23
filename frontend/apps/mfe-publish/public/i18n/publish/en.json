@@ -229,6 +229,7 @@
       "show": "See the post text",
       "error": "Text unavailable.",
       "retry": "Try again",
+      "instagram-note": "On Instagram, the link is replaced by the reference of the listing.",
       "photos": {
         "zero": "No photo. Text written automatically in the language of the page.",
         "one": "With your photo. Text written automatically in the language of the page.",

@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
@@ -25,6 +27,13 @@ import org.springframework.stereotype.Component;
  *
  * The text never carries the name, phone number or email of the seller: none is an input, and those typed in the
  * title or the description are removed ({@link PersonalData}). Lengths are counted in code points.
+ *
+ * <p>On Instagram ({@link #buildForInstagram}, SOC-05), links are not clickable in a caption: the last but one line is
+ * {@code Annonce complète sur soukly.tn/r/8F3C2K9A}, the host of the listing page (that of {@code PUBLIC_BASE_URL})
+ * followed by the short reference, which the front end redirects to the listing. The caption never carries an
+ * {@code https://} link: the schemes typed in the title or the description are removed too. At most
+ * {@value #INSTAGRAM_MAX_HASHTAGS} hashtags, the limit of Instagram: beyond, the {@code #} of those typed by the seller
+ * are removed, so that their words stay.
  */
 @Component
 public class CaptionBuilder {
@@ -36,13 +45,44 @@ public class CaptionBuilder {
     static final String BRAND_HASHTAG = "#Soukly";
     private static final String PRICE_SEPARATOR = " · ";
 
+    /** Hashtags of an Instagram caption, ours included. */
+    public static final int INSTAGRAM_MAX_HASHTAGS = 30;
+    private static final Pattern SCHEME = Pattern.compile("(?i)\\b(?:https?|ftp)://");
+    private static final Pattern HASHTAG = Pattern.compile("#(?=[\\p{L}\\p{N}_])");
+
+    /** The text of a Facebook post, and of the preview: the link of the listing is written as is. */
     public Caption build(CaptionInput input) {
-        CaptionLanguage language = input.language();
         List<String> hashtags = hashtags(input);
-        String tail = language.seeListing() + input.publicUrl() + "\n" + String.join(" ", hashtags);
+        String link = input.language().seeListing() + input.publicUrl();
+        return build(input, link, hashtags, PersonalData.mask(input.title()),
+                PersonalData.mask(blankToNull(input.description())));
+    }
+
+    /**
+     * The caption of an Instagram post (SOC-05).
+     *
+     * @param shortRef short reference of the listing; {@code null} for a listing that has none (created before SOC-05):
+     *                 the host alone is written then
+     */
+    public Caption buildForInstagram(CaptionInput input, String shortRef) {
+        List<String> hashtags = hashtags(input);
+        String address = host(input.publicUrl()) + (shortRef == null ? "" : "/r/" + shortRef);
+        String link = input.language().fullListingOn() + address;
+        String title = withoutSchemes(PersonalData.mask(input.title()));
+        String description = withoutSchemes(PersonalData.mask(blankToNull(input.description())));
+        int allowed = INSTAGRAM_MAX_HASHTAGS - hashtags.size();
+        int inTitle = title == null ? 0 : count(HASHTAG, title);
+        title = limitHashtags(title, allowed);
+        description = limitHashtags(description, Math.max(0, allowed - inTitle));
+        return build(input, link, hashtags, title, description);
+    }
+
+    private Caption build(CaptionInput input, String link, List<String> hashtags, String maskedTitle,
+            String description) {
+        String tail = link + "\n" + String.join(" ", hashtags);
         String price = priceLine(input);
         String place = place(input);
-        String title = nonBlank(PersonalData.mask(input.title()));
+        String title = nonBlank(maskedTitle);
         if (title != null) {
             // Never reached with the 80 characters of a real title: the template stays within the limit anyway
             int others = length(tail) + (price == null ? 0 : length(price) + 1)
@@ -50,13 +90,40 @@ public class CaptionBuilder {
             title = truncate(title, Math.max(MAX_LENGTH - others - 2, length(ELLIPSIS) + 1));
         }
         String head = join(Arrays.asList(title, price, place));
-        String description = PersonalData.mask(blankToNull(input.description()));
         // The description is the only part of unbounded length: it gives way when the whole text would be too long
         int budget = MAX_LENGTH - length(head) - length(tail) - 4;
         String text = description == null || budget <= length(ELLIPSIS)
                 ? joinParagraphs(head, tail)
                 : joinParagraphs(head, truncate(description, Math.min(DESCRIPTION_MAX, budget)), tail);
         return new Caption(text, hashtags);
+    }
+
+    /** The host of the listing page, with its port when it is not the default one (a local front end). */
+    static String host(java.net.URI url) {
+        return url.getPort() < 0 ? url.getHost() : url.getHost() + ":" + url.getPort();
+    }
+
+    private static String withoutSchemes(String text) {
+        return text == null ? null : SCHEME.matcher(text).replaceAll("");
+    }
+
+    /** Keeps the first {@code allowed} hashtags of a text typed by the seller; the others lose their {@code #}. */
+    private static String limitHashtags(String text, int allowed) {
+        if (text == null) {
+            return null;
+        }
+        Matcher matcher = HASHTAG.matcher(text);
+        StringBuilder result = new StringBuilder();
+        int seen = 0;
+        while (matcher.find()) {
+            matcher.appendReplacement(result, ++seen <= allowed ? "#" : "");
+        }
+        matcher.appendTail(result);
+        return result.toString();
+    }
+
+    private static int count(Pattern pattern, String text) {
+        return (int) pattern.matcher(text).results().count();
     }
 
     private static String priceLine(CaptionInput input) {

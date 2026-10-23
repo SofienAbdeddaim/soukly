@@ -3,7 +3,6 @@ package com.soukly.social.post;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -66,9 +65,8 @@ public class FacebookPublisher {
     private final ReferentialLabels labels;
     private final PostMetrics metrics;
     private final TransactionTemplate transactions;
-    private final Clock clock;
     private final PublishRateLimiter limiter;
-    private final RetrySchedule retries;
+    private final PostAttempts attempts;
     private final AtomicBoolean running = new AtomicBoolean();
 
     FacebookPublisher(SocialPostRepository posts, SocialConnectionRepository connections,
@@ -84,9 +82,8 @@ public class FacebookPublisher {
         this.labels = labels;
         this.metrics = metrics;
         this.transactions = transactions;
-        this.clock = clock;
         this.limiter = new PublishRateLimiter(properties.pageInterval(), properties.callsPerMinute(), clock);
-        this.retries = new RetrySchedule(properties.retryDelays());
+        this.attempts = new PostAttempts(Network.FACEBOOK, posts, metrics, properties.retryDelays(), clock);
     }
 
     /** What a run did. */
@@ -107,9 +104,9 @@ public class FacebookPublisher {
         try {
             int[] counts = new int[4];
             for (int i = 0; i < MAX_PER_RUN; i++) {
-                Optional<Outcome> outcome = transactions.execute(status -> posts.lockNextDue(Network.FACEBOOK)
+                Optional<PostAttempts.Outcome> outcome = transactions.execute(status -> posts.lockNextDue(Network.FACEBOOK)
                         .map(this::handle));
-                if (outcome == null || outcome.isEmpty() || outcome.get() == Outcome.THROTTLED) {
+                if (outcome == null || outcome.isEmpty() || outcome.get() == PostAttempts.Outcome.THROTTLED) {
                     break;
                 }
                 counts[outcome.get().ordinal()]++;
@@ -120,11 +117,7 @@ public class FacebookPublisher {
         }
     }
 
-    private enum Outcome {
-        PUBLISHED, RETRIED, ENDED, POSTPONED, THROTTLED
-    }
-
-    private Outcome handle(SocialPost post) {
+    private PostAttempts.Outcome handle(SocialPost post) {
         MDC.put("listingId", post.listingId().toString());
         if (post.requestId() != null) {
             MDC.put("requestId", post.requestId());
@@ -137,15 +130,11 @@ public class FacebookPublisher {
         }
     }
 
-    private Outcome publish(SocialPost post) {
+    private PostAttempts.Outcome publish(SocialPost post) {
         Optional<PublishingAccount> found = connections.findForPublishing(post.userId(), Network.FACEBOOK);
         if (found.isEmpty() || found.get().status() == ConnectionStatus.NEEDS_RECONNECT) {
             // Disconnected, or Meta refused the token, since the listing was published
-            String reason = found.isEmpty() ? ListingPosts.NOT_CONNECTED : ListingPosts.NEEDS_RECONNECT;
-            posts.markEnded(post.id(), PostStatus.SKIPPED, reason, post.attempts());
-            metrics.entered(Network.FACEBOOK, PostStatus.SKIPPED);
-            log.info("Facebook post of listing {} skipped: {}", post.listingId(), reason);
-            return Outcome.ENDED;
+            return attempts.skipped(post, found.isEmpty() ? ListingPosts.NOT_CONNECTED : ListingPosts.NEEDS_RECONNECT);
         }
         PublishingAccount page = found.get();
         PostContent content = post.content();
@@ -153,11 +142,11 @@ public class FacebookPublisher {
         PublishRateLimiter.Permit permit = limiter.acquire(page.externalId(), photos.size() + 1);
         if (!permit.granted()) {
             posts.postpone(post.id(), permit.notBefore());
-            return permit.pageBusy() ? Outcome.POSTPONED : Outcome.THROTTLED;
+            return permit.pageBusy() ? PostAttempts.Outcome.POSTPONED : PostAttempts.Outcome.THROTTLED;
         }
         long start = System.nanoTime();
         try {
-            String message = captions.build(captionInput(content)).text();
+            String message = captions.build(captionInput(content, labels, trackedLink(content.listingUrl()))).text();
             List<String> photoIds = new ArrayList<>();
             for (URI photo : photos) {
                 photoIds.add(facebook.uploadUnpublishedPhoto(page.externalId(), page.token(), photo));
@@ -168,47 +157,22 @@ public class FacebookPublisher {
             metrics.entered(Network.FACEBOOK, PostStatus.PUBLISHED);
             metrics.published(Network.FACEBOOK, "published", elapsed(start));
             log.info("Listing {} published on Facebook with {} photo(s)", post.listingId(), photoIds.size());
-            return Outcome.PUBLISHED;
+            return PostAttempts.Outcome.PUBLISHED;
         } catch (CaptionUnavailableException e) {
-            return temporaryFailure(post, CAPTION_UNAVAILABLE, start);
+            return attempts.temporaryFailure(post, CAPTION_UNAVAILABLE, elapsed(start));
         } catch (GraphApiException e) {
             GraphFailure failure = GraphFailure.of(e);
             log.warn("Facebook refused the post of listing {}: {} {}", post.listingId(), e.getMessage(),
                     e.error() == null || e.error().message() == null ? "" : "- " + e.error().message());
             return switch (failure.kind()) {
-                case TEMPORARY -> temporaryFailure(post, failure.errorCode(), start);
+                case TEMPORARY -> attempts.temporaryFailure(post, failure.errorCode(), elapsed(start));
                 case TOKEN_INVALID -> {
                     connections.markNeedsReconnect(page.id());
-                    yield failed(post, failure.errorCode(), start);
+                    yield attempts.failed(post, failure.errorCode(), elapsed(start));
                 }
-                default -> failed(post, failure.errorCode(), start);
+                default -> attempts.failed(post, failure.errorCode(), elapsed(start));
             };
         }
-    }
-
-    private Outcome temporaryFailure(SocialPost post, String reason, long start) {
-        int attempts = post.attempts() + 1;
-        Optional<Duration> delay = retries.delayAfter(attempts);
-        if (delay.isEmpty()) {
-            return failed(post, reason, attempts, start);
-        }
-        posts.retryAt(post.id(), attempts, reason, clock.instant().plus(delay.get()));
-        metrics.published(Network.FACEBOOK, "retry", elapsed(start));
-        log.info("Facebook post of listing {} tried again in {} (attempt {}): {}", post.listingId(), delay.get(),
-                attempts, reason);
-        return Outcome.RETRIED;
-    }
-
-    private Outcome failed(SocialPost post, String reason, long start) {
-        return failed(post, reason, post.attempts() + 1, start);
-    }
-
-    private Outcome failed(SocialPost post, String reason, int attempts, long start) {
-        posts.markEnded(post.id(), PostStatus.FAILED, reason, attempts);
-        metrics.entered(Network.FACEBOOK, PostStatus.FAILED);
-        metrics.published(Network.FACEBOOK, "failed", elapsed(start));
-        log.warn("Facebook post of listing {} failed: {}", post.listingId(), reason);
-        return Outcome.ENDED;
     }
 
     /** The permalink is a convenience: the post is published even when Meta does not give it. */
@@ -221,7 +185,8 @@ public class FacebookPublisher {
         }
     }
 
-    private CaptionInput captionInput(PostContent content) {
+    /** The input of the text of a post, with the labels of the referentials in the language of the text. */
+    static CaptionInput captionInput(PostContent content, ReferentialLabels labels, URI link) {
         CaptionLanguage language = CaptionLanguage.of(content.language()).orElse(CaptionLanguage.FR);
         String category = labels.subcategory(content.categoryCode()).map(label -> label.in(language)).orElse(null);
         String governorate = labels.governorate(content.governorateCode()).map(label -> label.in(language))
@@ -231,7 +196,7 @@ public class FacebookPublisher {
                         .map(label -> label.in(language)).orElse(null);
         return new CaptionInput(content.title(), content.description(), content.priceMode(),
                 CaptionInput.FIXED.equals(content.priceMode()) ? content.price() : null, content.negotiable(),
-                category, governorate, delegation, trackedLink(content.listingUrl()), language);
+                category, governorate, delegation, link, language);
     }
 
     /** The link of the post, with the parameters that attribute the visits to it. */
@@ -244,7 +209,7 @@ public class FacebookPublisher {
                 .toUri();
     }
 
-    private static Duration elapsed(long start) {
+    static Duration elapsed(long start) {
         return Duration.ofNanos(System.nanoTime() - start);
     }
 }

@@ -1,8 +1,10 @@
 package com.soukly.social.instagram;
 
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -18,16 +20,22 @@ import org.springframework.web.client.RestClientResponseException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.soukly.social.graph.GraphApiException;
+import com.soukly.social.graph.GraphError;
 
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * {@link InstagramGraphClient} over HTTP with {@link RestClient}, from the documentation of Instagram API with
- * Instagram Login: the code is exchanged on {@code api.instagram.com}, the rest goes to {@code graph.instagram.com}.
+ * Instagram Login: the code is exchanged on {@code api.instagram.com}, the rest goes to {@code graph.instagram.com},
+ * the content publishing included (SOC-05). The tokens of the publishing calls go in the form body.
  * Tokens and the app secret never reach a log; {@link #call} drops the exceptions that quote a URL.
  */
 @Component
 class RestInstagramGraphClient implements InstagramGraphClient {
+
+    private static final JsonMapper ERRORS = JsonMapper.builder().build();
 
     private static final String PROFILE_FIELDS = "id,user_id,username,account_type,profile_picture_url";
 
@@ -112,6 +120,109 @@ class RestInstagramGraphClient implements InstagramGraphClient {
         return new InstagramProfile(me.id(), me.userId(), me.username(), me.accountType(), me.pictureUrl());
     }
 
+    @Override
+    public String createImageContainer(String accountId, String token, URI imageUrl, String caption) {
+        MultiValueMap<String, String> form = form(token);
+        form.add("image_url", imageUrl.toString());
+        form.add("caption", caption);
+        return id("image container", post("image container", "/{account}/media", accountId, form));
+    }
+
+    @Override
+    public String createCarouselItem(String accountId, String token, URI imageUrl) {
+        MultiValueMap<String, String> form = form(token);
+        form.add("image_url", imageUrl.toString());
+        form.add("is_carousel_item", "true");
+        return id("carousel item container", post("carousel item container", "/{account}/media", accountId, form));
+    }
+
+    @Override
+    public String createCarousel(String accountId, String token, List<String> children, String caption) {
+        MultiValueMap<String, String> form = form(token);
+        form.add("media_type", "CAROUSEL");
+        form.add("children", String.join(",", children));
+        form.add("caption", caption);
+        return id("carousel container", post("carousel container", "/{account}/media", accountId, form));
+    }
+
+    @Override
+    public String containerStatus(String containerId, String token) {
+        StatusResponse status = call("container status", () -> graph.get()
+                .uri(uri -> uri.path("/" + properties.graphVersion() + "/{container}")
+                        .queryParam("fields", "status_code")
+                        .queryParam("access_token", "{token}")
+                        .build(containerId, token))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(StatusResponse.class));
+        if (status == null || status.statusCode() == null) {
+            throw new GraphApiException("Instagram container status: no status_code in the answer", 200);
+        }
+        return status.statusCode();
+    }
+
+    @Override
+    public String publish(String accountId, String token, String containerId) {
+        MultiValueMap<String, String> form = form(token);
+        form.add("creation_id", containerId);
+        return id("media publish", post("media publish", "/{account}/media_publish", accountId, form));
+    }
+
+    @Override
+    public String permalink(String mediaId, String token) {
+        PermalinkResponse media = call("permalink", () -> graph.get()
+                .uri(uri -> uri.path("/" + properties.graphVersion() + "/{media}")
+                        .queryParam("fields", "permalink")
+                        .queryParam("access_token", "{token}")
+                        .build(mediaId, token))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(PermalinkResponse.class));
+        return media == null ? null : media.permalink();
+    }
+
+    @Override
+    public PublishingLimit publishingLimit(String accountId, String token) {
+        JsonNode body = call("publishing limit", () -> graph.get()
+                .uri(uri -> uri.path("/" + properties.graphVersion() + "/{account}/content_publishing_limit")
+                        .queryParam("fields", "quota_usage,config")
+                        .queryParam("access_token", "{token}")
+                        .build(accountId, token))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(JsonNode.class));
+        JsonNode limit = body == null ? null : body.path("data").path(0);
+        if (limit == null || !limit.path("quota_usage").isNumber() || !limit.path("config").path("quota_total")
+                .isNumber()) {
+            throw new GraphApiException("Instagram publishing limit: no quota_usage or quota_total in the answer", 200);
+        }
+        return new PublishingLimit(limit.path("quota_usage").asInt(), limit.path("config").path("quota_total").asInt());
+    }
+
+    /** The token goes in the form, never in the URL. */
+    private static MultiValueMap<String, String> form(String token) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("access_token", token);
+        return form;
+    }
+
+    private IdResponse post(String operation, String path, String accountId, MultiValueMap<String, String> form) {
+        return call(operation, () -> graph.post()
+                .uri(uri -> uri.path("/" + properties.graphVersion() + path).build(accountId))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .accept(MediaType.APPLICATION_JSON)
+                .body(form)
+                .retrieve()
+                .body(IdResponse.class));
+    }
+
+    private static String id(String operation, IdResponse response) {
+        if (response == null || response.id() == null) {
+            throw new GraphApiException("Instagram " + operation + ": no id in the answer", 200);
+        }
+        return response.id();
+    }
+
     private static LongLivedToken longLived(TokenResponse response) {
         if (response == null || response.accessToken() == null || response.expiresIn() == null) {
             throw new GraphApiException("Instagram token exchange: no access_token or expires_in in the answer", 200);
@@ -138,16 +249,47 @@ class RestInstagramGraphClient implements InstagramGraphClient {
         return Set.copyOf(permissions);
     }
 
-    /** Runs a call; an error keeps the operation and the status only (RestClient messages quote the URL). */
+    /**
+     * Runs a call; an error keeps the operation, the status and the {@code error} object of Meta, cleaned of tokens
+     * ({@link GraphError}), never the URL that RestClient messages quote.
+     */
     private static <T> T call(String operation, Supplier<T> request) {
         try {
             return request.get();
         } catch (RestClientResponseException e) {
-            throw new GraphApiException("Instagram " + operation + " answered " + e.getStatusCode().value(),
-                    e.getStatusCode().value());
+            GraphError error = error(e);
+            throw new GraphApiException("Instagram " + operation + " answered " + e.getStatusCode().value()
+                    + (error == null ? "" : " with error " + error.codes()), e.getStatusCode().value(), error);
         } catch (RestClientException e) {
             throw new GraphApiException("Instagram " + operation + " failed: " + e.getClass().getSimpleName(), 0);
         }
+    }
+
+    /** The {@code error} object of the answer; {@code null} when the body is not the JSON of Meta. */
+    private static GraphError error(RestClientResponseException e) {
+        try {
+            byte[] body = e.getResponseBodyAsByteArray();
+            ErrorResponse answer = body.length == 0 ? null : ERRORS.readValue(body, ErrorResponse.class);
+            return answer == null ? null : answer.error();
+        } catch (JacksonException notJson) {
+            return null;
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ErrorResponse(GraphError error) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record IdResponse(String id) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record StatusResponse(@JsonProperty("status_code") String statusCode) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record PermalinkResponse(String permalink) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -31,6 +31,10 @@ export interface CaptionRequest {
   delegationCode: string | null;
   publicUrl: string;
   language: string;
+  /** `FACEBOOK` by default; `INSTAGRAM` gives the caption without link (SOC-05). */
+  network?: 'FACEBOOK' | 'INSTAGRAM';
+  /** Short reference of the draft, written in the Instagram caption. */
+  shortRef?: string | null;
 }
 
 /** The text posted on the networks, built by social-publisher (the front end never builds it). */
