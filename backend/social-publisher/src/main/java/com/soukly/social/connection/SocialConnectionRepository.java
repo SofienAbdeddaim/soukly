@@ -139,6 +139,23 @@ public class SocialConnectionRepository {
                 cipher.keyVersion(), Timestamp.from(expiresAt), Timestamp.from(clock.instant()), connection.id());
     }
 
+    /** Status of the connection of this network, without reading its token; empty when there is none. */
+    public Optional<ConnectionStatus> status(UUID userId, Network network) {
+        return jdbc.query("SELECT status FROM social_connections WHERE user_id = ? AND network = ?",
+                (rs, row) -> ConnectionStatus.valueOf(rs.getString(1)), userId, network.name()).stream().findFirst();
+    }
+
+    /** The connection of this network with its token decrypted, to publish or remove a post (SOC-04). */
+    public Optional<PublishingAccount> findForPublishing(UUID userId, Network network) {
+        return jdbc.query("""
+                SELECT id, external_id, status, token_ciphertext, key_version FROM social_connections
+                WHERE user_id = ? AND network = ?
+                """, (rs, row) -> new PublishingAccount(rs.getObject("id", UUID.class), rs.getString("external_id"),
+                ConnectionStatus.valueOf(rs.getString("status")), cipher.decrypt(rs.getBytes("token_ciphertext"),
+                        rs.getInt("key_version"), associatedData(userId, network))),
+                userId, network.name()).stream().findFirst();
+    }
+
     /** The network refused the token: the member must connect again ({@link #save} clears it). */
     public void markNeedsReconnect(UUID id) {
         jdbc.update("UPDATE social_connections SET status = 'NEEDS_RECONNECT', updated_at = ? WHERE id = ?",

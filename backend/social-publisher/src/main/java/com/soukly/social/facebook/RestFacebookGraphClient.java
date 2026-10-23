@@ -1,5 +1,6 @@
 package com.soukly.social.facebook;
 
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.util.List;
 import java.util.Set;
@@ -7,6 +8,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.springframework.http.MediaType;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -18,11 +21,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.soukly.social.graph.GraphApiException;
+import com.soukly.social.graph.GraphError;
 
 /**
  * {@link FacebookGraphClient} over HTTP with {@link RestClient}: origin and version from {@link FacebookProperties}.
- * Tokens and the app secret go in the query string, as the Graph API documents it; the client never logs a URL, and
- * {@link #call} drops the exceptions that quote one.
+ * Tokens and the app secret go in the query string, as the Graph API documents it, except for the publishing calls
+ * whose parameters, Page token included, go in a form body; the client never logs a URL, and {@link #call} drops the
+ * exceptions that quote one, keeping the {@code error} object of Meta ({@link GraphError}).
  */
 @Component
 class RestFacebookGraphClient implements FacebookGraphClient {
@@ -140,6 +145,64 @@ class RestFacebookGraphClient implements FacebookGraphClient {
                 .toBodilessEntity());
     }
 
+    @Override
+    public String uploadUnpublishedPhoto(String pageId, String pageToken, URI photoUrl) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("url", photoUrl.toString());
+        form.add("published", "false");
+        form.add("access_token", pageToken);
+        return id("photo upload", call("photo upload", () -> client.post()
+                .uri(uri -> versioned(uri, "/{page}/photos").build(pageId))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(form)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(IdResponse.class)));
+    }
+
+    @Override
+    public String createPost(String pageId, String pageToken, String message, List<String> photoIds) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("message", message);
+        for (int i = 0; i < photoIds.size(); i++) {
+            form.add("attached_media[" + i + "]", "{\"media_fbid\":\"" + photoIds.get(i) + "\"}");
+        }
+        form.add("access_token", pageToken);
+        return id("post creation", call("post creation", () -> client.post()
+                .uri(uri -> versioned(uri, "/{page}/feed").build(pageId))
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(form)
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(IdResponse.class)));
+    }
+
+    @Override
+    public String permalink(String postId, String pageToken) {
+        PermalinkResponse post = call("permalink", () -> client.get()
+                .uri(uri -> versioned(uri, "/{post}").queryParam("fields", "permalink_url")
+                        .queryParam("access_token", "{token}").build(postId, pageToken))
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(PermalinkResponse.class));
+        return post == null ? null : post.permalinkUrl();
+    }
+
+    @Override
+    public void deletePost(String postId, String pageToken) {
+        call("post deletion", () -> client.delete()
+                .uri(uri -> versioned(uri, "/{post}").queryParam("access_token", "{token}").build(postId, pageToken))
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    private static String id(String operation, IdResponse response) {
+        if (response == null || response.id() == null) {
+            throw new GraphApiException("Graph API " + operation + ": no id in the answer", 200);
+        }
+        return response.id();
+    }
+
     private UriBuilder versioned(UriBuilder uri, String path) {
         return uri.path("/" + properties.graphVersion() + path);
     }
@@ -156,11 +219,30 @@ class RestFacebookGraphClient implements FacebookGraphClient {
         try {
             return request.get();
         } catch (RestClientResponseException e) {
-            throw new GraphApiException("Graph API " + operation + " answered " + e.getStatusCode().value(),
-                    e.getStatusCode().value());
+            GraphError error = error(e);
+            throw new GraphApiException("Graph API " + operation + " answered " + e.getStatusCode().value()
+                    + (error == null ? "" : " with error " + error.codes()), e.getStatusCode().value(), error);
         } catch (RestClientException e) {
             throw new GraphApiException("Graph API " + operation + " failed: " + e.getClass().getSimpleName(), 0);
         }
+    }
+
+    /** The {@code error} object of the answer; {@code null} when the body is not the JSON of Meta. */
+    private static GraphError error(RestClientResponseException e) {
+        try {
+            ErrorResponse body = e.getResponseBodyAs(ErrorResponse.class);
+            return body == null ? null : body.error();
+        } catch (RuntimeException notJson) {
+            return null;
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record ErrorResponse(GraphError error) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record PermalinkResponse(@JsonProperty("permalink_url") String permalinkUrl) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

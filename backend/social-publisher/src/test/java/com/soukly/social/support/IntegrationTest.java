@@ -78,7 +78,7 @@ public abstract class IntegrationTest {
         // Run by the tests only
         registry.add("soukly.social.facebook.purge-initial-delay", () -> "P1D");
         registry.add("soukly.social.instagram.refresh-initial-delay", () -> "P1D");
-        registry.add("soukly.social.user-events.retry-interval", () -> "100ms");
+        registry.add("soukly.social.events.retry-interval", () -> "100ms");
     }
 
     /** The topics of user-service, which creates them outside the tests. */
