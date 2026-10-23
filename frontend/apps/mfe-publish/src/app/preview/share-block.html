@@ -72,7 +72,11 @@
     <p class="share__muted">
       {{ photosKey() | transloco: { count: listing()?.photos?.length ?? 0 } }}
     </p>
-    } } }
+    @if (instagramNote()) {
+    <p class="share__muted" data-testid="share-caption-instagram-note">
+      {{ 'publish.share.caption.instagram-note' | transloco }}
+    </p>
+    } } } }
   </details>
 
   <p class="share__muted">

@@ -207,6 +207,8 @@ export interface FakeListing {
   /** SOC-03: null (absent) until the seller chose. */
   shareTo?: string[] | null;
   shareLanguage?: string | null;
+  /** SOC-05: short reference of the Instagram captions. */
+  shortRef?: string;
 }
 
 export type FakeStatus = 'DRAFT' | 'PUBLISHED' | 'EXPIRED' | 'INACTIVE' | 'DELETED';
@@ -291,6 +293,7 @@ function view(listing: FakeListing, warnings: string[] = []) {
     status: listing.status ?? 'DRAFT',
     shareTo: listing.shareTo ?? null,
     shareLanguage: listing.shareLanguage ?? null,
+    shortRef: listing.shortRef ?? '7K4M2QX9',
     kind: kindOf(listing),
     missingFields: missingFields(listing),
     warnings,

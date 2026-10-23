@@ -94,6 +94,14 @@
   font-size: 0.8125rem;
 }
 
+/* The short reference (SOC-05): discreet, read over the phone or typed from an Instagram post. */
+.detail__ref {
+  margin: 0.75rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+}
+
 .detail__section {
   display: flex;
   flex-direction: column;

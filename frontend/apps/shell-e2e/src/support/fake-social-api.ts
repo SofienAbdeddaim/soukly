@@ -80,6 +80,8 @@ interface CaptionBody {
   negotiable: boolean;
   publicUrl: string;
   language: string;
+  network?: string;
+  shortRef?: string | null;
 }
 
 /**
@@ -98,7 +100,9 @@ function caption(body: CaptionBody) {
     '',
     body.description,
     '',
-    `${ar ? 'شاهد الإعلان:' : "Voir l'annonce :"} ${body.publicUrl}`,
+    body.network === 'INSTAGRAM'
+      ? `${ar ? 'الإعلان كاملًا على' : 'Annonce complète sur'} ${new URL(body.publicUrl).host}/r/${body.shortRef}`
+      : `${ar ? 'شاهد الإعلان:' : "Voir l'annonce :"} ${body.publicUrl}`,
     hashtags.join(' '),
   ].join('\n');
   return { text, hashtags };

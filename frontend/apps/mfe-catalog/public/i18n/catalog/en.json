@@ -147,7 +147,8 @@
     "read-less": "Show less",
     "seller": "Seller",
     "member-since": "Member since {{since}}",
-    "contact-area": "Price and seller contact"
+    "contact-area": "Price and seller contact",
+    "reference": "Ref."
   },
   "contact": {
     "show": "Show the number",

@@ -199,6 +199,51 @@ describe('ShareBlock', () => {
     expect(element.textContent).toContain('Avec votre photo');
   });
 
+  it('shows the Instagram caption when Instagram alone is ticked', async () => {
+    const INSTAGRAM = connection({ network: 'INSTAGRAM', displayName: '@sfax.auto' });
+    const { element, render } = await setup(
+      { ...DRAFT, shareTo: ['INSTAGRAM'], shortRef: '8F3C2K9A' },
+      [FACEBOOK, INSTAGRAM],
+    );
+    const details = element.querySelector('details') as HTMLDetailsElement;
+
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    await render();
+    const request = http.expectOne('/api/social/caption-preview');
+    expect(request.request.body).toEqual(
+      expect.objectContaining({ network: 'INSTAGRAM', shortRef: '8F3C2K9A' }),
+    );
+    request.flush({ text: 'Annonce complète sur soukly.tn/r/8F3C2K9A', hashtags: ['#Soukly'] });
+    await render();
+
+    expect(element.querySelector('[data-testid=share-caption-text]')?.textContent).toContain(
+      'soukly.tn/r/8F3C2K9A',
+    );
+    expect(element.querySelector('[data-testid=share-caption-instagram-note]')).toBeNull();
+  });
+
+  it('shows the Facebook text with a word on Instagram when both are ticked', async () => {
+    const INSTAGRAM = connection({ network: 'INSTAGRAM', displayName: '@sfax.auto' });
+    const { element, render } = await setup(
+      { ...DRAFT, shareTo: ['FACEBOOK', 'INSTAGRAM'], shortRef: '8F3C2K9A' },
+      [FACEBOOK, INSTAGRAM],
+    );
+    const details = element.querySelector('details') as HTMLDetailsElement;
+
+    details.open = true;
+    details.dispatchEvent(new Event('toggle'));
+    await render();
+    const request = http.expectOne('/api/social/caption-preview');
+    expect(request.request.body).toEqual(expect.objectContaining({ network: 'FACEBOOK' }));
+    request.flush({ text: "Voir l'annonce : https://soukly.tn/fr/listings/1", hashtags: [] });
+    await render();
+
+    expect(
+      element.querySelector('[data-testid=share-caption-instagram-note]')?.textContent,
+    ).toContain('Sur Instagram, le lien est remplacé par la référence');
+  });
+
   it('keeps a draft of a member without network unchanged', async () => {
     const { store } = await setup(DRAFT, []);
 
