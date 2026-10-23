@@ -12,8 +12,8 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:${SOCIAL_SVC_DB_PASSWORD:}}
   flyway:
     locations: classpath:db/migration
-  # User events (SOC-01): only user.deleted is handled, to delete the connections of the account. Its dead letters go
-  # through the producer.
+  # User events (SOC-01): only user.deleted is handled, to delete the connections of the account. Listing events
+  # (SOC-04): listing.published and listing.deleted. Dead letters go through the producer.
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
     consumer:
@@ -38,7 +38,8 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        # Metrics of the posts (social.posts, social.posts.publish); the port is never exposed by the gateway
+        include: health,metrics
 
 soukly:
   social:
@@ -97,7 +98,25 @@ soukly:
     listing-service:
       base-url: ${LISTING_SERVICE_URL:http://localhost:8082}
       labels-cache-ttl: 1h
-    # Consumer of the user events (AUTH-05): a failed message is retried 3 times, then sent to the DLQ
-    user-events:
+    # Consumers of the user events (AUTH-05) and of the listing events (SOC-04): a failed message is retried 3 times,
+    # then sent to the DLQ of its topic
+    events:
       retries: 3
       retry-interval: 2s
+    # Publication of the listings on the Facebook Pages (SOC-04)
+    posts:
+      facebook:
+        # The task takes the PENDING posts that are due every publish-interval
+        publish-interval: PT10S
+        publish-initial-delay: PT30S
+        # At most one post per Page every page-interval, and calls-per-minute publishing calls (photos and posts) in
+        # all; prudent values, to adjust to the limits Meta documents
+        page-interval: 30s
+        calls-per-minute: 30
+        # New attempts after a temporary failure (network, 5xx, rate limit), then FAILED
+        retry-delays: 1m,5m,30m,2h,6h
+        # Photos attached to a post, in the seller's order
+        max-photos: 10
+        # Removal of a post (listing or account deleted): attempts and pause between two attempts
+        delete-attempts: 3
+        delete-retry-interval: 5s

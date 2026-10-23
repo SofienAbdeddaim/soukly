@@ -104,6 +104,61 @@ POST /social/instagram/callback ─► consumes the state ─► POST api.instag
   listing-service unavailable: `503` `caption-unavailable`; an unknown code: `400` `validation-failed`
   (`category.unknown`, `governorate.unknown`, `delegation.unknown`).
 
+## Publishing the listings on the Facebook Page (SOC-04)
+
+When a listing is published with `FACEBOOK` in `shareTo`, it is posted on the connected Page of the seller: **all its
+photos (at most 10, in the seller's order) and the text of the `CaptionBuilder`**, whose link carries
+`utm_source=facebook&utm_medium=social&utm_campaign=soukly_share`.
+
+```
+listing-service ── listing.published ──► consumer (group social-publisher, processed_events)
+                                          └─► social_posts: PENDING, or SKIPPED (not-connected / needs-reconnect)
+FacebookPublisher (every 10 s) ── lock a due PENDING row (FOR UPDATE SKIP LOCKED) ── Page token decrypted
+   POST /{page-id}/photos  url=<1600 px WebP>, published=false   (once per photo)
+   POST /{page-id}/feed    message=<caption>, attached_media[i]={"media_fbid": …}
+   GET  /{post-id}?fields=permalink_url
+   └─► PUBLISHED (external_post_id, permalink, published_at)
+listing.deleted / user.deleted ──► PENDING → CANCELLED; PUBLISHED → DELETE /{post-id} (3 attempts) → DELETED
+```
+
+- **`social_posts`** (V4): one row per listing and network (`unique (listing_id, network)`), with `status`
+  (`PENDING`, `PUBLISHED`, `SKIPPED`, `FAILED`, `CANCELLED`, `DELETED`), `attempts`, `last_error_code` (the reason of a
+  `SKIPPED` or `FAILED` row, or why a post could not be removed), `next_attempt_at`, the Page it was posted on and the
+  `content` of the event (title, description, price, codes, photos, link, language): the publication is decoupled from
+  Kafka and builds the text when it runs. The consumer never calls Meta for a publication.
+- **Pace** (in memory, one instance in V1): at most one post per Page every 30 s (`page-interval`) and 30 publishing
+  calls (photos and posts) per minute in all (`calls-per-minute`). A post whose Page is busy is postponed without
+  counting an attempt.
+- **Errors** (`GraphFailure`, codes of the Graph API error guide):
+
+  | Meta answer | Effect |
+  | --- | --- |
+  | no answer, 5xx, 429, codes `1`, `2`, `4`, `17`, `32`, `341`, `613`, `80001`, `is_transient` | `PENDING`, tried again after 1 min, 5 min, 30 min, 2 h, 6 h (`retry-delays`), then `FAILED` with the last code |
+  | `190` (any subcode), `102` | connection `NEEDS_RECONNECT`, post `FAILED` `needs-reconnect`, no new attempt |
+  | `10`, `200`–`299` | `FAILED` `permission-missing` |
+  | anything else (`100`, `324` invalid photo, `368`, `506` duplicate…) | `FAILED` `meta-{code}[/{subcode}]` |
+
+  The message of Meta is logged cleaned of tokens, emails and phone numbers (`GraphError.safeMessage`).
+- **Removal**: `listing.deleted` cancels the `PENDING` rows (a publication in progress finishes first, under its row
+  lock) and deletes the `PUBLISHED` posts with the Page token, in 3 attempts 5 s apart; a post already gone on Facebook
+  (`100/33`) counts as deleted. When it cannot be deleted (another Page connected since, token refused, Meta down), the
+  row stays `PUBLISHED` with `last_error_code` and an error is logged. `user.deleted` does the same for every listing of
+  the member **before** deleting the connections, then deletes the `social_posts` rows with them.
+- `listing.updated`, `listing.renewed`, `listing.deactivated`, `listing.expired` are ignored in V1. Invalid listing
+  events go to `soukly.listing-events.dlq` after the retries (shared error handler with the user events).
+- **Metrics** (`/actuator/metrics`, never routed by the gateway): `social.posts{network,status}` counts the posts that
+  enter each status, `social.posts.publish{network,outcome}` times the publications. Logs carry `listingId` and the
+  `X-Request-Id` header of the Kafka message when it has one (kept in `social_posts.request_id`).
+
+| Setting (`soukly.social.posts.facebook.*`) | Default |
+| --- | --- |
+| `publish-interval` / `publish-initial-delay` | `PT10S` / `PT30S` |
+| `page-interval` | `30s` |
+| `calls-per-minute` | `30` |
+| `retry-delays` | `1m,5m,30m,2h,6h` |
+| `max-photos` | `10` |
+| `delete-attempts` / `delete-retry-interval` | `3` / `5s` |
+
 ## Configuration
 
 | Variable                                  | Meaning                                                                                                                                   |
@@ -162,3 +217,14 @@ The exact labels move often in the Meta developer dashboard: check them there.
 5. Refresh: in `soukly_social`, `UPDATE social_connections SET token_expires_at = now() + interval '5 days' WHERE network = 'INSTAGRAM'`, restart social-publisher with `SOUKLY_SOCIAL_INSTAGRAM_REFRESH_INITIAL_DELAY=PT5S`: after a few seconds `token_expires_at` is about 60 days ahead again (the token must be at least 24 hours old). Remove Soukly from the tester's *Apps and websites*, repeat: the card shows "Relier à nouveau".
 6. **Déconnecter** Instagram: only the Instagram card goes back to "Non relié".
 7. Repeat from `/ar/account/social`: right to left, `@username` stays left to right.
+
+### Publishing on the Page (SOC-04)
+
+1. Same services as above, with listing-service and photos reachable by Meta over **public HTTPS** (dev: the public
+   URL of the photo storage; locally the Graph API cannot fetch `localhost` photos, so this test is done in dev).
+2. Connect the Page of a tester, publish a listing with 3 photos and "Partager sur Facebook" ticked.
+3. Within a few seconds, the Page shows one post with the 3 photos and the text of the preview; the link opens the
+   listing with `utm_source=facebook`. In `soukly_social`, the row of `social_posts` is `PUBLISHED` with its
+   `permalink`. If Meta refuses the WebP photos, the row is `FAILED` `meta-324` (or another code): note it, a JPEG
+   variant is then needed (`PhotoVariantService`, SOC-05).
+4. Delete the listing in "Mes annonces": the post disappears from the Page and the row is `DELETED`.

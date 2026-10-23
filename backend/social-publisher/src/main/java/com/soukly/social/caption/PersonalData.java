@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
  * Removes the email addresses and the phone numbers a seller may have typed in a title or a description: a text
  * posted on a social network never carries personal data (SOC-03). The listing page still shows the text as written.
  */
-final class PersonalData {
+public final class PersonalData {
 
     static final String MASK = "[…]";
 
@@ -26,7 +26,7 @@ final class PersonalData {
     private PersonalData() {
     }
 
-    static String mask(String text) {
+    public static String mask(String text) {
         if (text == null) {
             return null;
         }
