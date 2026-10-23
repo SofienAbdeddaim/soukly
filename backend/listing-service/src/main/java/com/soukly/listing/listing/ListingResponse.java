@@ -21,12 +21,13 @@ import com.soukly.listing.seller.SellerProfile;
  *                    otherwise null
  * @param shareTo     networks to share to at the publication (SOC-03), null until the seller chose
  * @param shareLanguage language of the post texts, or null
+ * @param shortRef    short reference of the Instagram captions (SOC-05)
  */
 public record ListingResponse(UUID id, ListingStatus status, long version, ListingKind kind, String categoryCode,
         String title, String description, PriceMode priceMode, Long price, boolean negotiable,
         String governorateCode, String delegationCode, Map<String, Object> attributes, List<Photo> photos,
         List<String> missingFields, List<String> warnings, Instant createdAt, Instant updatedAt,
-        Instant publishedAt, Instant expiresAt, Seller seller, List<ShareNetwork> shareTo, String shareLanguage) {
+        Instant publishedAt, Instant expiresAt, Seller seller, List<ShareNetwork> shareTo, String shareLanguage, String shortRef) {
 
     /** The only currency of V1. */
     static final String CURRENCY = "TND";
@@ -47,7 +48,8 @@ public record ListingResponse(UUID id, ListingStatus status, long version, Listi
                 content.price(), content.negotiable(), content.governorateCode(), content.delegationCode(),
                 content.attributes(), view.photos().stream().map(Photo::of).toList(), view.missingFields(),
                 view.warnings(), listing.createdAt(), listing.updatedAt(), listing.publishedAt(),
-                listing.expiresAt(), seller, content.shareTo(), content.shareLanguage());
+                listing.expiresAt(), seller, content.shareTo(), content.shareLanguage(),
+                listing.shortRef());
     }
 
     /**

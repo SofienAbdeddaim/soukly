@@ -14,11 +14,12 @@ import java.util.UUID;
  * @param price    whole dinars, null "on quote"
  * @param currency always {@code TND} in V1
  * @param photos   READY photos, cover first, with their 1600 and 400 px WebP versions (ANN-02)
+ * @param shortRef short reference of the Instagram captions, shown as "Réf. 8F3C2K9A" (SOC-05)
  */
 public record PublicListingResponse(UUID id, ListingStatus status, ListingKind kind, String categoryCode,
         String title, String description, PriceMode priceMode, Long price, String currency, boolean negotiable,
         String governorateCode, String delegationCode, Map<String, Object> attributes,
-        List<ListingResponse.Photo> photos, Instant publishedAt, ListingResponse.Seller seller) {
+        List<ListingResponse.Photo> photos, Instant publishedAt, ListingResponse.Seller seller, String shortRef) {
 
     static PublicListingResponse of(ListingReading reading) {
         Listing listing = reading.view().listing();
@@ -27,6 +28,6 @@ public record PublicListingResponse(UUID id, ListingStatus status, ListingKind k
                 content.title(), content.description(), content.priceMode(), content.price(), ListingResponse.CURRENCY,
                 content.negotiable(), content.governorateCode(), content.delegationCode(), content.attributes(),
                 reading.view().photos().stream().map(ListingResponse.Photo::of).toList(), listing.publishedAt(),
-                ListingResponse.Seller.of(listing.ownerId(), reading.seller()));
+                ListingResponse.Seller.of(listing.ownerId(), reading.seller()), listing.shortRef());
     }
 }

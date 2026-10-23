@@ -115,6 +115,20 @@ class ListingController {
     }
 
     /**
+     * The listing of a short reference, in any case (SOC-05): public, for the redirection {@code /r/{ref}} of the
+     * front end. Declared as a literal path, it wins over {@code GET /listings/{id}}.
+     */
+    @GetMapping("/by-ref/{ref}")
+    ResponseEntity<ListingId> byRef(@PathVariable String ref) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noCache())
+                .body(new ListingId(listings.idByShortRef(ref)));
+    }
+
+    /** Body of {@code GET /listings/by-ref/{ref}}. */
+    record ListingId(UUID id) {
+    }
+
+    /**
      * Public at the gateway: the token, when there is one, says whether the reader owns the listing. The owner gets
      * the full view in any status; anyone else the public view of a published listing (CATA-03), never stored by a
      * shared cache and revalidated, since it disappears with the listing.
