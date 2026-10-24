@@ -128,6 +128,8 @@ services:
       MAIL_PORT: ${MAIL_PORT:?MAIL_PORT is not set}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-false}
       MAIL_FROM: ${MAIL_FROM:?MAIL_FROM is not set}
       JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
       JWT_KEY_ID: ${JWT_KEY_ID:?JWT_KEY_ID is not set}
