@@ -277,6 +277,7 @@ type.
 | `SPRING_DATASOURCE_PASSWORD`                          | `USER_SVC_DB_PASSWORD`                               | database password                                                               |
 | `MAIL_HOST`, `MAIL_PORT`                              | `localhost`, `1025` (Mailpit)                        | SMTP server                                                                     |
 | `MAIL_USERNAME`, `MAIL_PASSWORD`                      | empty                                                | SMTP credentials                                                                |
+| `MAIL_SMTP_AUTH`, `MAIL_STARTTLS`                     | `false`                                              | `true` for a real provider on port 587 (SMTP login, then STARTTLS required)     |
 | `MAIL_FROM`                                           | `no-reply@example.com`                               | sender                                                                          |
 | `FRONT_BASE_URL`                                      | `http://localhost:4200`                              | origin of the links in the emails                                               |
 | `USER_SERVICE_PORT`                                   | `8081`                                               | HTTP port                                                                       |
