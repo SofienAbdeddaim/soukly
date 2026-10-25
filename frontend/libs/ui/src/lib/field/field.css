@@ -63,10 +63,10 @@
 }
 
 .ui-field .ui-control:focus-visible {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
+  outline: 2px solid transparent; /* forced-colors mode only */
+  outline-offset: 0;
   border-color: var(--color-text);
-  box-shadow: var(--focus-ring);
+  box-shadow: var(--focus-ring-field);
 }
 
 .ui-field--invalid .ui-control {
@@ -158,7 +158,8 @@
 }
 
 .ui-field .ui-field__suffix:focus-visible {
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  box-shadow: var(--focus-ring);
+  outline: 2px solid transparent; /* forced-colors mode only */
+  outline-offset: 0;
+  /* Inside the button: a ring outside it would run over the border of the field. */
+  box-shadow: inset 0 0 0 2px var(--color-text);
 }
