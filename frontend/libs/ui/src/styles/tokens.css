@@ -80,6 +80,8 @@
 
   /* Double ring: a background-coloured gap, then an indigo ring, visible on light and dark surfaces. */
   --focus-ring: 0 0 0 2px var(--color-bg), 0 0 0 4px var(--color-text);
+  /* Text fields: the border turns indigo and a soft halo follows it, instead of the double ring. */
+  --focus-ring-field: 0 0 0 3px var(--soukly-indigo-900-alpha-16);
 
   --control-height: 44px;
   --control-height-lg: 52px;
