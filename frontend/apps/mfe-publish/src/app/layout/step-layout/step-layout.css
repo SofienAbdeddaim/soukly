@@ -89,8 +89,9 @@
   gap: 10px;
   padding-block: 12px;
   padding-inline: 16px;
-  border-block-start: 1px solid var(--color-border);
-  background-color: var(--color-surface);
+  /* Same cream as the page, so the bar does not show as a white band behind the button. */
+  background-color: var(--color-bg);
+  box-shadow: 0 -8px 12px -8px rgb(0 0 0 / 0.12);
 }
 
 @media (min-width: 768px) {

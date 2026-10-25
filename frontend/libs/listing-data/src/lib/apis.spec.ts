@@ -58,6 +58,16 @@ describe('listing-data APIs', () => {
       // No ETag header readable: the one listing-service derives from the version.
       expect((await updated).etag).toBe('"4"');
     });
+
+    it('ignores an ETag rewritten by the compression of a proxy', async () => {
+      const read = TestBed.inject(ListingsApi).get(TEST_ID);
+      http.expectOne(`/api/listings/${TEST_ID}`).flush(draftListing({ version: 3 }), {
+        headers: { ETag: '"3-zstd"' },
+      });
+
+      // Sent back in If-Match, "3-zstd" would never match version 3: every save would answer 412.
+      expect((await read).etag).toBe('"3"');
+    });
   });
 
   describe('ListingsApi, My listings (ANN-05)', () => {
