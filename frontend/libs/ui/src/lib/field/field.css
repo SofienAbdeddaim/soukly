@@ -134,6 +134,11 @@
   border-inline-end-width: 2px;
 }
 
+/* The addon follows the control, so that the group reads as one focused field. */
+.ui-field .ui-field__group:has(.ui-control:focus-visible) :is(.ui-field__prefix, .ui-field__unit) {
+  border-color: var(--color-text);
+}
+
 .ui-field .ui-field__group:has(.ui-field__suffix) .ui-control {
   padding-inline-end: var(--control-height);
 }

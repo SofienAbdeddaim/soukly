@@ -20,11 +20,16 @@
 
 .card__media {
   position: relative;
+  flex: none;
   aspect-ratio: 4 / 3;
+  overflow: hidden;
   background-color: var(--color-surface-muted);
 }
 
+/* Out of the flow: a portrait photo must not stretch the box beyond its 4:3 ratio. */
 .card__image {
+  position: absolute;
+  inset: 0;
   inline-size: 100%;
   block-size: 100%;
   object-fit: cover;
