@@ -18,7 +18,7 @@
         <!-- Not managed by the Spring Boot BOM; latest releases on Maven Central (checked 2026-10-20) -->
         <libphonenumber.version>9.0.41</libphonenumber.version>
         <bouncycastle.version>1.86</bouncycastle.version>
-        <greenmail.version>2.1.14</greenmail.version>
+        <greenmail.version>2.1.15</greenmail.version>
     </properties>
 
     <dependencies>
