@@ -92,7 +92,7 @@ class InstagramPublishingTests extends IntegrationTest {
     @AfterEach
     void noTokenInTheLogs() {
         if (code != null) {
-            assertThat(output.getAll()).doesNotContain(TestInstagram.longToken(code))
+            assertThat(output.getAll()).doesNotContain(TestInstagram.token(code))
                     .doesNotContain("seller@example.tn");
         }
     }
@@ -119,7 +119,7 @@ class InstagramPublishingTests extends IntegrationTest {
                 .key(prefix + "/ig-1080.jpg")).contentType()).isEqualTo("image/jpeg"));
         assertThat(items).allSatisfy(call -> {
             assertThat(call.params()).containsEntry("is_carousel_item", "true").doesNotContainKey("caption");
-            assertThat(call.params()).containsEntry("access_token", TestInstagram.longToken(code));
+            assertThat(call.params()).containsEntry("access_token", TestInstagram.token(code));
         });
         List<MediaCall> carousels = TestInstagram.calls(account, "carousel");
         assertThat(carousels).hasSize(1);

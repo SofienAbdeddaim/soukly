@@ -92,7 +92,8 @@ export type InstagramFailure =
   | 'oauth-state-invalid'
   | 'oauth-cancelled'
   | 'oauth-permission-missing'
-  | 'instagram-not-professional'
+  | 'instagram-no-account'
+  | 'instagram-several-accounts'
   | 'instagram-unavailable'
   | 'instagram-not-configured'
   | 'unknown';

@@ -148,13 +148,13 @@ describe('SocialApi', () => {
     http
       .expectOne('/api/social/instagram/callback')
       .flush(
-        { type: 'urn:soukly:problem:instagram-not-professional', status: 400, lang: 'fr' },
+        { type: 'urn:soukly:problem:instagram-no-account', status: 400, lang: 'fr' },
         { status: 400, statusText: 'Bad Request' },
       );
     expect(await personal).toEqual({
       kind: 'failed',
       lang: 'fr',
-      failure: 'instagram-not-professional',
+      failure: 'instagram-no-account',
     });
     expect(toInstagramFailure('facebook-no-page')).toBe('unknown');
   });

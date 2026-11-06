@@ -62,16 +62,20 @@ soukly:
     token-encryption:
       key: ${SOCIAL_TOKEN_ENC_KEY:}
       key-version: ${SOCIAL_TOKEN_ENC_KEY_VERSION:1}
-    # Facebook Login and Graph API (SOC-01). Empty app id: "Connect" answers 503 facebook-not-configured.
+    # Facebook Login for Business and Graph API (SOC-01). New Meta apps only accept "Unified login": the dialog names a
+    # saved configuration of the app (config_id) that carries the permissions, never a scope. Empty app id or
+    # configuration: "Connect" answers 503 facebook-not-configured.
     facebook:
       app-id: ${META_APP_ID:}
       app-secret: ${META_APP_SECRET:}
+      # Configuration "User access token", assets Pages, permissions pages_show_list, pages_manage_posts,
+      # pages_read_engagement
+      login-config-id: ${META_FACEBOOK_LOGIN_CONFIG_ID:}
       graph-version: ${META_GRAPH_VERSION:v26.0}
       graph-base-url: ${META_GRAPH_BASE_URL:https://graph.facebook.com}
       dialog-base-url: ${META_DIALOG_BASE_URL:https://www.facebook.com}
       # Origin of the front end: the redirect URI is {front-base-url}/oauth/facebook/callback, declared once at Meta
       front-base-url: ${FRONT_BASE_URL:${PUBLIC_BASE_URL:http://localhost:4200}}
-      scopes: pages_show_list,pages_manage_posts,pages_read_engagement
       # Without these, a connected Page could not be listed or posted to: oauth-permission-missing
       required-permissions: pages_show_list,pages_manage_posts
       # A connection started and not finished, and the choice among several Pages, expire after
@@ -81,26 +85,22 @@ soukly:
       read-timeout: 10s
       purge-interval: PT1H
       purge-initial-delay: PT5M
-    # Instagram API with Instagram Login (SOC-02): its own app id and secret (Instagram product of the Meta app). Empty
-    # app id: "Connect" answers 503 instagram-not-configured.
+    # Instagram API with Facebook Login for Business (Unified login): same Meta app, its own configuration, every call
+    # on the Graph API of Facebook. Empty app id or configuration: "Connect" answers 503 instagram-not-configured.
     instagram:
-      app-id: ${INSTAGRAM_APP_ID:}
-      app-secret: ${INSTAGRAM_APP_SECRET:}
-      graph-version: ${INSTAGRAM_GRAPH_VERSION:${META_GRAPH_VERSION:v26.0}}
-      graph-base-url: ${INSTAGRAM_GRAPH_BASE_URL:https://graph.instagram.com}
-      api-base-url: ${INSTAGRAM_API_BASE_URL:https://api.instagram.com}
-      dialog-base-url: ${INSTAGRAM_DIALOG_BASE_URL:https://www.instagram.com}
+      app-id: ${META_APP_ID:}
+      app-secret: ${META_APP_SECRET:}
+      # Configuration "System-user access token", expiration Never, assets Instagram accounts, permissions
+      # instagram_basic, instagram_content_publish, business_management
+      login-config-id: ${META_INSTAGRAM_LOGIN_CONFIG_ID:}
+      graph-version: ${META_GRAPH_VERSION:v26.0}
+      graph-base-url: ${META_GRAPH_BASE_URL:https://graph.facebook.com}
+      dialog-base-url: ${META_DIALOG_BASE_URL:https://www.facebook.com}
       # The redirect URI is {front-base-url}/oauth/instagram/callback, declared once at Meta
       front-base-url: ${FRONT_BASE_URL:${PUBLIC_BASE_URL:http://localhost:4200}}
-      scopes: instagram_business_basic,instagram_business_content_publish
-      required-permissions: instagram_business_basic,instagram_business_content_publish
       state-ttl: 10m
       connect-timeout: 3s
       read-timeout: 10s
-      # Long-lived tokens last about 60 days: the daily task refreshes those that expire within this delay
-      refresh-before: ${INSTAGRAM_TOKEN_REFRESH_BEFORE:10d}
-      refresh-interval: P1D
-      refresh-initial-delay: PT10M
     # Labels of the categories and places for the post texts (SOC-03): public referential endpoints of listing-service,
     # reached directly, never through the gateway
     # Statuses of the listings (SOC-06): internal endpoints /internal/listings/**, with the shared X-Internal-Token
