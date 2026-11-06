@@ -103,7 +103,7 @@ class FacebookConnectionApiTests extends IntegrationTest {
     }
 
     @Test
-    void theAuthorizeUrlNamesTheAppTheRedirectUriTheStateAndThePermissions() throws Exception {
+    void theAuthorizeUrlNamesTheAppTheRedirectUriTheStateAndTheLoginConfiguration() throws Exception {
         String url = authorizeUrl(member, "ar");
         UriComponents uri = UriComponentsBuilder.fromUriString(url).build();
 
@@ -113,8 +113,10 @@ class FacebookConnectionApiTests extends IntegrationTest {
         assertThat(decode(uri.getQueryParams().getFirst("redirect_uri")))
                 .isEqualTo(FRONT_BASE_URL + "/oauth/facebook/callback");
         assertThat(uri.getQueryParams().getFirst("response_type")).isEqualTo("code");
-        assertThat(decode(uri.getQueryParams().getFirst("scope")))
-                .isEqualTo("pages_show_list,pages_manage_posts,pages_read_engagement");
+        // Unified login: the saved configuration carries the permissions, never a scope
+        assertThat(uri.getQueryParams().getFirst("config_id")).isEqualTo(TestGraph.LOGIN_CONFIG_ID);
+        assertThat(uri.getQueryParams().getFirst("override_default_response_type")).isEqualTo("true");
+        assertThat(uri.getQueryParams()).doesNotContainKey("scope");
         String state = uri.getQueryParams().getFirst("state");
         // 32 random bytes in base64url
         assertThat(state).hasSize(43);

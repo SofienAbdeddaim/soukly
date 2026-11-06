@@ -67,7 +67,7 @@ describe('SocialPage', () => {
     expect(instagram().dataset['state']).toBe('not-connected');
     expect(instagram().textContent).toContain('Non relié');
     expect(instagram().textContent).toContain(
-      'Compte professionnel (Business ou Créateur) requis. Pas besoin de Page Facebook.',
+      'Compte professionnel (Business ou Créateur) requis. Vous le choisissez dans la fenêtre Facebook.',
     );
   });
 
@@ -112,14 +112,14 @@ describe('SocialPage', () => {
     );
   });
 
-  it('explains how to switch a personal Instagram account to a professional one', async () => {
-    const { element } = await setup('/fr/account/social?instagram=instagram-not-professional');
+  it('explains what to check when Meta shared no Instagram account', async () => {
+    const { element } = await setup('/fr/account/social?instagram=instagram-no-account');
 
     const panel = element().querySelector('[data-testid=instagram-failure]') as HTMLElement;
     expect(panel.getAttribute('role')).toBe('alert');
-    expect(panel.textContent).toContain('Ce compte Instagram est personnel');
+    expect(panel.textContent).toContain('Aucun compte Instagram partagé');
     expect(panel.querySelectorAll('[data-testid=instagram-steps] li')).toHaveLength(3);
-    expect(panel.textContent).toContain('Passer à un compte professionnel');
+    expect(panel.textContent).toContain('cochez ce compte Instagram');
     expect(panel.querySelector('[data-testid=instagram-retry]')?.textContent).toContain(
       'Réessayer',
     );
@@ -132,6 +132,7 @@ describe('SocialPage', () => {
     ['oauth-cancelled', 'Vous avez annulé la connexion'],
     ['oauth-permission-missing', "Soukly a besoin de l'autorisation de publier sur votre compte"],
     ['instagram-unavailable', "Instagram n'a pas terminé la connexion"],
+    ['instagram-several-accounts', 'Plusieurs comptes Instagram choisis'],
   ])('explains the Instagram failure %s', async (failure, title) => {
     const { element } = await setup(`/fr/account/social?instagram=${failure}`);
 

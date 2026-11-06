@@ -14,7 +14,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.soukly.common.event.SocialEvents;
 import com.soukly.common.outbox.OutboxRelay;
-import com.soukly.social.instagram.InstagramTokenRefresher;
 import com.soukly.social.support.IntegrationTest;
 import com.soukly.social.support.TestRedpanda;
 
@@ -37,8 +36,6 @@ class ReconnectNoticeTests extends IntegrationTest {
     @Autowired
     private OutboxRelay relay;
 
-    @Autowired
-    private InstagramTokenRefresher refresher;
 
     @Autowired
     private TransactionTemplate transactions;
@@ -98,18 +95,6 @@ class ReconnectNoticeTests extends IntegrationTest {
 
         transactions.executeWithoutResult(status -> health.needsReconnect(connection));
 
-        assertThat(events()).isEqualTo(1);
-    }
-
-    @Test
-    void anExpiredInstagramTokenAsksToReconnectByEmail() {
-        connections.save(member, new NewConnection(Network.INSTAGRAM, "ig-" + member, "person-" + member,
-                "@sfax.auto", null, "token-" + member, clock.instant().plus(Duration.ofDays(1))));
-        clock.advance(Duration.ofDays(2));
-
-        refresher.refreshExpiring();
-
-        assertThat(status()).isEqualTo("NEEDS_RECONNECT");
         assertThat(events()).isEqualTo(1);
     }
 

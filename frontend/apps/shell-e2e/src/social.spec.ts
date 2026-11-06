@@ -157,7 +157,7 @@ test.describe('instagram', () => {
     const api = await open(page);
     const card = page.getByTestId('instagram-card');
     await expect(card).toContainText(
-      'Compte professionnel (Business ou Créateur) requis. Pas besoin de Page Facebook.',
+      'Compte professionnel (Business ou Créateur) requis. Vous le choisissez dans la fenêtre Facebook.',
     );
 
     await card.getByRole('button', { name: 'Relier' }).click();
@@ -176,12 +176,12 @@ test.describe('instagram', () => {
     });
   });
 
-  test('a personal account is told how to switch to a professional one', async ({ page }) => {
-    const api = await open(page, { instagramScenario: 'personal' });
+  test('no shared account is told what to check', async ({ page }) => {
+    const api = await open(page, { instagramScenario: 'no-account' });
     await page.getByTestId('instagram-connect').click();
 
     const failure = page.getByTestId('instagram-failure');
-    await expect(failure).toContainText('Ce compte Instagram est personnel');
+    await expect(failure).toContainText('Aucun compte Instagram partagé');
     await expect(failure.getByRole('listitem')).toHaveCount(3);
     await expect(failure).toBeFocused();
     await expectNoSeriousA11yViolations(page);

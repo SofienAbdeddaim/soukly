@@ -9,7 +9,7 @@ import { Page, Route } from '@playwright/test';
 export type FacebookScenario =
   'one-page' | 'several-pages' | 'cancelled' | 'permission-missing' | 'no-page';
 
-export type InstagramScenario = 'business' | 'personal' | 'cancelled';
+export type InstagramScenario = 'business' | 'no-account' | 'cancelled';
 
 export interface FakeSocialApi {
   scenario: FacebookScenario;
@@ -265,8 +265,8 @@ export async function fakeSocialApi(
       if (api.instagramScenario === 'cancelled') {
         return json(route, 400, problem('oauth-cancelled', 400, api.lang));
       }
-      if (api.instagramScenario === 'personal') {
-        return json(route, 400, problem('instagram-not-professional', 400, api.lang));
+      if (api.instagramScenario === 'no-account') {
+        return json(route, 400, problem('instagram-no-account', 400, api.lang));
       }
       api.instagram = instagramConnection();
       return json(route, 200, { lang: api.lang, connection: api.instagram });
