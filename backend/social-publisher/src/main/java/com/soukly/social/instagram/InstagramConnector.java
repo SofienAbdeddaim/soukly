@@ -1,7 +1,6 @@
 package com.soukly.social.instagram;
 
-import java.time.Clock;
-import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -21,9 +20,11 @@ import com.soukly.social.oauth.OAuthFailure;
 import com.soukly.social.oauth.OAuthStates;
 
 /**
- * Connection of an Instagram professional account (SOC-02) with Instagram Login, without a Facebook Page: the
- * authorization dialog, the exchange of the code on the server only, the long-lived token, the check of the account
- * type and the disconnection. One account per member: connecting another one replaces it.
+ * Connection of an Instagram professional account (SOC-02) with Facebook Login for Business, the "Unified login" of
+ * new Meta apps: the Facebook dialog with the saved Instagram configuration ({@code config_id}), where the person
+ * selects the account; the exchange of the code on the server only, for a system-user token that does not expire;
+ * the reading of the granted account and the disconnection. One account per member: connecting another one replaces
+ * it.
  *
  * <p>Same guarantees as Facebook (SOC-01): the OAuth state comes from {@link OAuthStates}, tokens never leave the
  * service and never reach a log.
@@ -32,11 +33,8 @@ import com.soukly.social.oauth.OAuthStates;
 @EnableConfigurationProperties(InstagramProperties.class)
 public class InstagramConnector {
 
-    /** {@code error} of the redirect when the person cancels on Instagram. */
+    /** {@code error} of the redirect when the person cancels in the dialog. */
     static final String ACCESS_DENIED = "access_denied";
-
-    /** Instagram appends this to the code in the redirect; it is not part of the code. */
-    private static final String CODE_SUFFIX = "#_";
 
     private static final Logger log = LoggerFactory.getLogger(InstagramConnector.class);
 
@@ -44,40 +42,43 @@ public class InstagramConnector {
     private final InstagramGraphClient instagram;
     private final OAuthStates states;
     private final SocialConnectionRepository connections;
-    private final Clock clock;
 
     InstagramConnector(InstagramProperties properties, InstagramGraphClient instagram, OAuthStates states,
-            SocialConnectionRepository connections, Clock clock) {
+            SocialConnectionRepository connections) {
         this.properties = properties;
         this.instagram = instagram;
         this.states = states;
         this.connections = connections;
-        this.clock = clock;
     }
 
-    /** Starts a connection: the URL of the Instagram authorization dialog, with a new single-use state. */
+    /**
+     * Starts a connection: the URL of the login dialog, with a new single-use state. The configuration carries the
+     * permissions and the choice of the account, so no {@code scope}; it gives a system-user token, which comes only
+     * with the authorization code grant ({@code override_default_response_type}).
+     */
     public String start(UUID userId, String lang) {
         if (!properties.configured()) {
             throw new NetworkNotConfiguredException(Network.INSTAGRAM);
         }
         String state = states.create(userId, Network.INSTAGRAM, lang, properties.stateTtl());
         return UriComponentsBuilder.fromUri(properties.dialogBaseUrl())
-                .path("/oauth/authorize")
+                .path("/" + properties.graphVersion() + "/dialog/oauth")
                 .queryParam("client_id", properties.appId())
                 .queryParam("redirect_uri", properties.redirectUri())
                 .queryParam("state", state)
                 .queryParam("response_type", "code")
-                .queryParam("scope", String.join(",", properties.scopes()))
+                .queryParam("config_id", properties.loginConfigId())
+                .queryParam("override_default_response_type", "true")
                 .encode()
                 .build()
                 .toUriString();
     }
 
     /**
-     * Ends a connection with what Instagram sent back to the callback route.
+     * Ends a connection with what Meta sent back to the callback route.
      *
-     * @throws OAuthFailedException the state is not valid, the member cancelled, a permission is missing, the account
-     *                              is a personal one, or Instagram failed
+     * @throws OAuthFailedException the state is not valid, the member cancelled, no account or several accounts were
+     *                              granted, or Meta failed
      */
     public InstagramCallbackResult callback(UUID userId, String code, String state, String error) {
         String lang = states.consume(userId, Network.INSTAGRAM, state);
@@ -89,25 +90,21 @@ public class InstagramConnector {
             throw new OAuthFailedException(OAuthFailure.INSTAGRAM_UNAVAILABLE, Network.INSTAGRAM, lang);
         }
         try {
-            InstagramGraphClient.ShortLivedToken shortLived = instagram.exchangeCode(stripSuffix(code),
-                    properties.redirectUri());
-            if (shortLived.permissions() != null
-                    && !shortLived.permissions().containsAll(properties.requiredPermissions())) {
-                throw new OAuthFailedException(OAuthFailure.PERMISSION_MISSING, Network.INSTAGRAM, lang);
+            String token = instagram.exchangeCode(code, properties.redirectUri());
+            List<InstagramAccount> accounts = instagram.assignedAccounts(token);
+            if (accounts.isEmpty()) {
+                log.info("Instagram connection of {} refused: no account granted", userId);
+                throw new OAuthFailedException(OAuthFailure.INSTAGRAM_NO_ACCOUNT, Network.INSTAGRAM, lang);
             }
-            InstagramGraphClient.LongLivedToken longLived = instagram.exchangeForLongLived(shortLived.accessToken());
-            InstagramProfile profile = instagram.profile(longLived.accessToken());
-            if (!profile.professional()) {
-                log.info("Instagram connection of {} refused: personal account", userId);
-                throw new OAuthFailedException(OAuthFailure.INSTAGRAM_NOT_PROFESSIONAL, Network.INSTAGRAM, lang);
+            if (accounts.size() > 1) {
+                log.info("Instagram connection of {} refused: {} accounts granted", userId, accounts.size());
+                throw new OAuthFailedException(OAuthFailure.INSTAGRAM_SEVERAL_ACCOUNTS, Network.INSTAGRAM, lang);
             }
-            Instant expiresAt = clock.instant().plusSeconds(longLived.expiresInSeconds());
-            String accountId = profile.userId() != null ? profile.userId()
-                    : shortLived.userId() != null ? shortLived.userId() : profile.id();
-            ConnectionView connection = connections.save(userId, new NewConnection(Network.INSTAGRAM, accountId,
-                    profile.id(), "@" + profile.username(), profile.pictureUrl(), longLived.accessToken(),
-                    expiresAt));
-            log.info("Instagram account {} connected to {}", accountId, userId);
+            InstagramAccount account = accounts.getFirst();
+            // The token does not expire: no expiry, and nothing to refresh
+            ConnectionView connection = connections.save(userId, new NewConnection(Network.INSTAGRAM, account.id(),
+                    null, "@" + account.username(), account.pictureUrl(), token, null));
+            log.info("Instagram account {} connected to {}", account.id(), userId);
             return new InstagramCallbackResult(lang, connection);
         } catch (GraphApiException e) {
             log.warn("Instagram connection of {} failed: {}", userId, e.getMessage());
@@ -116,15 +113,11 @@ public class InstagramConnector {
     }
 
     /**
-     * Deletes the connection. Instagram Login offers no call to revoke the access: the member removes Soukly from the
-     * apps of their Instagram account, and the token expires on its own. Nothing to delete is not an error.
+     * Deletes the connection. The member can remove Soukly from the integrations of their business portfolio; the
+     * token is never used again. Nothing to delete is not an error.
      */
     public void disconnect(UUID userId) {
         connections.delete(userId, Network.INSTAGRAM);
         log.info("Instagram account of {} disconnected", userId);
-    }
-
-    private static String stripSuffix(String code) {
-        return code.endsWith(CODE_SUFFIX) ? code.substring(0, code.length() - CODE_SUFFIX.length()) : code;
     }
 }

@@ -89,8 +89,8 @@ class DeletedAccountTests extends IntegrationTest {
 
         assertThat(count("social_connections", member)).isZero();
         await().atMost(TIMEOUT).until(() -> TestGraph.revoked().contains(TestGraph.userId(pageCode)));
-        // Instagram Login has no revocation, and the Facebook one is never asked for an Instagram id
-        assertThat(TestGraph.revoked()).doesNotContain(TestInstagram.scopedId(instagramCode));
+        // No revocation for Instagram, and the Facebook one is never asked for an Instagram id
+        assertThat(TestGraph.revoked()).doesNotContain(TestInstagram.accountId(instagramCode));
     }
 
     @Test
