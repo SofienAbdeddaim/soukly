@@ -152,6 +152,7 @@
   },
   "preview": {
     "title": "Check your listing",
+    "intro": "This is what buyers will see.",
     "missing": "Still missing:",
     "fields": {
       "categoryCode": "Category",
@@ -167,20 +168,33 @@
     "photo-count": "1 / {{ count }}",
     "no-title": "Untitled",
     "on-quote": "On quote",
-    "negotiable": "negotiable",
+    "negotiable": "Negotiable",
     "yes": "Yes",
     "no": "No",
     "edit-photos": "Edit the photos",
     "edit-details": "Edit the details",
     "edit-price-location": "Edit the price and place",
-    "online": "Online for 60 days",
-    "reminder": "Reminder 3 days before",
     "rules-before": "By publishing, you confirm that your listing follows the",
     "rules-link": "publishing rules",
     "rules-after": ".",
-    "edit": "Edit",
-    "publish": "Publish",
-    "place": "{{ delegation }}, {{ governorate }}"
+    "publish": "Publish listing",
+    "place": "{{ delegation }}, {{ governorate }}",
+    "back": "Back",
+    "chip": {
+      "photos": "Photos",
+      "price-location": "Price and place",
+      "details": "Edit"
+    },
+    "sections": {
+      "details": "Details",
+      "description": "Description"
+    },
+    "facts": {
+      "online": "60 days",
+      "online-detail": "online after publishing",
+      "reminder": "Email reminder",
+      "reminder-detail": "3 days before it ends"
+    }
   },
   "done": {
     "title": "Your listing is online",
@@ -216,6 +230,7 @@
   },
   "share": {
     "title": "Share the listing",
+    "subtitle": "Post it on Facebook and Instagram too.",
     "network": {
       "FACEBOOK": "Facebook Page",
       "INSTAGRAM": "Instagram"
