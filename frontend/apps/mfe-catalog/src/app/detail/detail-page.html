@@ -96,6 +96,11 @@
             {{ 'catalog.detail.description' | transloco }}
           </h2>
           <app-listing-description [text]="view.description" />
+          @if (view.shortRef) {
+          <p class="detail__ref" data-testid="short-ref">
+            {{ 'catalog.detail.reference' | transloco }} <bdi>{{ view.shortRef }}</bdi>
+          </p>
+          }
         </section>
         @if (!desktop()) {
         <ng-container [ngTemplateOutlet]="seller" />

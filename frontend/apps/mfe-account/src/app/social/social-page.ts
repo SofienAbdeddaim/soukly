@@ -13,6 +13,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { problemCode } from '@soukly/auth';
 import { LocaleService } from '@soukly/i18n';
 import {
+  BlockedListings,
   ExternalNavigation,
   FACEBOOK_RESULT_PARAM,
   FacebookFailure,
@@ -40,6 +41,7 @@ import { FacebookCard } from './facebook-card';
 import { FacebookFailurePanel } from './facebook-failure';
 import { InstagramCard } from './instagram-card';
 import { InstagramFailurePanel } from './instagram-failure';
+import { RelaunchBanner } from './relaunch-banner';
 
 /**
  * "My networks" (`/{lang}/account/social`): the Facebook Page (SOC-01) and the Instagram account
@@ -47,7 +49,8 @@ import { InstagramFailurePanel } from './instagram-failure';
  * the shell brings the member back here with `?facebook=` or `?instagram=` `connected` or the
  * reason of a failure, read once then removed from the URL. Under each connected network, the
  * switch "tick by default for every new listing" (SOC-03); a member sent by the preview of a draft
- * finds "Back to my listing".
+ * finds "Back to my listing". Back from connecting a network again, a banner offers to post the
+ * listings blocked meanwhile (SOC-06); after a first connection there are none, so no banner.
  */
 @Component({
   selector: 'app-social-page',
@@ -61,6 +64,7 @@ import { InstagramFailurePanel } from './instagram-failure';
     FacebookFailurePanel,
     InstagramCard,
     InstagramFailurePanel,
+    RelaunchBanner,
   ],
   templateUrl: './social-page.html',
   styleUrl: './social-page.css',
@@ -100,6 +104,10 @@ export class SocialPage implements OnInit {
    * time of the connection on the network, then offered as "Back to my listing".
    */
   protected readonly returnTo = signal<string | null>(null);
+  /** The listings blocked while a network was not connected, offered after connecting it again. */
+  protected readonly relaunch = signal<BlockedListings | null>(null);
+  protected readonly relaunching = signal(false);
+  protected readonly relaunchFailed = signal(false);
   /** The network whose disconnection failed. */
   protected readonly disconnectError = signal<'facebook' | 'instagram' | null>(null);
 
@@ -187,6 +195,29 @@ export class SocialPage implements OnInit {
     void this.router.navigateByUrl(path);
   }
 
+  /** Posts the blocked listings again, then the banner goes away with a toast. */
+  protected async confirmRelaunch(): Promise<void> {
+    const blocked = this.relaunch();
+    if (!blocked) {
+      return;
+    }
+    this.relaunching.set(true);
+    this.relaunchFailed.set(false);
+    try {
+      const count = await this.api.relaunchPosts(blocked.network);
+      this.relaunch.set(null);
+      this.toasts.success(`social.relaunch.done.${blocked.network}`, { count });
+    } catch {
+      this.relaunchFailed.set(true);
+    } finally {
+      this.relaunching.set(false);
+    }
+  }
+
+  protected dismissRelaunch(): void {
+    this.relaunch.set(null);
+  }
+
   protected dismissInstagramFailure(): void {
     this.instagramFailure.set(null);
   }
@@ -234,6 +265,19 @@ export class SocialPage implements OnInit {
     this.instagramFailure.set(null);
     this.instagramConnected.set(false);
     this.disconnectError.set(null);
+    this.relaunch.set(null);
+  }
+
+  /** After a connection: the listings to post again, if any; nothing when they cannot be read. */
+  private async readBlocked(network: SocialNetwork): Promise<void> {
+    try {
+      const blocked = await this.api.blockedPosts(network);
+      if (blocked.total > 0 && this.relaunch() === null) {
+        this.relaunch.set(blocked);
+      }
+    } catch {
+      // The banner is only an offer: the posts stay "to connect again" on "My listings".
+    }
   }
 
   private async confirmDisconnect(
@@ -283,11 +327,13 @@ export class SocialPage implements OnInit {
     }
     if (facebook === 'connected') {
       this.connected.set(true);
+      void this.readBlocked('FACEBOOK');
     } else if (facebook !== null) {
       this.failure.set(toFacebookFailure(facebook));
     }
     if (instagram === 'connected') {
       this.instagramConnected.set(true);
+      void this.readBlocked('INSTAGRAM');
     } else if (instagram !== null) {
       this.instagramFailure.set(toInstagramFailure(instagram));
     }

@@ -12,8 +12,8 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:${SOCIAL_SVC_DB_PASSWORD:}}
   flyway:
     locations: classpath:db/migration
-  # User events (SOC-01): only user.deleted is handled, to delete the connections of the account. Its dead letters go
-  # through the producer.
+  # User events (SOC-01): only user.deleted is handled, to delete the connections of the account. Listing events
+  # (SOC-04): listing.published and listing.deleted. Dead letters go through the producer.
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
     consumer:
@@ -31,14 +31,23 @@ spring:
         request.timeout.ms: 5000
         delivery.timeout.ms: 10000
     admin:
+      # The social events topics are declared at startup (local and dev, SOC-06); a broker that is down does not
+      # prevent the start.
       fail-fast: false
       operation-timeout: 10s
+  task:
+    scheduling:
+      pool:
+        # Publishers, token refresh, housekeeping and the outbox relay do not wait for each other; each task runs once
+        # at a time on its own
+        size: 4
 
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        # Metrics of the posts (social.posts, social.posts.publish); the port is never exposed by the gateway
+        include: health,metrics
 
 soukly:
   social:
@@ -53,16 +62,20 @@ soukly:
     token-encryption:
       key: ${SOCIAL_TOKEN_ENC_KEY:}
       key-version: ${SOCIAL_TOKEN_ENC_KEY_VERSION:1}
-    # Facebook Login and Graph API (SOC-01). Empty app id: "Connect" answers 503 facebook-not-configured.
+    # Facebook Login for Business and Graph API (SOC-01). New Meta apps only accept "Unified login": the dialog names a
+    # saved configuration of the app (config_id) that carries the permissions, never a scope. Empty app id or
+    # configuration: "Connect" answers 503 facebook-not-configured.
     facebook:
       app-id: ${META_APP_ID:}
       app-secret: ${META_APP_SECRET:}
+      # Configuration "User access token", assets Pages, permissions pages_show_list, pages_manage_posts,
+      # pages_read_engagement
+      login-config-id: ${META_FACEBOOK_LOGIN_CONFIG_ID:}
       graph-version: ${META_GRAPH_VERSION:v26.0}
       graph-base-url: ${META_GRAPH_BASE_URL:https://graph.facebook.com}
       dialog-base-url: ${META_DIALOG_BASE_URL:https://www.facebook.com}
       # Origin of the front end: the redirect URI is {front-base-url}/oauth/facebook/callback, declared once at Meta
       front-base-url: ${FRONT_BASE_URL:${PUBLIC_BASE_URL:http://localhost:4200}}
-      scopes: pages_show_list,pages_manage_posts,pages_read_engagement
       # Without these, a connected Page could not be listed or posted to: oauth-permission-missing
       required-permissions: pages_show_list,pages_manage_posts
       # A connection started and not finished, and the choice among several Pages, expire after
@@ -72,32 +85,99 @@ soukly:
       read-timeout: 10s
       purge-interval: PT1H
       purge-initial-delay: PT5M
-    # Instagram API with Instagram Login (SOC-02): its own app id and secret (Instagram product of the Meta app). Empty
-    # app id: "Connect" answers 503 instagram-not-configured.
+    # Instagram API with Facebook Login for Business (Unified login): same Meta app, its own configuration, every call
+    # on the Graph API of Facebook. Empty app id or configuration: "Connect" answers 503 instagram-not-configured.
     instagram:
-      app-id: ${INSTAGRAM_APP_ID:}
-      app-secret: ${INSTAGRAM_APP_SECRET:}
-      graph-version: ${INSTAGRAM_GRAPH_VERSION:${META_GRAPH_VERSION:v26.0}}
-      graph-base-url: ${INSTAGRAM_GRAPH_BASE_URL:https://graph.instagram.com}
-      api-base-url: ${INSTAGRAM_API_BASE_URL:https://api.instagram.com}
-      dialog-base-url: ${INSTAGRAM_DIALOG_BASE_URL:https://www.instagram.com}
+      app-id: ${META_APP_ID:}
+      app-secret: ${META_APP_SECRET:}
+      # Configuration "System-user access token", expiration Never, assets Instagram accounts, permissions
+      # instagram_basic, instagram_content_publish, business_management
+      login-config-id: ${META_INSTAGRAM_LOGIN_CONFIG_ID:}
+      graph-version: ${META_GRAPH_VERSION:v26.0}
+      graph-base-url: ${META_GRAPH_BASE_URL:https://graph.facebook.com}
+      dialog-base-url: ${META_DIALOG_BASE_URL:https://www.facebook.com}
       # The redirect URI is {front-base-url}/oauth/instagram/callback, declared once at Meta
       front-base-url: ${FRONT_BASE_URL:${PUBLIC_BASE_URL:http://localhost:4200}}
-      scopes: instagram_business_basic,instagram_business_content_publish
-      required-permissions: instagram_business_basic,instagram_business_content_publish
       state-ttl: 10m
       connect-timeout: 3s
       read-timeout: 10s
-      # Long-lived tokens last about 60 days: the daily task refreshes those that expire within this delay
-      refresh-before: ${INSTAGRAM_TOKEN_REFRESH_BEFORE:10d}
-      refresh-interval: P1D
-      refresh-initial-delay: PT10M
     # Labels of the categories and places for the post texts (SOC-03): public referential endpoints of listing-service,
     # reached directly, never through the gateway
+    # Statuses of the listings (SOC-06): internal endpoints /internal/listings/**, with the shared X-Internal-Token
     listing-service:
       base-url: ${LISTING_SERVICE_URL:http://localhost:8082}
+      internal-api-token: ${INTERNAL_API_TOKEN:}
       labels-cache-ttl: 1h
-    # Consumer of the user events (AUTH-05): a failed message is retried 3 times, then sent to the DLQ
-    user-events:
+    # Consumers of the user events (AUTH-05) and of the listing events (SOC-04): a failed message is retried 3 times,
+    # then sent to the DLQ of its topic
+    events:
       retries: 3
       retry-interval: 2s
+    # Social events (SOC-06): outbox relay to soukly.social-events, same behavior as the ones of listing-service
+    # (ANN-03) and user-service (AUTH-05)
+    outbox:
+      relay-interval: PT1S
+      relay-initial-delay: PT5S
+      batch-size: 100
+      send-timeout: 15s
+      retention: 7d
+      purge-interval: PT1H
+      partitions: 3
+    # Email "connect again" (SOC-06), sent by user-service on social.connection.needs-reconnect: at most one per
+    # connection within this delay
+    reconnect-notice:
+      interval: 24h
+    # Publication of the listings on the Facebook Pages (SOC-04)
+    posts:
+      # What the seller can do on "My listings" (SOC-06): "Try again" per post, and the age of the posts blocked by a
+      # connection problem that are offered again after a reconnection
+      follow-up:
+        max-manual-retries: 3
+        relaunch-window: 30d
+      facebook:
+        # The task takes the PENDING posts that are due every publish-interval
+        publish-interval: PT10S
+        publish-initial-delay: PT30S
+        # At most one post per Page every page-interval, and calls-per-minute publishing calls (photos and posts) in
+        # all; prudent values, to adjust to the limits Meta documents
+        page-interval: 30s
+        calls-per-minute: 30
+        # New attempts after a temporary failure (network, 5xx, rate limit), then FAILED
+        retry-delays: 1m,5m,30m,2h,6h
+        # Photos attached to a post, in the seller's order
+        max-photos: 10
+        # Removal of a post (listing or account deleted): attempts and pause between two attempts
+        delete-attempts: 3
+        delete-retry-interval: 5s
+      # Publication of the listings on the Instagram professional accounts (SOC-05)
+      instagram:
+        publish-interval: PT10S
+        publish-initial-delay: PT30S
+        retry-delays: 1m,5m,30m,2h,6h
+        # Photos of a carousel, in the seller's order (Instagram takes 10 at most)
+        max-photos: 10
+        # Status of a container read 5 times over less than a minute before trying the post again later
+        status-checks: 5
+        status-interval: 12s
+        # The account reached the posts Instagram allows through the API within 24 hours (moving window): the post
+        # waits, without counting an attempt, and the limit is read again after this delay
+        quota-retry-delay: 1h
+    # Instagram versions of the photos (SOC-05): JPEG written by social-publisher next to the WebP versions of
+    # listing-service, in the same bucket
+    photos:
+      # Public URL of the bucket root, the same as PHOTO_PUBLIC_BASE_URL of listing-service; Instagram fetches the
+      # JPEG versions from it, so it must be public and HTTPS outside the local machine
+      public-base-url: ${PHOTO_PUBLIC_BASE_URL:http://soukly-listings.web.localhost:3902}
+      jpeg-quality: 85
+      max-source-size: 10MB
+      conversion-timeout: 30s
+      max-concurrent-conversions: 2
+      # Directory of vips and vipsheader (package libvips-tools); empty = the PATH
+      vips-bin-directory: ${VIPS_BIN_DIRECTORY:}
+    # S3 API of the object storage, the bucket of listing-service: Garage locally (docker-compose.yml)
+    storage:
+      endpoint: ${S3_ENDPOINT:http://localhost:3900}
+      region: ${S3_REGION:garage}
+      bucket: ${S3_BUCKET:soukly-listings}
+      access-key: ${S3_ACCESS_KEY:${S3_ACCESS_KEY_ID:}}
+      secret-key: ${S3_SECRET_KEY:${S3_SECRET_ACCESS_KEY:}}

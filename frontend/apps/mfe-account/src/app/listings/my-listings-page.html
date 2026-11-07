@@ -58,6 +58,10 @@
           [now]="now()"
           [busy]="busyId() === card.id"
           (requested)="run(card, $event)"
+          [posts]="posts.of(card.id)"
+          [postsLoading]="postsLoading(card)"
+          [retryingNetwork]="retryingNetwork(card)"
+          (retryPost)="retryPost(card, $event)"
         />
       </li>
       }

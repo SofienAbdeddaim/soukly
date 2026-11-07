@@ -56,7 +56,10 @@ public class FacebookConnector {
         this.clock = clock;
     }
 
-    /** Starts a connection: the URL of the Facebook OAuth dialog, with a new single-use state. */
+    /**
+     * Starts a connection: the URL of the Facebook Login for Business dialog, with a new single-use state. The
+     * configuration ({@code config_id}) carries the permissions and the choice of the Pages, so no {@code scope}.
+     */
     public String start(UUID userId, String lang) {
         if (!properties.configured()) {
             throw new NetworkNotConfiguredException(Network.FACEBOOK);
@@ -68,7 +71,8 @@ public class FacebookConnector {
                 .queryParam("redirect_uri", properties.redirectUri())
                 .queryParam("state", state)
                 .queryParam("response_type", "code")
-                .queryParam("scope", String.join(",", properties.scopes()))
+                .queryParam("config_id", properties.loginConfigId())
+                .queryParam("override_default_response_type", "true")
                 .encode()
                 .build()
                 .toUriString();
