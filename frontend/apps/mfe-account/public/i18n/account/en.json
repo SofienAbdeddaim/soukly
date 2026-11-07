@@ -345,7 +345,7 @@
     "instagram": {
       "name": "Instagram",
       "not-connected": "Not connected",
-      "hint": "A professional account (Business or Creator) is required. No Facebook Page needed.",
+      "hint": "A professional account (Business or Creator) is required. You select it in the Facebook window.",
       "connected-on": "Instagram · connected on {{date}}",
       "change": "Change account",
       "disconnect": "Disconnect",
@@ -411,12 +411,16 @@
         "title": "This connection link has expired",
         "text": "Start the connection to Instagram again from this page."
       },
-      "instagram-not-professional": {
-        "title": "This Instagram account is personal",
-        "text": "To post your listings, your account must be a professional account. It is free and quick:",
-        "step-1": "in Instagram, open “Settings and activity” from your profile;",
-        "step-2": "choose “Account type and tools”;",
-        "step-3": "tap “Switch to professional account”, then choose Business or Creator."
+      "instagram-no-account": {
+        "title": "No Instagram account was shared",
+        "text": "Soukly did not receive any professional account. Check these 3 points, then try again:",
+        "step-1": "your Instagram account is professional (Business or Creator): in Instagram, “Settings and activity”, then “Account type and tools”;",
+        "step-2": "it is linked to your Facebook Page or to your Meta business portfolio;",
+        "step-3": "in the Facebook window, tick this Instagram account before you continue."
+      },
+      "instagram-several-accounts": {
+        "title": "Several Instagram accounts were selected",
+        "text": "Soukly connects one account only. Try again and tick a single Instagram account in the Facebook window."
       },
       "instagram-unavailable": {
         "title": "Instagram did not complete the connection",

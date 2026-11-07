@@ -69,14 +69,12 @@ describe('InstagramCallback', () => {
     http
       .expectOne('/api/social/instagram/callback')
       .flush(
-        { type: 'urn:soukly:problem:instagram-not-professional', status: 400, lang: 'en' },
+        { type: 'urn:soukly:problem:instagram-no-account', status: 400, lang: 'en' },
         { status: 400, statusText: 'Bad Request' },
       );
     await settle();
 
-    expect(TestBed.inject(Router).url).toBe(
-      '/en/account/social?instagram=instagram-not-professional',
-    );
+    expect(TestBed.inject(Router).url).toBe('/en/account/social?instagram=instagram-no-account');
   });
 
   it('falls back to the preferred language when the state was not valid', async () => {

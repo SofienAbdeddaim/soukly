@@ -33,7 +33,8 @@ import com.soukly.social.photo.PhotoVariantService;
 
 /**
  * Publishes the {@code PENDING} Instagram posts that are due (SOC-05), every {@code publish-interval}, with the
- * content publishing of the Instagram API with Instagram Login:
+ * content publishing of the Instagram API with Facebook Login for Business (Unified login), on the Graph API of
+ * Facebook:
  *
  * <ol>
  * <li>the limit of the account is read ({@code content_publishing_limit}): once reached, the post waits

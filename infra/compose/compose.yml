@@ -207,11 +207,11 @@ services:
       META_APP_ID: ${META_APP_ID:-}
       META_APP_SECRET: ${META_APP_SECRET:-}
       META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v26.0}
+      META_FACEBOOK_LOGIN_CONFIG_ID: ${META_FACEBOOK_LOGIN_CONFIG_ID:-}
+      META_INSTAGRAM_LOGIN_CONFIG_ID: ${META_INSTAGRAM_LOGIN_CONFIG_ID:-}
       # Access tokens validated again by the service (SOC-01), with the same JWKS and issuer as the gateway.
       USER_SERVICE_JWKS_URI: http://user-service:8081/.well-known/jwks.json
       JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
-      INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID:-}
-      INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET:-}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8083/actuator/health"]
       interval: 10s

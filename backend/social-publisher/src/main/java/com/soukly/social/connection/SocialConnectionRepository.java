@@ -108,38 +108,6 @@ public class SocialConnectionRepository {
                 """, Boolean.class, network.name(), externalUserId));
     }
 
-    /**
-     * Locks the next connected token of this network that expires before {@code before}, after {@code after} in the
-     * order of the expiry (keyset, {@code null} for the first one). Must run in a transaction: the row stays locked
-     * until it ends, and a row locked by another run is skipped ({@code SKIP LOCKED}), so a token is never refreshed
-     * twice at once.
-     */
-    public Optional<ExpiringToken> lockNextExpiring(Network network, Instant before, ExpiringToken after) {
-        String keyset = after == null ? "" : "AND (token_expires_at, id) > (?, ?) ";
-        Object[] args = after == null
-                ? new Object[] { network.name(), Timestamp.from(before) }
-                : new Object[] { network.name(), Timestamp.from(before), Timestamp.from(after.expiresAt()),
-                    after.id() };
-        return jdbc.query("SELECT id, user_id, token_ciphertext, key_version, token_expires_at "
-                + "FROM social_connections WHERE network = ? AND status = 'CONNECTED' AND token_expires_at < ? "
-                + keyset + "ORDER BY token_expires_at, id LIMIT 1 FOR UPDATE SKIP LOCKED", (rs, row) -> {
-                    UUID userId = rs.getObject("user_id", UUID.class);
-                    String token = cipher.decrypt(rs.getBytes("token_ciphertext"), rs.getInt("key_version"),
-                            associatedData(userId, network));
-                    return new ExpiringToken(rs.getObject("id", UUID.class), userId, network, token,
-                            rs.getTimestamp("token_expires_at").toInstant());
-                }, args).stream().findFirst();
-    }
-
-    /** Replaces the token of a connection after a refresh, with its new expiry. */
-    public void updateToken(ExpiringToken connection, String token, Instant expiresAt) {
-        jdbc.update("""
-                UPDATE social_connections SET token_ciphertext = ?, key_version = ?, token_expires_at = ?,
-                    updated_at = ? WHERE id = ?
-                """, cipher.encrypt(token, associatedData(connection.userId(), connection.network())),
-                cipher.keyVersion(), Timestamp.from(expiresAt), Timestamp.from(clock.instant()), connection.id());
-    }
-
     /** Status of the connection of this network, without reading its token; empty when there is none. */
     public Optional<ConnectionStatus> status(UUID userId, Network network) {
         return jdbc.query("SELECT status FROM social_connections WHERE user_id = ? AND network = ?",
