@@ -150,6 +150,9 @@ describe('ShareBlock', () => {
     expect(element.querySelector('[data-testid=share-none]')?.textContent).toContain(
       'Reliez Facebook ou Instagram pour partager vos annonces',
     );
+    const connect = element.querySelector('[data-testid=share-connect]') as HTMLAnchorElement;
+    expect(connect.textContent?.trim()).toBe('Relier un réseau');
+    expect(connect.getAttribute('href')).toMatch(/^\/fr\/account\/social\?returnTo=/);
     expect(element.querySelector('input')).toBeNull();
   });
 

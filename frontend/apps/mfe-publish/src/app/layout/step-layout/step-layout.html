@@ -1,4 +1,4 @@
-<div class="flow">
+<div class="flow" [class.flow--wide]="wide()">
   <header class="flow__header">
     <div class="flow__bar">
       <a
@@ -42,6 +42,7 @@
     <ng-content />
   </div>
 
+  @if (footer()) {
   <footer class="flow__footer">
     @if (store) {
     <app-save-status />
@@ -50,4 +51,5 @@
       <ng-content select="[stepActions]" />
     </div>
   </footer>
+  }
 </div>
