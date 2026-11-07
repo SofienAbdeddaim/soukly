@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.soukly.user.account.AccountStatus;
 import com.soukly.user.account.UserAccount;
 import com.soukly.user.account.UserAccountRepository;
+import com.soukly.user.event.ProcessedEvents;
 import com.soukly.user.mail.ListingReminderMailer;
 
 /**

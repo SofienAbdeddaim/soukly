@@ -10,11 +10,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -41,19 +39,16 @@ import com.soukly.social.token.TokenCipher;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Connection of an Instagram professional account (SOC-02) against the simulated Instagram API: Business and Creator
- * accounts, a personal account, a cancellation, a missing permission, invalid states, the daily refresh of the tokens
- * (refreshed, refused, Instagram down), the disconnection next to a Facebook Page, and no token ever in an answer or a
- * log.
+ * Connection of an Instagram professional account (SOC-02) with Facebook Login for Business (Meta Unified login)
+ * against the simulated Graph API: one granted account, none, several, a cancellation, invalid states, a code Meta
+ * refuses, the accounts of the former Instagram Login to reconnect, the disconnection next to a Facebook Page, and no
+ * token ever in an answer or a log.
  */
 @ExtendWith(OutputCaptureExtension.class)
 class InstagramConnectionApiTests extends IntegrationTest {
 
     private final JsonMapper json = JsonMapper.builder().build();
     private final List<String> secrets = new ArrayList<>();
-
-    @Autowired
-    private InstagramTokenRefresher refresher;
 
     @Autowired
     private TokenCipher cipher;
@@ -75,11 +70,11 @@ class InstagramConnectionApiTests extends IntegrationTest {
         for (String secret : secrets) {
             assertThat(output.getAll()).doesNotContain(secret);
         }
-        assertThat(output.getAll()).doesNotContain("IGlong").doesNotContain("IGshort").doesNotContain("IGrefreshed");
+        assertThat(output.getAll()).doesNotContain("IGsuat");
     }
 
     @Test
-    void aBusinessAccountIsConnectedWithItsTokenEncryptedAndItsExpiry() throws Exception {
+    void theGrantedAccountIsConnectedWithItsTokenEncryptedAndNoExpiry() throws Exception {
         String state = connect(member, "fr");
         String code = code(TestInstagram.business("sfax.auto"));
 
@@ -99,14 +94,14 @@ class InstagramConnectionApiTests extends IntegrationTest {
                 FROM social_connections WHERE user_id = ? AND network = 'INSTAGRAM'
                 """, member);
         assertThat(row.get("external_id")).isEqualTo(TestInstagram.accountId(code));
-        assertThat(row.get("external_user_id")).isEqualTo(TestInstagram.scopedId(code));
+        assertThat(row.get("external_user_id")).isNull();
         assertThat(row.get("display_name")).isEqualTo("@sfax.auto");
         assertThat(row.get("status")).isEqualTo("CONNECTED");
-        assertThat(((Timestamp) row.get("token_expires_at")).toInstant())
-                .isEqualTo(clock.instant().plusSeconds(TestInstagram.EXPIRES_IN));
+        // A system-user token does not expire
+        assertThat(row.get("token_expires_at")).isNull();
         byte[] ciphertext = (byte[]) row.get("token_ciphertext");
-        assertThat(new String(ciphertext, StandardCharsets.ISO_8859_1)).doesNotContain("IGlong");
-        assertThat(decrypt(member)).isEqualTo(TestInstagram.longToken(code));
+        assertThat(new String(ciphertext, StandardCharsets.ISO_8859_1)).doesNotContain("IGsuat");
+        assertThat(decrypt(member)).isEqualTo(TestInstagram.token(code));
 
         connections(member)
                 .andExpect(jsonPath("$.length()").value(1))
@@ -115,18 +110,19 @@ class InstagramConnectionApiTests extends IntegrationTest {
     }
 
     @Test
-    void theAuthorizeUrlNamesTheInstagramAppTheRedirectUriTheStateAndThePermissions() throws Exception {
+    void theAuthorizeUrlIsTheFacebookDialogWithTheInstagramLoginConfiguration() throws Exception {
         String url = authorizeUrl(member, "ar");
         UriComponents uri = UriComponentsBuilder.fromUriString(url).build();
 
         assertThat(uri.getScheme() + "://" + uri.getHost() + uri.getPath())
-                .isEqualTo("https://www.instagram.example.test/oauth/authorize");
+                .isEqualTo("https://www.facebook.example.test/v26.0/dialog/oauth");
         assertThat(uri.getQueryParams().getFirst("client_id")).isEqualTo(TestInstagram.APP_ID);
         assertThat(decode(uri.getQueryParams().getFirst("redirect_uri")))
                 .isEqualTo(FRONT_BASE_URL + "/oauth/instagram/callback");
         assertThat(uri.getQueryParams().getFirst("response_type")).isEqualTo("code");
-        assertThat(decode(uri.getQueryParams().getFirst("scope")))
-                .isEqualTo("instagram_business_basic,instagram_business_content_publish");
+        assertThat(uri.getQueryParams().getFirst("config_id")).isEqualTo(TestInstagram.LOGIN_CONFIG_ID);
+        assertThat(uri.getQueryParams().getFirst("override_default_response_type")).isEqualTo("true");
+        assertThat(uri.getQueryParams()).doesNotContainKey("scope");
         assertThat(uri.getQueryParams().getFirst("state")).hasSize(43);
         assertThat(url).doesNotContain(TestInstagram.APP_SECRET);
         assertThat(jdbc.queryForObject("SELECT network || ':' || lang FROM oauth_states WHERE user_id = ?",
@@ -134,27 +130,45 @@ class InstagramConnectionApiTests extends IntegrationTest {
     }
 
     @Test
-    void aCreatorAccountIsConnectedToo() throws Exception {
-        String state = connect(member, "en");
-        // An answer with the token at the top level and the permissions as an array, and the suffix of the redirect
-        String code = code(TestInstagram.account("amira.deco", "MEDIA_CREATOR", TestInstagram.ALL_PERMISSIONS, true));
-
-        callback(member, Map.of("code", code + "#_", "state", state))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.lang").value("en"))
-                .andExpect(jsonPath("$.connection.displayName").value("@amira.deco"));
-    }
-
-    @Test
-    void aPersonalAccountIsRefusedAndNothingIsSaved() throws Exception {
+    void noGrantedAccountIsRefusedAndNothingIsSaved() throws Exception {
         String state = connect(member, "fr");
-        String code = code(TestInstagram.account("perso.123", "PERSONAL", TestInstagram.ALL_PERMISSIONS, false));
+        // A personal account, or none selected in the dialog: Meta grants no Instagram account
+        String code = code(TestInstagram.accounts());
 
         callback(member, Map.of("code", code, "state", state))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.type").value("urn:soukly:problem:instagram-not-professional"))
+                .andExpect(jsonPath("$.type").value("urn:soukly:problem:instagram-no-account"))
                 .andExpect(jsonPath("$.lang").value("fr"));
         connections(member).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void severalGrantedAccountsAreRefusedAndNothingIsSaved() throws Exception {
+        String state = connect(member, "en");
+        String code = code(TestInstagram.accounts("sfax.auto", "amira.deco"));
+
+        callback(member, Map.of("code", code, "state", state))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.type").value("urn:soukly:problem:instagram-several-accounts"))
+                .andExpect(jsonPath("$.lang").value("en"));
+        connections(member).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void anAccountOfTheFormerInstagramLoginIsToReconnect() throws Exception {
+        connectAccount(member, "sfax.auto");
+        // A row as SOC-02 wrote it: a token with an expiry
+        jdbc.update("UPDATE social_connections SET token_expires_at = ? WHERE user_id = ?",
+                Timestamp.from(clock.instant().plus(Duration.ofDays(30))), member);
+
+        jdbc.update(new String(getClass().getResourceAsStream("/db/migration/V6__instagram_unified_login.sql")
+                .readAllBytes(), StandardCharsets.UTF_8));
+
+        assertThat(connectionStatus(member)).isEqualTo("NEEDS_RECONNECT");
+        // A new connection clears it
+        callback(member, Map.of("code", code(TestInstagram.business("sfax.auto")), "state", connect(member, "fr")))
+                .andExpect(status().isOk());
+        assertThat(connectionStatus(member)).isEqualTo("CONNECTED");
     }
 
     @Test
@@ -166,19 +180,6 @@ class InstagramConnectionApiTests extends IntegrationTest {
                 .andExpect(jsonPath("$.type").value("urn:soukly:problem:oauth-cancelled"))
                 .andExpect(jsonPath("$.detail").value("The connection was cancelled on Instagram."))
                 .andExpect(jsonPath("$.lang").value("ar"));
-        connections(member).andExpect(jsonPath("$.length()").value(0));
-    }
-
-    @Test
-    void aMissingPublishingPermissionIsReported() throws Exception {
-        String state = connect(member, "fr");
-        String code = code(TestInstagram.account("sfax.auto", "BUSINESS", Set.of("instagram_business_basic"),
-                false));
-
-        callback(member, Map.of("code", code, "state", state))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.type").value("urn:soukly:problem:oauth-permission-missing"))
-                .andExpect(jsonPath("$.lang").value("fr"));
         connections(member).andExpect(jsonPath("$.length()").value(0));
     }
 
@@ -244,78 +245,7 @@ class InstagramConnectionApiTests extends IntegrationTest {
     }
 
     @Test
-    void aTokenThatExpiresSoonIsRefreshedAndOneThatDoesNotIsLeftAlone() throws Exception {
-        String soon = connectAccount(member, "sfax.auto");
-        UUID later = UUID.randomUUID();
-        clock.advance(Duration.ofDays(20));
-        String notYet = connectAccount(later, "amira.deco");
-        Instant laterExpiry = expiry(later);
-
-        // The first token now expires in 5 days, the second in 25
-        clock.advance(Duration.ofDays(35));
-        refresher.refreshExpiring();
-
-        assertThat(TestInstagram.refreshed()).contains(soon).doesNotContain(notYet);
-        assertThat(expiry(member)).isEqualTo(clock.instant().plusSeconds(TestInstagram.EXPIRES_IN));
-        assertThat(decrypt(member)).startsWith("IGrefreshed").endsWith(soon);
-        assertThat(connectionStatus(member)).isEqualTo("CONNECTED");
-        assertThat(expiry(later)).isEqualTo(laterExpiry);
-
-        // Refreshed already: the next run leaves it alone
-        refresher.refreshExpiring();
-        assertThat(TestInstagram.refreshed().stream().filter(soon::equals)).hasSize(1);
-    }
-
-    @Test
-    void aTokenWhoseAccessWasRemovedNeedsAReconnection() throws Exception {
-        String code = connectAccount(member, "sfax.auto");
-        TestInstagram.revoke(code);
-        clock.advance(Duration.ofDays(55));
-
-        refresher.refreshExpiring();
-
-        assertThat(connectionStatus(member)).isEqualTo("NEEDS_RECONNECT");
-        connections(member).andExpect(jsonPath("$[0].status").value("NEEDS_RECONNECT"));
-
-        // A new connection clears it
-        callback(member, Map.of("code", code(TestInstagram.business("sfax.auto")), "state", connect(member, "fr")))
-                .andExpect(status().isOk());
-        connections(member).andExpect(jsonPath("$[0].status").value("CONNECTED"));
-    }
-
-    @Test
-    void anExpiredTokenNeedsAReconnectionEvenWhenInstagramIsDown() throws Exception {
-        UUID down = UUID.randomUUID();
-        connectAccount(member, "sfax.auto");
-        String downCode = connectAccount(down, "amira.deco");
-        TestInstagram.unavailable(downCode);
-        Instant downExpiry = expiry(down);
-
-        clock.advance(Duration.ofDays(61));
-        refresher.refreshExpiring();
-
-        assertThat(connectionStatus(member)).isEqualTo("NEEDS_RECONNECT");
-        // Expired too: not refreshable any more either
-        assertThat(connectionStatus(down)).isEqualTo("NEEDS_RECONNECT");
-        assertThat(expiry(down)).isEqualTo(downExpiry);
-    }
-
-    @Test
-    void instagramDownLeavesTheTokenForTheNextRun() throws Exception {
-        String code = connectAccount(member, "sfax.auto");
-        TestInstagram.unavailable(code);
-        Instant before = expiry(member);
-        clock.advance(Duration.ofDays(55));
-
-        refresher.refreshExpiring();
-
-        assertThat(connectionStatus(member)).isEqualTo("CONNECTED");
-        assertThat(expiry(member)).isEqualTo(before);
-        assertThat(decrypt(member)).isEqualTo(TestInstagram.longToken(code));
-    }
-
-    @Test
-    void facebookPagesHaveNoExpiryAndAreNeverRefreshed() throws Exception {
+    void facebookPagesHaveNoExpiry() throws Exception {
         connectFacebookPage(member);
 
         assertThat(jdbc.queryForObject("SELECT token_expires_at FROM social_connections WHERE user_id = ?",
@@ -357,11 +287,6 @@ class InstagramConnectionApiTests extends IntegrationTest {
     private String code(String code) {
         secrets.add(code);
         return code;
-    }
-
-    private Instant expiry(UUID userId) {
-        return jdbc.queryForObject("SELECT token_expires_at FROM social_connections WHERE user_id = ? "
-                + "AND network = 'INSTAGRAM'", Timestamp.class, userId).toInstant();
     }
 
     private String connectionStatus(UUID userId) {

@@ -1,7 +1,7 @@
 import { Page, Route } from '@playwright/test';
 
 /**
- * Fakes social-publisher (SOC-01, SOC-02, SOC-03) in the browser, on top of `fakeAccountApi` (register it
+ * Fakes social-publisher (SOC-01, SOC-02, SOC-03, SOC-06) in the browser, on top of `fakeAccountApi` (register it
  * after: the last route registered wins). Facebook and Instagram themselves are never opened: the
  * `authorizeUrl` of "Connect" leads straight back to `/oauth/facebook/callback` or
  * `/oauth/instagram/callback`, as the network would after the member's answer.
@@ -9,7 +9,7 @@ import { Page, Route } from '@playwright/test';
 export type FacebookScenario =
   'one-page' | 'several-pages' | 'cancelled' | 'permission-missing' | 'no-page';
 
-export type InstagramScenario = 'business' | 'personal' | 'cancelled';
+export type InstagramScenario = 'business' | 'no-account' | 'cancelled';
 
 export interface FakeSocialApi {
   scenario: FacebookScenario;
@@ -25,6 +25,35 @@ export interface FakeSocialApi {
   calls: { method: string; path: string; body: unknown }[];
   /** SOC-03: "See the post text" answers 503 while true. */
   captionDown: boolean;
+  /** SOC-06: posts by listing id, as `GET /social/posts` answers them. */
+  posts: Record<string, FakePost[]>;
+  /** SOC-06: listings blocked while a network was not connected, offered after connecting again. */
+  blocked: Record<'FACEBOOK' | 'INSTAGRAM', { listingId: string; title: string }[]>;
+}
+
+/** A post of a listing on one network (SOC-06), with the badge social-publisher computes. */
+export interface FakePost {
+  network: 'FACEBOOK' | 'INSTAGRAM';
+  status: 'PENDING' | 'PUBLISHED' | 'FAILED' | 'SKIPPED';
+  badge: 'PUBLISHED' | 'PENDING' | 'TO_RECONNECT' | 'FAILED';
+  reason?: 'RETRIES_EXHAUSTED' | 'MEDIA_REJECTED' | 'NOT_CONNECTED' | 'REJECTED';
+  permalink?: string;
+  errorCode?: string;
+  retryable: boolean;
+  manualRetriesLeft: number;
+  updatedAt: string;
+}
+
+export function fakePost(changes: Partial<FakePost>): FakePost {
+  return {
+    network: 'FACEBOOK',
+    status: 'PUBLISHED',
+    badge: 'PUBLISHED',
+    retryable: false,
+    manualRetriesLeft: 3,
+    updatedAt: CONNECTED_AT,
+    ...changes,
+  };
 }
 
 export interface FakeConnection {
@@ -80,6 +109,8 @@ interface CaptionBody {
   negotiable: boolean;
   publicUrl: string;
   language: string;
+  network?: string;
+  shortRef?: string | null;
 }
 
 /**
@@ -98,7 +129,9 @@ function caption(body: CaptionBody) {
     '',
     body.description,
     '',
-    `${ar ? 'شاهد الإعلان:' : "Voir l'annonce :"} ${body.publicUrl}`,
+    body.network === 'INSTAGRAM'
+      ? `${ar ? 'الإعلان كاملًا على' : 'Annonce complète sur'} ${new URL(body.publicUrl).host}/r/${body.shortRef}`
+      : `${ar ? 'شاهد الإعلان:' : "Voir l'annonce :"} ${body.publicUrl}`,
     hashtags.join(' '),
   ].join('\n');
   return { text, hashtags };
@@ -113,7 +146,16 @@ const PROBLEMS: Partial<Record<FacebookScenario, string>> = {
 export async function fakeSocialApi(
   page: Page,
   options: Partial<
-    Pick<FakeSocialApi, 'scenario' | 'instagramScenario' | 'facebook' | 'instagram' | 'captionDown'>
+    Pick<
+      FakeSocialApi,
+      | 'scenario'
+      | 'instagramScenario'
+      | 'facebook'
+      | 'instagram'
+      | 'captionDown'
+      | 'posts'
+      | 'blocked'
+    >
   > = {},
 ): Promise<FakeSocialApi> {
   const api: FakeSocialApi = {
@@ -125,6 +167,8 @@ export async function fakeSocialApi(
     pending: null,
     calls: [],
     captionDown: false,
+    posts: {},
+    blocked: { FACEBOOK: [], INSTAGRAM: [] },
     ...options,
   };
   const json = (route: Route, status: number, body?: unknown) =>
@@ -221,8 +265,8 @@ export async function fakeSocialApi(
       if (api.instagramScenario === 'cancelled') {
         return json(route, 400, problem('oauth-cancelled', 400, api.lang));
       }
-      if (api.instagramScenario === 'personal') {
-        return json(route, 400, problem('instagram-not-professional', 400, api.lang));
+      if (api.instagramScenario === 'no-account') {
+        return json(route, 400, problem('instagram-no-account', 400, api.lang));
       }
       api.instagram = instagramConnection();
       return json(route, 200, { lang: api.lang, connection: api.instagram });
@@ -230,6 +274,50 @@ export async function fakeSocialApi(
     if (method === 'DELETE' && path === '/api/social/instagram') {
       api.instagram = null;
       return route.fulfill({ status: 204 });
+    }
+    if (method === 'GET' && path === '/api/social/posts') {
+      const ids = (new URL(request.url()).searchParams.get('listingIds') ?? '').split(',');
+      const listings = ids
+        .filter((id) => api.posts[id]?.length)
+        .map((listingId) => ({ listingId, posts: api.posts[listingId] }));
+      return json(route, 200, { listings });
+    }
+    const retry = /^\/api\/social\/posts\/([^/]+)\/(FACEBOOK|INSTAGRAM)\/retry$/.exec(path);
+    if (method === 'POST' && retry) {
+      const posts = api.posts[retry[1]] ?? [];
+      const index = posts.findIndex((post) => post.network === retry[2]);
+      if (index < 0) {
+        return json(route, 404, problem('post-not-found', 404));
+      }
+      if (posts[index].badge !== 'FAILED' || !posts[index].retryable) {
+        return json(route, 409, problem('not-retryable', 409));
+      }
+      const left = posts[index].manualRetriesLeft - 1;
+      posts[index] = fakePost({
+        network: posts[index].network,
+        status: 'PENDING',
+        badge: 'PENDING',
+        manualRetriesLeft: left,
+      });
+      return json(route, 200, posts[index]);
+    }
+    if (method === 'GET' && path === '/api/social/posts/blocked') {
+      const network = new URL(request.url()).searchParams.get('network') as 'FACEBOOK';
+      const listings = api.blocked[network] ?? [];
+      return json(route, 200, { network, total: listings.length, listings });
+    }
+    if (method === 'POST' && path === '/api/social/posts/relaunch') {
+      const network = (body as { network: 'FACEBOOK' | 'INSTAGRAM' }).network;
+      const listings = api.blocked[network];
+      for (const { listingId } of listings) {
+        api.posts[listingId] = (api.posts[listingId] ?? []).map((post) =>
+          post.network === network
+            ? fakePost({ network, status: 'PENDING', badge: 'PENDING' })
+            : post,
+        );
+      }
+      api.blocked[network] = [];
+      return json(route, 200, { relaunched: listings.length });
     }
     return json(route, 503, problem('unavailable', 503));
   });

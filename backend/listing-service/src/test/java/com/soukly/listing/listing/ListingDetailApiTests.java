@@ -84,7 +84,7 @@ class ListingDetailApiTests extends IntegrationTest {
         JsonNode listing = json.readTree(body);
         assertThat(names(listing)).containsExactlyInAnyOrder("id", "status", "kind", "categoryCode", "title",
                 "description", "priceMode", "price", "currency", "negotiable", "governorateCode", "delegationCode",
-                "attributes", "photos", "publishedAt", "seller");
+                "attributes", "photos", "publishedAt", "seller", "shortRef");
         assertThat(names(listing.get("seller"))).containsExactlyInAnyOrder("id", "displayName", "memberSince");
         // Attributes in the display order of the subcategory (CAT-01)
         assertThat(names(listing.get("attributes"))).containsExactly("brand", "model", "year", "mileage-km", "fuel",

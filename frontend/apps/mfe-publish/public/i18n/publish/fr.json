@@ -229,6 +229,7 @@
       "show": "Voir le texte du post",
       "error": "Texte indisponible.",
       "retry": "Réessayer",
+      "instagram-note": "Sur Instagram, le lien est remplacé par la référence de l'annonce.",
       "photos": {
         "zero": "Sans photo. Texte généré automatiquement dans la langue de la page.",
         "one": "Avec votre photo. Texte généré automatiquement dans la langue de la page.",

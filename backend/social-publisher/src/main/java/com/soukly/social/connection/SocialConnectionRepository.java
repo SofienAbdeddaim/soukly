@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -107,42 +108,43 @@ public class SocialConnectionRepository {
                 """, Boolean.class, network.name(), externalUserId));
     }
 
+    /** Status of the connection of this network, without reading its token; empty when there is none. */
+    public Optional<ConnectionStatus> status(UUID userId, Network network) {
+        return jdbc.query("SELECT status FROM social_connections WHERE user_id = ? AND network = ?",
+                (rs, row) -> ConnectionStatus.valueOf(rs.getString(1)), userId, network.name()).stream().findFirst();
+    }
+
+    /** The connection of this network with its token decrypted, to publish or remove a post (SOC-04). */
+    public Optional<PublishingAccount> findForPublishing(UUID userId, Network network) {
+        return jdbc.query("""
+                SELECT id, external_id, status, token_ciphertext, key_version FROM social_connections
+                WHERE user_id = ? AND network = ?
+                """, (rs, row) -> new PublishingAccount(rs.getObject("id", UUID.class), rs.getString("external_id"),
+                ConnectionStatus.valueOf(rs.getString("status")), cipher.decrypt(rs.getBytes("token_ciphertext"),
+                        rs.getInt("key_version"), associatedData(userId, network))),
+                userId, network.name()).stream().findFirst();
+    }
+
     /**
-     * Locks the next connected token of this network that expires before {@code before}, after {@code after} in the
-     * order of the expiry (keyset, {@code null} for the first one). Must run in a transaction: the row stays locked
-     * until it ends, and a row locked by another run is skipped ({@code SKIP LOCKED}), so a token is never refreshed
-     * twice at once.
+     * The network refused the token: the member must connect again ({@link #save} clears it). Only a connected account
+     * changes; {@code reconnect_notified_at} becomes {@code now} when the last email "connect again" is older than
+     * {@code noticeInterval} (or there was none), in the same statement, so two changes at once never both notify.
+     * Use {@link ConnectionHealth#needsReconnect}, which writes the event too.
+     *
+     * @return the change; empty when the connection was not {@code CONNECTED} (already to reconnect, or deleted)
      */
-    public Optional<ExpiringToken> lockNextExpiring(Network network, Instant before, ExpiringToken after) {
-        String keyset = after == null ? "" : "AND (token_expires_at, id) > (?, ?) ";
-        Object[] args = after == null
-                ? new Object[] { network.name(), Timestamp.from(before) }
-                : new Object[] { network.name(), Timestamp.from(before), Timestamp.from(after.expiresAt()),
-                    after.id() };
-        return jdbc.query("SELECT id, user_id, token_ciphertext, key_version, token_expires_at "
-                + "FROM social_connections WHERE network = ? AND status = 'CONNECTED' AND token_expires_at < ? "
-                + keyset + "ORDER BY token_expires_at, id LIMIT 1 FOR UPDATE SKIP LOCKED", (rs, row) -> {
-                    UUID userId = rs.getObject("user_id", UUID.class);
-                    String token = cipher.decrypt(rs.getBytes("token_ciphertext"), rs.getInt("key_version"),
-                            associatedData(userId, network));
-                    return new ExpiringToken(rs.getObject("id", UUID.class), userId, network, token,
-                            rs.getTimestamp("token_expires_at").toInstant());
-                }, args).stream().findFirst();
-    }
-
-    /** Replaces the token of a connection after a refresh, with its new expiry. */
-    public void updateToken(ExpiringToken connection, String token, Instant expiresAt) {
-        jdbc.update("""
-                UPDATE social_connections SET token_ciphertext = ?, key_version = ?, token_expires_at = ?,
-                    updated_at = ? WHERE id = ?
-                """, cipher.encrypt(token, associatedData(connection.userId(), connection.network())),
-                cipher.keyVersion(), Timestamp.from(expiresAt), Timestamp.from(clock.instant()), connection.id());
-    }
-
-    /** The network refused the token: the member must connect again ({@link #save} clears it). */
-    public void markNeedsReconnect(UUID id) {
-        jdbc.update("UPDATE social_connections SET status = 'NEEDS_RECONNECT', updated_at = ? WHERE id = ?",
-                Timestamp.from(clock.instant()), id);
+    Optional<NeedsReconnectChange> markNeedsReconnect(UUID id, Duration noticeInterval) {
+        Timestamp now = Timestamp.from(clock.instant());
+        Timestamp notifiedBefore = Timestamp.from(clock.instant().minus(noticeInterval));
+        return jdbc.query("""
+                UPDATE social_connections SET status = 'NEEDS_RECONNECT', updated_at = ?,
+                    reconnect_notified_at = CASE WHEN reconnect_notified_at IS NULL OR reconnect_notified_at <= ?
+                        THEN ? ELSE reconnect_notified_at END
+                WHERE id = ? AND status = 'CONNECTED'
+                RETURNING user_id, network, display_name, reconnect_notified_at = ? AS send_email
+                """, (rs, row) -> new NeedsReconnectChange(rs.getObject("user_id", UUID.class),
+                Network.valueOf(rs.getString("network")), rs.getString("display_name"), rs.getBoolean("send_email")),
+                now, notifiedBefore, now, id, now).stream().findFirst();
     }
 
     private static Timestamp timestamp(Instant instant) {

@@ -13,9 +13,9 @@ export class AccountToasts {
   private readonly transloco = inject(TranslocoService);
   private readonly toasts = inject(ToastService);
 
-  success(key: string): void {
+  success(key: string, params: Record<string, unknown> = {}): void {
     combineLatest([
-      this.transloco.selectTranslate<string>(key, {}, 'account'),
+      this.transloco.selectTranslate<string>(key, params, 'account'),
       this.transloco.selectTranslate<string>('common.close', {}, 'account'),
     ])
       .pipe(take(1))

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import com.soukly.common.event.UserEventEnvelope;
 import com.soukly.common.event.UserEvents;
+import com.soukly.social.event.InvalidEventException;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;

@@ -1,0 +1,14 @@
+[(#{common.greeting(${displayName})})]
+
+[(${intro})][# th:if="${accountName != null}"]
+[(${accountName})][/]
+
+[(#{social-reconnect.reason})]
+
+[(#{social-reconnect.button})]: [(${socialUrl})]
+
+[(#{social-reconnect.listings-online})]
+
+[(${why})]
+
+[(#{common.signature})]
