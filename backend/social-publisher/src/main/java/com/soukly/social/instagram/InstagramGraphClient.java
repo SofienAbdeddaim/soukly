@@ -2,33 +2,25 @@ package com.soukly.social.instagram;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Set;
 
 import com.soukly.social.graph.GraphApiException;
 
 /**
- * The calls of social-publisher to Instagram (SOC-02, SOC-05): Instagram API with Instagram Login, its connection and
- * its content publishing (containers, carousels, publication). Simulated in the tests: the
- * real API is never called by an automated test. Every failure is a {@link GraphApiException} whose message never
- * contains a token, the app secret or the requested URL.
+ * The calls of social-publisher to Instagram (SOC-02, SOC-05): Instagram API with Facebook Login for Business (the
+ * "Unified login" of new Meta apps), its connection and its content publishing (containers, carousels, publication),
+ * all on the Graph API of Facebook. Simulated in the tests: the real API is never called by an automated test. Every
+ * failure is a {@link GraphApiException} whose message never contains a token, the app secret or the requested URL.
  */
 public interface InstagramGraphClient {
 
-    /** Exchanges the code of the authorization dialog for a short-lived token (about one hour). */
-    ShortLivedToken exchangeCode(String code, String redirectUri);
-
-    /** Exchanges a short-lived token for a long-lived one (about 60 days). */
-    LongLivedToken exchangeForLongLived(String shortLivedToken);
-
     /**
-     * Refreshes a long-lived token that is at least 24 hours old and not expired: a new token valid about 60 days.
-     *
-     * @throws GraphApiException with a 4xx status when Instagram refuses it (expired, or the access was removed)
+     * Exchanges the code of the login dialog for the access token of the configuration: a business integration
+     * system-user token that does not expire, valid for the Instagram accounts the person granted.
      */
-    LongLivedToken refresh(String longLivedToken);
+    String exchangeCode(String code, String redirectUri);
 
-    /** The account the token belongs to. */
-    InstagramProfile profile(String accessToken);
+    /** The Instagram professional accounts the token was granted ({@code /me/assigned_instagram_accounts}). */
+    List<InstagramAccount> assignedAccounts(String accessToken);
 
     /**
      * Creates the container of a post of one photo ({@code POST /{ig-user-id}/media}, {@code image_url} and
@@ -71,27 +63,6 @@ public interface InstagramGraphClient {
 
         public boolean reached() {
             return usage >= total;
-        }
-    }
-
-    /**
-     * @param userId      Instagram-scoped id of the account
-     * @param permissions permissions granted in the dialog; {@code null} when Instagram did not list them
-     */
-    record ShortLivedToken(String accessToken, String userId, Set<String> permissions) {
-
-        @Override
-        public String toString() {
-            return "ShortLivedToken[userId=" + userId + "]";
-        }
-    }
-
-    /** @param expiresInSeconds validity of the token from now */
-    record LongLivedToken(String accessToken, long expiresInSeconds) {
-
-        @Override
-        public String toString() {
-            return "LongLivedToken[expiresInSeconds=" + expiresInSeconds + "]";
         }
     }
 }

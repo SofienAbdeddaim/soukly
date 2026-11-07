@@ -71,12 +71,13 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.facebook.graph-base-url", TestGraph::baseUrl);
         registry.add("soukly.social.facebook.dialog-base-url", () -> "https://www.facebook.example.test");
         registry.add("soukly.social.facebook.front-base-url", () -> FRONT_BASE_URL);
+        registry.add("soukly.social.facebook.login-config-id", () -> TestGraph.LOGIN_CONFIG_ID);
         registry.add("soukly.social.instagram.app-id", () -> TestInstagram.APP_ID);
         registry.add("soukly.social.instagram.app-secret", () -> TestInstagram.APP_SECRET);
         registry.add("soukly.social.instagram.graph-version", () -> TestInstagram.VERSION);
         registry.add("soukly.social.instagram.graph-base-url", TestInstagram::baseUrl);
-        registry.add("soukly.social.instagram.api-base-url", TestInstagram::baseUrl);
-        registry.add("soukly.social.instagram.dialog-base-url", () -> "https://www.instagram.example.test");
+        registry.add("soukly.social.instagram.dialog-base-url", () -> "https://www.facebook.example.test");
+        registry.add("soukly.social.instagram.login-config-id", () -> TestInstagram.LOGIN_CONFIG_ID);
         registry.add("soukly.social.instagram.front-base-url", () -> FRONT_BASE_URL);
         registry.add("soukly.social.listing-service.base-url", TestReferentials::baseUrl);
         registry.add("soukly.social.listing-service.internal-api-token", () -> TestReferentials.INTERNAL_TOKEN);
@@ -88,7 +89,6 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.photos.public-base-url", () -> PHOTO_BASE_URL);
         // Run by the tests only
         registry.add("soukly.social.facebook.purge-initial-delay", () -> "P1D");
-        registry.add("soukly.social.instagram.refresh-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.facebook.publish-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.instagram.publish-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.instagram.status-interval", () -> "10ms");

@@ -34,6 +34,8 @@ public final class TestGraph {
     public static final String VERSION = "v26.0";
     public static final String APP_ID = "1234567890";
     public static final String APP_SECRET = "test-app-secret-" + UUID.randomUUID();
+    /** Facebook Login for Business configuration of the Page connection (Unified login). */
+    public static final String LOGIN_CONFIG_ID = "1100000000000001";
     public static final Set<String> ALL_PERMISSIONS = Set.of("pages_show_list", "pages_manage_posts",
             "pages_read_engagement");
 
