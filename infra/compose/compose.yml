@@ -128,6 +128,8 @@ services:
       MAIL_PORT: ${MAIL_PORT:?MAIL_PORT is not set}
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-false}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-false}
       MAIL_FROM: ${MAIL_FROM:?MAIL_FROM is not set}
       JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
       JWT_KEY_ID: ${JWT_KEY_ID:?JWT_KEY_ID is not set}
@@ -193,17 +195,23 @@ services:
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is not set}
       FRONT_BASE_URL: ${FRONT_BASE_URL:?FRONT_BASE_URL is not set}
       PHOTO_PUBLIC_BASE_URL: ${PHOTO_PUBLIC_BASE_URL:?PHOTO_PUBLIC_BASE_URL is not set}
+      # Instagram versions of the photos (SOC-05), written next to those of listing-service in the same bucket
+      S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT is not set}
+      S3_REGION: ${S3_REGION:?S3_REGION is not set}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is not set}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY_ID:?S3_ACCESS_KEY_ID is not set}
+      S3_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is not set}
       LISTING_SERVICE_URL: http://listing-service:8082
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is not set}
       SOCIAL_TOKEN_ENC_KEY: ${SOCIAL_TOKEN_ENC_KEY:?SOCIAL_TOKEN_ENC_KEY is not set}
       META_APP_ID: ${META_APP_ID:-}
       META_APP_SECRET: ${META_APP_SECRET:-}
       META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v26.0}
+      META_FACEBOOK_LOGIN_CONFIG_ID: ${META_FACEBOOK_LOGIN_CONFIG_ID:-}
+      META_INSTAGRAM_LOGIN_CONFIG_ID: ${META_INSTAGRAM_LOGIN_CONFIG_ID:-}
       # Access tokens validated again by the service (SOC-01), with the same JWKS and issuer as the gateway.
       USER_SERVICE_JWKS_URI: http://user-service:8081/.well-known/jwks.json
       JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
-      INSTAGRAM_APP_ID: ${INSTAGRAM_APP_ID:-}
-      INSTAGRAM_APP_SECRET: ${INSTAGRAM_APP_SECRET:-}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8083/actuator/health"]
       interval: 10s

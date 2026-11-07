@@ -35,6 +35,21 @@
     </div>
   </div>
 
+  @if (postsLoading()) {
+  <ui-skeleton
+    class="item__posts-skeleton"
+    inlineSize="12rem"
+    blockSize="22px"
+    data-testid="post-badges-loading"
+  />
+  } @else if (posts().length) {
+  <app-social-post-badges
+    [posts]="posts()"
+    [retrying]="retryingNetwork()"
+    (retry)="retryPost.emit($event)"
+  />
+  }
+
   <div class="item__actions">
     @switch (primary()) { @case ('edit') {
     <a

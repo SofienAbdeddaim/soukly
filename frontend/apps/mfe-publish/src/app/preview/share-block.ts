@@ -32,7 +32,8 @@ interface ShareOption {
  * are saved in `shareTo`; afterwards the saved choice is shown. Each change is saved by the
  * autosave of the draft, with the language of the page as the language of the post text. A
  * network to connect again cannot be ticked. "See the post text" asks social-publisher for the
- * text: the front end never builds it.
+ * text: the front end never builds it. With Instagram alone, the text is the Instagram caption,
+ * with the short address of the listing instead of its link (SOC-05).
  */
 @Component({
   selector: 'app-share-block',
@@ -81,6 +82,22 @@ export class ShareBlock implements OnInit {
     const form = count ? new Intl.PluralRules(this.locale.intlLocale()).select(count) : 'zero';
     return `publish.share.caption.photos.${form}`;
   });
+
+  /**
+   * The text shown is the Instagram caption (no link, the short reference instead, SOC-05) when
+   * Instagram is the only network ticked, otherwise the Facebook text.
+   */
+  protected readonly captionNetwork = computed<ShareNetwork>(() => {
+    const checked = this.options().filter((option) => option.checked);
+    return checked.length === 1 && checked[0].network === 'INSTAGRAM' ? 'INSTAGRAM' : 'FACEBOOK';
+  });
+
+  /** Both networks ticked: the Facebook text is shown, with a word on the Instagram one. */
+  protected readonly instagramNote = computed(
+    () =>
+      this.captionNetwork() === 'FACEBOOK' &&
+      this.options().some((option) => option.checked && option.network === 'INSTAGRAM'),
+  );
 
   /** The way back to this step after connecting again on "My networks". */
   protected readonly returnTo = computed(() => this.document.location.pathname);
@@ -153,6 +170,8 @@ export class ShareBlock implements OnInit {
           delegationCode: listing.delegationCode,
           publicUrl: `${this.document.location.origin}/${lang}/listings/${listing.id}`,
           language: lang,
+          network: this.captionNetwork(),
+          shortRef: listing.shortRef ?? null,
         }),
       );
       this.captionState.set('ready');

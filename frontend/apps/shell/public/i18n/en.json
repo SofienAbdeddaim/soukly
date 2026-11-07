@@ -46,5 +46,11 @@
       "title": "Connecting Instagram",
       "loading": "We are finishing the connection of your Instagram account…"
     }
+  },
+  "short-ref": {
+    "title": "Opening the listing",
+    "loading": "We are opening the listing…",
+    "error": "The listing could not be opened. Check your network, then try again.",
+    "retry": "Try again"
   }
 }

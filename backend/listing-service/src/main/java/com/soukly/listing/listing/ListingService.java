@@ -32,6 +32,9 @@ import tools.jackson.databind.JsonNode;
 @EnableConfigurationProperties({ DraftProperties.class, PublicationProperties.class })
 public class ListingService {
 
+    /** Draws of a short reference before giving up: a collision is about one in a thousand billion. */
+    static final int MAX_SHORT_REF_ATTEMPTS = 5;
+
     private final ListingRepository repository;
     private final DraftEditor editor;
     private final ListingViews views;
@@ -72,9 +75,15 @@ public class ListingService {
             throw new DraftLimitReachedException(properties.maxPerOwner());
         }
         Instant now = now();
-        Listing listing = new Listing(UUID.randomUUID(), ownerId, ListingStatus.DRAFT, edit.content(), 1, now, now,
-                null, null, null, null);
-        repository.insert(listing);
+        Listing listing;
+        int attempts = 0;
+        do {
+            if (++attempts > MAX_SHORT_REF_ATTEMPTS) {
+                throw new IllegalStateException("No free short reference after " + MAX_SHORT_REF_ATTEMPTS + " draws");
+            }
+            listing = new Listing(UUID.randomUUID(), ownerId, ListingStatus.DRAFT, edit.content(), 1, now, now, null,
+                    null, null, null, ShortRefs.generate());
+        } while (!repository.insert(listing));
         return views.view(listing, edit.warnings());
     }
 
@@ -138,7 +147,7 @@ public class ListingService {
         if (!draft.missingFields().isEmpty()) {
             throw new ListingIncompleteException(draft.missingFields());
         }
-        Listing published = listing.published(now, publication.ttl());
+        Listing published = withShortRef(listing).published(now, publication.ttl());
         repository.updateStatus(published);
         ListingView view = views.view(published, List.of());
         outbox.write(events.published(view, now));
@@ -328,6 +337,35 @@ public class ListingService {
     }
 
     /** Truncated to the precision of PostgreSQL, so that an answer and a later reading agree. */
+    /** A listing created before SOC-05 gets its short reference when it is published (V14 left it NULL). */
+    private Listing withShortRef(Listing listing) {
+        if (listing.shortRef() != null) {
+            return listing;
+        }
+        for (int attempt = 0; attempt < MAX_SHORT_REF_ATTEMPTS; attempt++) {
+            String ref = ShortRefs.generate();
+            if (repository.setShortRef(listing.id(), ref)) {
+                return listing.withShortRef(ref);
+            }
+        }
+        throw new IllegalStateException("No free short reference after " + MAX_SHORT_REF_ATTEMPTS + " draws");
+    }
+
+    /**
+     * The listing of a short reference typed in any case (SOC-05), for the redirection {@code /r/{ref}} of the
+     * Instagram captions: only a listing whose page exists (published, expired or deactivated, CATA-03).
+     *
+     * @throws ListingNotFoundException unknown reference, a draft or a deleted listing
+     */
+    @Transactional(readOnly = true)
+    public UUID idByShortRef(String typed) {
+        return ShortRefs.normalize(typed)
+                .flatMap(repository::findByShortRef)
+                .filter(listing -> listing.status() != ListingStatus.DRAFT && listing.status() != ListingStatus.DELETED)
+                .map(Listing::id)
+                .orElseThrow(ListingNotFoundException::new);
+    }
+
     private Instant now() {
         return clock.instant().truncatedTo(ChronoUnit.MICROS);
     }

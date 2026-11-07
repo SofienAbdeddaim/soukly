@@ -197,7 +197,7 @@ Fill in each file. Every secret is generated separately for dev and for prod, fo
 | `S3_REGION` | `garage` | storage region, for example `eu-marseille-1` (Oracle) or `fsn1` (Hetzner) |
 | `PHOTO_PUBLIC_BASE_URL` | `https://photos.<DEV_HOST>` | public URL of `listings/` (section 5) |
 | `LEGAL_CONTACT_EMAIL` | the prod mailbox (`privacy@<prod domain>`) during the Meta review | empty (`privacy@<host of PUBLIC_BASE_URL>`) or the mailbox |
-| `MAIL_*` | `mailpit`, `1025`, no credentials | SMTP provider (to be chosen) |
+| `MAIL_*` | `mailpit`, `1025`, no credentials, `MAIL_SMTP_AUTH` and `MAIL_STARTTLS` `false` | SMTP provider (for example Brevo: `smtp-relay.brevo.com`, `587`, login and SMTP key, `MAIL_SMTP_AUTH=true`, `MAIL_STARTTLS=true`); `MAIL_FROM` on a domain verified at the provider |
 
 `IMAGE_TAG` is the tag of the images to run: the full 40-character commit SHA built by the
 build-images workflow (DEP-01). DEP-03 and DEP-04 rewrite it at each deployment.

@@ -131,6 +131,35 @@ class CaptionPreviewApiTests extends IntegrationTest {
     }
 
     @Test
+    void theInstagramCaptionHasTheShortReferenceOfTheDraft() throws Exception {
+        Map<String, Object> body = car("fr");
+        body.put("network", "INSTAGRAM");
+        body.put("shortRef", "8F3C2K9A");
+
+        preview(body)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.text").value(org.hamcrest.Matchers.containsString(
+                        "\n\nAnnonce complète sur soukly.example.test/r/8F3C2K9A\n#Soukly #Sfax #Voitures")))
+                .andExpect(jsonPath("$.text").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("https://"))));
+        body.put("network", "FACEBOOK");
+        preview(body).andExpect(jsonPath("$.text").value(org.hamcrest.Matchers.containsString(
+                "Voir l'annonce : https://soukly.example.test/fr/listings/8f3c2a10")));
+    }
+
+    @Test
+    void anUnknownNetworkOrAnInvalidReferenceIsRefused() throws Exception {
+        Map<String, Object> body = car("fr");
+        body.put("network", "TIKTOK");
+        body.put("shortRef", "8F3C2K9O");
+
+        preview(body)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[*].code").value(org.hamcrest.Matchers.contains("network.invalid",
+                        "short-ref.invalid")));
+    }
+
+    @Test
     void anAccessTokenIsRequired() throws Exception {
         mockMvc.perform(post("/social/caption-preview").contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(car("fr"))))

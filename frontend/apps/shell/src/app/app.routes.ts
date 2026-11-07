@@ -5,14 +5,16 @@ import { loadRemoteRoutes } from './federation/load-remote-routes';
 import { NotFound } from './not-found/not-found';
 import { FacebookCallback, preferredLangGuard } from './oauth/facebook-callback';
 import { InstagramCallback } from './oauth/instagram-callback';
+import { SHORT_REF_PATH, ShortRefRedirect } from './short-ref/short-ref-redirect';
 
 /**
  * Routes of the shell, under the language prefix: "/fr/account/login", "/ar/publish/new"…
  * A URL without a supported prefix is redirected (see withLangPrefix in @soukly/i18n).
  * The legal pages (`/{lang}/legal/{slug}`, LEG-01) are static HTML served before the shell: an
  * unknown one reaches the shell and shows its 404 page. The return routes of Facebook
- * (`/oauth/facebook/callback`, SOC-01) and Instagram (`/oauth/instagram/callback`, SOC-02) are the
- * only pages without a prefix: a single redirect URI per network is declared at Meta.
+ * (`/oauth/facebook/callback`, SOC-01) and Instagram (`/oauth/instagram/callback`, SOC-02) are
+ * pages without a prefix, since a single redirect URI per network is declared at Meta, with the
+ * short address of a listing (`/r/{ref}`, SOC-05), written in the Instagram captions.
  */
 export function createShellRoutes(): Routes {
   return [
@@ -24,6 +26,11 @@ export function createShellRoutes(): Routes {
     {
       path: INSTAGRAM_CALLBACK_PATH,
       component: InstagramCallback,
+      canActivate: [preferredLangGuard],
+    },
+    {
+      path: `${SHORT_REF_PATH}/:ref`,
+      component: ShortRefRedirect,
       canActivate: [preferredLangGuard],
     },
     ...withLangPrefix([

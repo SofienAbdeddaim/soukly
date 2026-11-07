@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-export type UiBadgeTone = 'success' | 'warning' | 'danger' | 'neutral';
+export type UiBadgeTone = 'success' | 'warning' | 'danger' | 'pending' | 'neutral';
 
 /**
- * Short status label in a pill, for example the state of a listing on "My listings" (ANN-05):
+ * Short status label in a pill, for example the state of a listing on "My listings" (ANN-05) or
+ * where it was posted (SOC-06, `pending` while a post is being published):
  *
  * ```html
  * <ui-badge tone="warning">Expire dans 2 j</ui-badge>
@@ -41,6 +42,10 @@ export type UiBadgeTone = 'success' | 'warning' | 'danger' | 'neutral';
 
     :host(.ui-badge--danger) {
       background-color: var(--color-danger-surface);
+    }
+
+    :host(.ui-badge--pending) {
+      background-color: var(--color-pending-surface);
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

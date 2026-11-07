@@ -46,6 +46,9 @@ public abstract class IntegrationTest {
         clock.reset();
     }
 
+    /** Shared token of the internal endpoints of listing-service (SOC-06), sent by social-publisher. */
+    public static final String INTERNAL_TOKEN = "test-internal-token-of-listing-service";
+
     @DynamicPropertySource
     static void jwks(DynamicPropertyRegistry registry) {
         registry.add("soukly.listing.jwt.jwk-set-uri", TestJwks::uri);
@@ -60,6 +63,7 @@ public abstract class IntegrationTest {
         registry.add("soukly.listing.publication.public-base-url", () -> "https://soukly.example.test");
         registry.add("soukly.listing.user-service.base-url", TestUserService::baseUrl);
         registry.add("soukly.listing.user-service.internal-api-token", () -> TestUserService.TOKEN);
+        registry.add("soukly.listing.internal-api.token", () -> INTERNAL_TOKEN);
         // Run by the tests only
         registry.add("soukly.listing.outbox.relay-initial-delay", () -> "P1D");
         registry.add("soukly.listing.outbox.purge-interval", () -> "P1D");
