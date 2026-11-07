@@ -147,7 +147,8 @@
     "read-less": "Réduire",
     "seller": "Vendeur",
     "member-since": "Membre depuis {{since}}",
-    "contact-area": "Prix et contact du vendeur"
+    "contact-area": "Prix et contact du vendeur",
+    "reference": "Réf."
   },
   "contact": {
     "show": "Afficher le numéro",

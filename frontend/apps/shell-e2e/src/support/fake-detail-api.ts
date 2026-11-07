@@ -4,13 +4,15 @@ import { PHOTOS } from './fake-listing-api';
 
 /**
  * Fakes the listing page of listing-service (CATA-03): `GET /api/listings/{id}` (the public view,
- * the owner's, `410` or `404`) and `POST /api/listings/{id}/contact`. Register it after
+ * the owner's, `410` or `404`), `POST /api/listings/{id}/contact` and the short reference lookup
+ * `GET /api/listings/by-ref/{ref}` (SOC-05). Register it after
  * `fakeListingApi` and `fakeSearchApi`; other calls fall through to them.
  */
 export const PUBLIC_ID = '11111111-1111-4111-8111-111111111111';
 export const OWN_ID = '22222222-2222-4222-8222-222222222222';
 export const GONE_ID = '33333333-3333-4333-8333-333333333333';
 export const SELLER_PHONE = '+21620123456';
+export const PUBLIC_REF = '8F3C2K9A';
 
 export interface FakeDetailApi {
   /** Contact requests received, with their `Authorization` header. */
@@ -58,6 +60,7 @@ export function publicDetail() {
     ...BASE,
     id: PUBLIC_ID,
     status: 'PUBLISHED',
+    shortRef: PUBLIC_REF,
     seller: {
       id: 'a1b2c3d4-0000-4000-8000-000000000001',
       displayName: 'Mohamed B.',
@@ -105,6 +108,25 @@ export async function fakeDetailApi(
   listings: Record<string, unknown> = { [PUBLIC_ID]: publicDetail() },
 ): Promise<FakeDetailApi> {
   const api: FakeDetailApi = { contacts: [], limitReached: false };
+  await page.route(
+    (url) => url.pathname.startsWith('/api/listings/by-ref/'),
+    async (route) => {
+      const ref = decodeURIComponent(new URL(route.request().url()).pathname.split('/')[4]);
+      const found = Object.entries(listings).find(
+        ([, listing]) =>
+          (listing as { shortRef?: string }).shortRef?.toUpperCase() === ref.toUpperCase(),
+      );
+      return route.fulfill(
+        found
+          ? { status: 200, contentType: 'application/json', body: JSON.stringify({ id: found[0] }) }
+          : {
+              status: 404,
+              contentType: 'application/problem+json',
+              body: JSON.stringify(problem('listing-not-found', 404)),
+            },
+      );
+    },
+  );
   await page.route(
     (url) => /^\/api\/listings\/[^/]+(\/contact)?$/u.test(url.pathname),
     async (route) => {

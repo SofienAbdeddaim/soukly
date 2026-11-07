@@ -27,7 +27,7 @@ class ListingRepository {
     private static final String COLUMNS = """
             id, owner_id, status, category_code, title, description, price_mode, price_tnd, negotiable,
             governorate_code, delegation_code, attributes, version, created_at, updated_at, published_at, expires_at,
-            reminder_sent_at, deleted_at, share_to, share_language""";
+            reminder_sent_at, deleted_at, share_to, share_language, short_ref""";
 
     private final JdbcClient jdbc;
     private final JsonMapper json;
@@ -71,24 +71,55 @@ class ListingRepository {
                 .single();
     }
 
-    void insert(Listing listing) {
-        ListingContent content = listing.content();
-        jdbc.sql("""
+    /**
+     * Inserts a new listing with its short reference.
+     *
+     * @return {@code false} when another listing has this short reference already: nothing is inserted, and the
+     *         transaction can go on with another one
+     */
+    boolean insert(Listing listing) {
+        return jdbc.sql("""
                 INSERT INTO listings (id, owner_id, status, category_code, title, description, price_mode, price_tnd,
                         negotiable, governorate_code, delegation_code, attributes, share_to, share_language, version,
-                        created_at, updated_at, published_at)
+                        created_at, updated_at, published_at, short_ref)
                 VALUES (:id, :owner, :status, :category, :title, :description, :priceMode, :price, :negotiable,
                         :governorate, :delegation, CAST(:attributes AS jsonb), CAST(:shareTo AS text[]),
-                        :shareLanguage, :version, :createdAt, :updatedAt, :publishedAt)""")
+                        :shareLanguage, :version, :createdAt, :updatedAt, :publishedAt, :shortRef)
+                ON CONFLICT (short_ref) DO NOTHING""")
                 .param("id", listing.id())
                 .param("owner", listing.ownerId())
                 .param("status", listing.status().name())
-                .params(contentParams(content))
+                .params(contentParams(listing.content()))
                 .param("version", listing.version())
                 .param("createdAt", Timestamp.from(listing.createdAt()))
                 .param("updatedAt", Timestamp.from(listing.updatedAt()))
                 .param("publishedAt", timestamp(listing.publishedAt()))
-                .update();
+                .param("shortRef", listing.shortRef())
+                .update() == 1;
+    }
+
+    /**
+     * Gives a short reference to a listing locked by {@link #findForUpdate(UUID)} that has none (created by a version
+     * before SOC-05).
+     *
+     * @return {@code false} when another listing has this reference: nothing changes
+     */
+    boolean setShortRef(UUID id, String shortRef) {
+        return jdbc.sql("""
+                UPDATE listings SET short_ref = :shortRef
+                WHERE id = :id AND short_ref IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM listings other WHERE other.short_ref = :shortRef)""")
+                .param("id", id)
+                .param("shortRef", shortRef)
+                .update() == 1;
+    }
+
+    /** The listing of a short reference, already upper case (SOC-05). */
+    Optional<Listing> findByShortRef(String shortRef) {
+        return jdbc.sql("SELECT " + COLUMNS + " FROM listings WHERE short_ref = :shortRef")
+                .param("shortRef", shortRef)
+                .query(this::listing)
+                .optional();
     }
 
     /** Writes the content and the version of a listing locked by {@link #findForUpdate(UUID)}. */
@@ -306,6 +337,7 @@ class ListingRepository {
         return new Listing(rs.getObject("id", UUID.class), rs.getObject("owner_id", UUID.class),
                 ListingStatus.valueOf(rs.getString("status")), content, rs.getLong("version"),
                 instant(rs, "created_at"), instant(rs, "updated_at"), instant(rs, "published_at"),
-                instant(rs, "expires_at"), instant(rs, "reminder_sent_at"), instant(rs, "deleted_at"));
+                instant(rs, "expires_at"), instant(rs, "reminder_sent_at"), instant(rs, "deleted_at"),
+                rs.getString("short_ref"));
     }
 }

@@ -1,50 +1,68 @@
 package com.soukly.social.instagram;
 
-import java.util.Set;
+import java.net.URI;
+import java.util.List;
 
 import com.soukly.social.graph.GraphApiException;
 
 /**
- * The calls of social-publisher to Instagram (SOC-02): Instagram API with Instagram Login. Simulated in the tests: the
- * real API is never called by an automated test. Every failure is a {@link GraphApiException} whose message never
- * contains a token, the app secret or the requested URL.
+ * The calls of social-publisher to Instagram (SOC-02, SOC-05): Instagram API with Facebook Login for Business (the
+ * "Unified login" of new Meta apps), its connection and its content publishing (containers, carousels, publication),
+ * all on the Graph API of Facebook. Simulated in the tests: the real API is never called by an automated test. Every
+ * failure is a {@link GraphApiException} whose message never contains a token, the app secret or the requested URL.
  */
 public interface InstagramGraphClient {
 
-    /** Exchanges the code of the authorization dialog for a short-lived token (about one hour). */
-    ShortLivedToken exchangeCode(String code, String redirectUri);
+    /**
+     * Exchanges the code of the login dialog for the access token of the configuration: a business integration
+     * system-user token that does not expire, valid for the Instagram accounts the person granted.
+     */
+    String exchangeCode(String code, String redirectUri);
 
-    /** Exchanges a short-lived token for a long-lived one (about 60 days). */
-    LongLivedToken exchangeForLongLived(String shortLivedToken);
+    /** The Instagram professional accounts the token was granted ({@code /me/assigned_instagram_accounts}). */
+    List<InstagramAccount> assignedAccounts(String accessToken);
 
     /**
-     * Refreshes a long-lived token that is at least 24 hours old and not expired: a new token valid about 60 days.
+     * Creates the container of a post of one photo ({@code POST /{ig-user-id}/media}, {@code image_url} and
+     * {@code caption}): Instagram fetches the JPEG from its public URL.
      *
-     * @throws GraphApiException with a 4xx status when Instagram refuses it (expired, or the access was removed)
+     * @return the container id
      */
-    LongLivedToken refresh(String longLivedToken);
+    String createImageContainer(String accountId, String token, URI imageUrl, String caption);
 
-    /** The account the token belongs to. */
-    InstagramProfile profile(String accessToken);
+    /** Creates the container of one photo of a carousel ({@code is_carousel_item=true}, without caption). */
+    String createCarouselItem(String accountId, String token, URI imageUrl);
+
+    /** Creates the container of a carousel ({@code media_type=CAROUSEL}) of 2 to 10 item containers, in order. */
+    String createCarousel(String accountId, String token, List<String> children, String caption);
 
     /**
-     * @param userId      Instagram-scoped id of the account
-     * @param permissions permissions granted in the dialog; {@code null} when Instagram did not list them
+     * {@code status_code} of a container: {@code IN_PROGRESS}, {@code FINISHED} (ready to publish), {@code ERROR},
+     * {@code EXPIRED} (not published within 24 hours) or {@code PUBLISHED}.
      */
-    record ShortLivedToken(String accessToken, String userId, Set<String> permissions) {
+    String containerStatus(String containerId, String token);
 
-        @Override
-        public String toString() {
-            return "ShortLivedToken[userId=" + userId + "]";
-        }
-    }
+    /**
+     * Publishes a container ({@code POST /{ig-user-id}/media_publish}).
+     *
+     * @return the id of the published media
+     */
+    String publish(String accountId, String token, String containerId);
 
-    /** @param expiresInSeconds validity of the token from now */
-    record LongLivedToken(String accessToken, long expiresInSeconds) {
+    /** {@code permalink} of a published media. */
+    String permalink(String mediaId, String token);
 
-        @Override
-        public String toString() {
-            return "LongLivedToken[expiresInSeconds=" + expiresInSeconds + "]";
+    /** Publications of the account through the API over the moving window ({@code content_publishing_limit}). */
+    PublishingLimit publishingLimit(String accountId, String token);
+
+    /**
+     * @param usage posts published through the API within the window
+     * @param total posts allowed within the window ({@code config.quota_total})
+     */
+    record PublishingLimit(int usage, int total) {
+
+        public boolean reached() {
+            return usage >= total;
         }
     }
 }

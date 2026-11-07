@@ -104,6 +104,44 @@ test.describe('share the listing', () => {
     await expectNoSeriousA11yViolations(page);
   });
 
+  test('Instagram alone: the post text ends with the reference, without a link', async ({
+    page,
+  }) => {
+    const { social } = await preview(
+      page,
+      { instagram: instagramConnection() },
+      { shareTo: ['INSTAGRAM'], shortRef: '8F3C2K9A' },
+    );
+
+    await page.getByText('Voir le texte du post').click();
+
+    const text = page.getByTestId('share-caption-text');
+    await expect(text).toContainText('Annonce complète sur');
+    await expect(text).toContainText('/r/8F3C2K9A');
+    await expect(text).not.toContainText('http');
+    await expect(page.getByTestId('share-caption-instagram-note')).toHaveCount(0);
+    const body = social.calls.find((call) => call.path === '/api/social/caption-preview')?.body;
+    expect(body).toMatchObject({ network: 'INSTAGRAM', shortRef: '8F3C2K9A' });
+  });
+
+  test('both networks: the Facebook text and a word on Instagram', async ({ page }) => {
+    await preview(
+      page,
+      { facebook: connection(), instagram: instagramConnection() },
+      { shareTo: ['FACEBOOK', 'INSTAGRAM'] },
+    );
+
+    await page.getByText('Voir le texte du post').click();
+
+    await expect(page.getByTestId('share-caption-text')).toContainText(
+      `/fr/listings/${LISTING_ID}`,
+    );
+    await expect(page.getByTestId('share-caption-instagram-note')).toContainText(
+      'Sur Instagram, le lien est remplacé par la référence',
+    );
+    await expectNoSeriousA11yViolations(page);
+  });
+
   test('the post text unavailable offers to try again', async ({ page }) => {
     const { social } = await preview(
       page,

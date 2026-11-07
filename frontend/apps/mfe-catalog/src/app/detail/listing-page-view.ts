@@ -49,6 +49,8 @@ export interface ListingPageView {
   familyLabel: string;
   subcategoryLabel: string;
   seller: SellerView | null;
+  /** Short reference of the Instagram captions (SOC-05), null when the API gave none. */
+  shortRef: string | null;
 }
 
 /**
@@ -102,6 +104,7 @@ export class ListingPageViews {
       familyLabel: family ? labelOf(family.label, lang) : '',
       subcategoryLabel: subcategory ? labelOf(subcategory.label, lang) : '',
       seller: listing.seller ? sellerView(listing.seller, locale) : null,
+      shortRef: listing.shortRef ?? null,
     };
   }
 

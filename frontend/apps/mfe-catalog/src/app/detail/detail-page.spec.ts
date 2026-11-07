@@ -104,6 +104,20 @@ describe('DetailPage', () => {
     expect(TestBed.inject(Meta).getTag('name="description"')?.content).toContain('Première main');
   });
 
+  it('shows the short reference of the listing discreetly', async () => {
+    const { element } = await open(`/fr/listings/${TEST_ID}`);
+
+    expect(text(element.querySelector('[data-testid="short-ref"]'))).toBe('Réf. 8F3C2K9A');
+  });
+
+  it('shows no reference when the API gives none', async () => {
+    const { element } = await open(`/fr/listings/${TEST_ID}`, {
+      reading: { kind: 'public', listing: publicListing({ shortRef: null }) },
+    });
+
+    expect(element.querySelector('[data-testid="short-ref"]')).toBeNull();
+  });
+
   it('never reads the description as HTML', async () => {
     const { element } = await open(`/fr/listings/${TEST_ID}`, {
       reading: {

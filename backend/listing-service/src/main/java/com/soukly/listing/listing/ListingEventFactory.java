@@ -40,7 +40,8 @@ class ListingEventFactory {
         ListingPublishedData data = new ListingPublishedData(content.title(), content.description(),
                 content.categoryCode(), content.kind().name(), content.priceMode().name(), content.price(), CURRENCY,
                 content.negotiable(), content.governorateCode(), content.delegationCode(), photoUrls.getFirst(),
-                photoUrls, publicUrls(listing.id()), shareTo(content), listing.expiresAt(), shareLanguage(content));
+                photoUrls, publicUrls(listing.id()), shareTo(content), listing.expiresAt(), shareLanguage(content),
+                listing.shortRef());
         return envelope(ListingEvents.PUBLISHED, listing, now, data);
     }
 

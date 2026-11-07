@@ -112,6 +112,11 @@ export interface Listing {
   shareTo?: ShareNetwork[] | null;
   /** Language of the post texts, `fr`, `ar` or `en`, or null. */
   shareLanguage?: string | null;
+  /**
+   * Short reference of the listing (SOC-05), 8 characters such as `8F3C2K9A`: written in the
+   * Instagram captions as `{host}/r/{shortRef}`. Missing from the answers of older versions.
+   */
+  shortRef?: string | null;
 }
 
 /** Networks a draft can be shared to (SOC-03). */
@@ -147,6 +152,8 @@ export interface PublicListing {
   photos: ListingPhoto[];
   publishedAt: string;
   seller: ListingSeller;
+  /** Short reference (SOC-05), shown as "Réf. 8F3C2K9A". */
+  shortRef?: string | null;
 }
 
 /** A JSON Merge Patch (RFC 7396) of a draft: `null` clears a field, an absent one is unchanged. */

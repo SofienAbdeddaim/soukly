@@ -10,19 +10,19 @@ import java.util.Optional;
  */
 public enum CaptionLanguage {
 
-    FR("fr", "Négociable", "Sur devis", "Voir l'annonce : ", ", ") {
+    FR("fr", "Négociable", "Sur devis", "Voir l'annonce : ", "Annonce complète sur ", ", ") {
         @Override
         String price(long dinars) {
             return group(dinars, NARROW_NO_BREAK_SPACE) + NO_BREAK_SPACE + "DT";
         }
     },
-    AR("ar", "قابل للتفاوض", "حسب الطلب", "شاهد الإعلان: ", "، ") {
+    AR("ar", "قابل للتفاوض", "حسب الطلب", "شاهد الإعلان: ", "الإعلان كاملًا على ", "، ") {
         @Override
         String price(long dinars) {
             return group(dinars, '.') + NO_BREAK_SPACE + "د.ت.";
         }
     },
-    EN("en", "Negotiable", "On quote", "See the listing: ", ", ") {
+    EN("en", "Negotiable", "On quote", "See the listing: ", "Full listing on ", ", ") {
         @Override
         String price(long dinars) {
             return "TND" + NO_BREAK_SPACE + group(dinars, ',');
@@ -36,13 +36,16 @@ public enum CaptionLanguage {
     private final String negotiable;
     private final String onQuote;
     private final String seeListing;
+    private final String fullListingOn;
     private final String listSeparator;
 
-    CaptionLanguage(String code, String negotiable, String onQuote, String seeListing, String listSeparator) {
+    CaptionLanguage(String code, String negotiable, String onQuote, String seeListing, String fullListingOn,
+            String listSeparator) {
         this.code = code;
         this.negotiable = negotiable;
         this.onQuote = onQuote;
         this.seeListing = seeListing;
+        this.fullListingOn = fullListingOn;
         this.listSeparator = listSeparator;
     }
 
@@ -77,6 +80,11 @@ public enum CaptionLanguage {
 
     String seeListing() {
         return seeListing;
+    }
+
+    /** Before the short address of the listing on Instagram, where links are not clickable (SOC-05). */
+    String fullListingOn() {
+        return fullListingOn;
     }
 
     /** Between the governorate and the delegation: the Arabic comma in Arabic. */

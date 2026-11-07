@@ -13,9 +13,10 @@ import { InstagramFailure } from '@soukly/social-data';
 import { UiButton } from '@soukly/ui';
 
 /**
- * Why the return from Instagram failed (SOC-02), with what the member can do. A personal account
- * gets the "Personal account" screen: the 3 steps to switch to a professional account in the
- * Instagram app, "Try again" and "Later". Takes the focus when shown, so keyboard and screen reader
+ * Why the return from Instagram failed (SOC-02), with what the member can do. When Meta shared no
+ * Instagram account (a personal account, one outside the business portfolio, or none ticked in the
+ * Facebook window of the Unified login), the "No account" screen gives the 3 things to check,
+ * "Try again" and "Later". Takes the focus when shown, so keyboard and screen reader
  * users land on it.
  */
 @Component({
@@ -139,7 +140,7 @@ export class InstagramFailurePanel {
   readonly dismiss = output<void>();
 
   protected readonly prefix = computed(() => `account.social.instagram-failure.${this.failure()}`);
-  protected readonly personal = computed(() => this.failure() === 'instagram-not-professional');
+  protected readonly personal = computed(() => this.failure() === 'instagram-no-account');
 
   /** Nothing to try again while Instagram is not configured in this environment. */
   protected readonly canRetry = computed(() => this.failure() !== 'instagram-not-configured');

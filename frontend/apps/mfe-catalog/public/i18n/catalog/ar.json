@@ -147,7 +147,8 @@
     "read-less": "عرض أقل",
     "seller": "البائع",
     "member-since": "عضو منذ {{since}}",
-    "contact-area": "السعر والتواصل مع البائع"
+    "contact-area": "السعر والتواصل مع البائع",
+    "reference": "المرجع"
   },
   "contact": {
     "show": "إظهار الرقم",

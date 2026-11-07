@@ -1,5 +1,6 @@
 package com.soukly.social.facebook;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Set;
 
@@ -32,4 +33,26 @@ public interface FacebookGraphClient {
 
     /** Removes every permission the person granted to the app, with the app access token. */
     void revokePermissions(String userId);
+
+    /**
+     * Uploads a photo to the Page from its public URL without publishing it ({@code POST /{page-id}/photos} with
+     * {@code published=false}), to attach it to a post (SOC-04).
+     *
+     * @return the id of the unpublished photo
+     */
+    String uploadUnpublishedPhoto(String pageId, String pageToken, URI photoUrl);
+
+    /**
+     * Publishes a post on the Page with this text and these unpublished photos, in this order
+     * ({@code POST /{page-id}/feed} with {@code attached_media}).
+     *
+     * @return the id of the post, {@code {page-id}_{post-id}}
+     */
+    String createPost(String pageId, String pageToken, String message, List<String> photoIds);
+
+    /** Address of the post on Facebook ({@code permalink_url}), or {@code null} when Meta does not give it. */
+    String permalink(String postId, String pageToken);
+
+    /** Deletes a post of the Page ({@code DELETE /{post-id}}). */
+    void deletePost(String postId, String pageToken);
 }

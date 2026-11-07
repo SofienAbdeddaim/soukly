@@ -122,8 +122,12 @@ export class ListingsApi {
   }
 }
 
-/** The ETag header, or the one listing-service derives from the version (`"7"`). */
+/**
+ * The ETag of the listing, derived from its version (`"7"`) as listing-service does, not read from
+ * the header: the Caddy of the edge changes the ETag of a compressed answer (`"7-zstd"`), which
+ * would never match the version again and fail every update with a `412`.
+ */
 function versioned(response: HttpResponse<Listing>): VersionedListing {
   const listing = response.body as Listing;
-  return { listing, etag: response.headers.get('ETag') ?? `"${listing.version}"` };
+  return { listing, etag: `"${listing.version}"` };
 }

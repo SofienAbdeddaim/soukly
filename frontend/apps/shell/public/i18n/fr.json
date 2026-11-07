@@ -46,5 +46,11 @@
       "title": "Connexion à Instagram",
       "loading": "Nous terminons la connexion de votre compte Instagram…"
     }
+  },
+  "short-ref": {
+    "title": "Ouverture de l'annonce",
+    "loading": "Nous ouvrons l'annonce…",
+    "error": "L'annonce n'a pas pu être ouverte. Vérifiez votre réseau, puis réessayez.",
+    "retry": "Réessayer"
   }
 }
