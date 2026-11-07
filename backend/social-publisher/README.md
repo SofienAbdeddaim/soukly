@@ -6,11 +6,20 @@ Social networks of Soukly: package `com.soukly.social`, database `soukly_social`
 
 Meta only lets an app post on a **Page**, never on a personal profile. A member connects **one Page**; connecting another one replaces it.
 
+**Meta "Unified login" (2026-11).** New Meta apps no longer accept the classic dialog with a `scope`, nor Instagram Login: both networks use **Facebook Login for Business** with a saved configuration of the app, named by `config_id` in the dialog. The configuration carries the permissions and the choice of the assets (Pages, Instagram accounts). One Meta app (`META_APP_ID` / `META_APP_SECRET`), two configurations:
+
+| Configuration                    | Env variable                     | Token type                              | Assets             | Permissions                                                        |
+| -------------------------------- | -------------------------------- | --------------------------------------- | ------------------ | ------------------------------------------------------------------ |
+| Facebook Page                    | `META_FACEBOOK_LOGIN_CONFIG_ID`  | User access token                       | Pages              | `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`   |
+| Instagram                        | `META_INSTAGRAM_LOGIN_CONFIG_ID` | System-user access token, expiry Never  | Instagram accounts | `instagram_basic`, `instagram_content_publish`, `business_management` |
+
+Valid OAuth redirect URIs of the app: `{PUBLIC_BASE_URL}/oauth/facebook/callback` and `{PUBLIC_BASE_URL}/oauth/instagram/callback`. The dialog is `https://www.facebook.com/{version}/dialog/oauth?client_id&redirect_uri&state&response_type=code&config_id&override_default_response_type=true`, without `scope`.
+
 ```
 browser                         social-publisher                         Facebook
 POST /social/facebook/connect ──► state (32 random bytes, stored hashed, 10 min, single use)
 ◄── { authorizeUrl } ─────────────
-──────────────────────── OAuth dialog (client_id, redirect_uri, state, scope) ──────────────────────►
+──────────────────── login dialog (client_id, redirect_uri, state, config_id) ─────────────────────►
 ◄─────────────── {FRONT_BASE_URL}/oauth/facebook/callback?code&state (or ?error=access_denied&state) ──
 POST /social/facebook/callback ─► consumes the state ─► code → user token → long-lived user token
                                   /me/permissions, /me, /me/accounts (Pages + Page tokens) ◄─────────
@@ -20,7 +29,7 @@ POST /social/facebook/page ─────► the chosen Page of the pending sel
 
 - The redirect URI has **no language prefix** (one URI to declare at Meta). The shell route reads `code`, `state` or `error`, removes them from the address bar and posts them to the callback; the answer's `lang` brings the member back to `/{lang}/account/social`.
 - The `code` is only exchanged here, never in the browser. A state that is unknown, expired, used or started by another member is refused (`oauth-state-invalid`) and nothing is saved.
-- Permissions asked: `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`. Without `pages_show_list` and `pages_manage_posts` the connection is refused (`oauth-permission-missing`). Pages whose `tasks` allow no posting (`CREATE_CONTENT` or `MANAGE`) are left out; none left: `facebook-no-page`.
+- Permissions of the configuration: `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`. Without `pages_show_list` and `pages_manage_posts` the connection is refused (`oauth-permission-missing`). Pages whose `tasks` allow no posting (`CREATE_CONTENT` or `MANAGE`) are left out; none left: `facebook-no-page`.
 - `social_connections` stores the Page id, its name and picture, the app-scoped id of the person (to revoke the permissions later) and the **Page token encrypted in AES-256-GCM** (`TokenCipher`: random 12-byte nonce per encryption, stored in front of the ciphertext; associated data = member and network, so a ciphertext moved to another row does not decrypt). `key_version` prepares a rotation. A Page token read with a long-lived user token does not expire on its own; `NEEDS_RECONNECT` (set by SOC-04 when Meta refuses it) is cleared by a new connection.
 - `DELETE /social/facebook` deletes the row, then revokes the permissions (`DELETE /{user-id}/permissions` with the app access token) at best effort, unless another Soukly account still uses them.
 - `user.deleted` (`soukly.user-events`, group `social-publisher`): the connections, states and pending choice of the account are deleted in the transaction that records `processed_events`, then the permissions are revoked. Retries then `soukly.user-events.dlq`, like listing-service.
@@ -35,36 +44,36 @@ POST /social/facebook/page ─────► the chosen Page of the pending sel
 | `facebook-no-page`               | 400    | the person manages no Page they can post on (with `lang`)               |
 | `facebook-unavailable`           | 502    | Facebook refused the code, sent another error, or did not answer        |
 | `page-selection-not-found`       | 404    | no pending choice, it expired, or the Page is not in it                 |
-| `facebook-not-configured`        | 503    | `META_APP_ID` or `META_APP_SECRET` is empty in this environment         |
+| `facebook-not-configured`        | 503    | `META_APP_ID`, `META_APP_SECRET` or `META_FACEBOOK_LOGIN_CONFIG_ID` is empty |
 
 ## Instagram professional account connection (SOC-02)
 
-A member connects **one Instagram professional account** (Business or Creator) with **Instagram API with Instagram Login**: no Facebook Page is needed, and Facebook and Instagram are independent (one, the other or both). The flow has the same structure and guarantees as Facebook, and shares its OAuth states (`OAuthStates`, package `oauth`), its problem types and `social_connections`.
+A member connects **one Instagram professional account** (Business or Creator) with **Instagram API with Facebook Login for Business** (the Unified login above): the Facebook dialog with the Instagram configuration, where the person selects the account; Facebook and Instagram stay independent (one, the other or both). The flow has the same structure and guarantees as Facebook, and shares its OAuth states (`OAuthStates`, package `oauth`), its problem types and `social_connections`.
 
 ```
-browser                          social-publisher                         Instagram
+browser                          social-publisher                         Meta
 POST /social/instagram/connect ──► state (shared with Facebook, bound to the network)
-◄── { authorizeUrl } ──────────── www.instagram.com/oauth/authorize?client_id&redirect_uri&state&scope&response_type=code
+◄── { authorizeUrl } ──────────── www.facebook.com/{version}/dialog/oauth?client_id&redirect_uri&state&response_type=code
+                                  &config_id={META_INSTAGRAM_LOGIN_CONFIG_ID}&override_default_response_type=true
 ◄─────────────── {FRONT_BASE_URL}/oauth/instagram/callback?code&state (or ?error=access_denied&state) ──
-POST /social/instagram/callback ─► consumes the state ─► POST api.instagram.com/oauth/access_token (short-lived token,
-                                   granted permissions) ─► graph.instagram.com/access_token (long-lived, ~60 days)
-                                   ─► /{version}/me?fields=id,user_id,username,account_type,profile_picture_url
+POST /social/instagram/callback ─► consumes the state ─► graph.facebook.com/{version}/oauth/access_token (system-user
+                                   token, no expiry) ─► /me/assigned_instagram_accounts?fields=id,username,profile_picture_url
 ◄── { lang, connection: { network: INSTAGRAM, displayName: "@username", status, connectedAt } } (no token, ever)
 ```
 
-- Permissions asked and required: `instagram_business_basic`, `instagram_business_content_publish`. A personal account (`account_type` other than `BUSINESS` or `MEDIA_CREATOR`) is refused with `instagram-not-professional`; nothing is saved.
-- `social_connections` stores the professional account id (`user_id`, used to publish in SOC-05) as `external_id`, the app-scoped id as `external_user_id`, `@username`, the picture, the **long-lived token encrypted** like the Page tokens, and its expiry in `token_expires_at` (Facebook Page tokens do not expire: `NULL`).
-- **Daily refresh** (`InstagramTokenRefresher`): every connected Instagram token that expires within `INSTAGRAM_TOKEN_REFRESH_BEFORE` (10 days) is refreshed (`graph.instagram.com/refresh_access_token`, a new ~60-day token). Each token is refreshed in its own transaction under a `FOR UPDATE SKIP LOCKED` row lock, so two instances never refresh the same one, and one run at a time per instance. A token Instagram refuses (4xx: access removed) or already expired puts the connection in `NEEDS_RECONNECT`; when Instagram is down (5xx, 429, no answer) it is tried again the next day.
-- `DELETE /social/instagram` deletes the row only: Instagram Login offers no call to revoke the access, so the member removes Soukly in Instagram (*Settings › Website permissions › Apps and websites*); the token is no longer used and expires on its own. `user.deleted` deletes the Instagram connection with the others, and only Facebook connections are revoked at Meta.
+- The token is a **business integration system-user token**: it does not expire (`token_expires_at` is `NULL`, nothing to refresh) and works only on `graph.facebook.com`, where the content publishing of SOC-05 goes too. Assigned accounts are always professional ones; none (a personal account, an account outside the person's business portfolio, or none selected) is refused with `instagram-no-account`, several with `instagram-several-accounts`; nothing is saved.
+- `social_connections` stores the Instagram account id (used to publish in SOC-05) as `external_id`, `@username`, the picture and the **token encrypted** like the Page tokens. `external_user_id` is empty.
+- Accounts connected with the former Instagram Login (tokens with an expiry) are set to `NEEDS_RECONNECT` by `V6`.
+- `DELETE /social/instagram` deletes the row only; the member can remove Soukly from the integrations of their business portfolio. `user.deleted` deletes the Instagram connection with the others, and only Facebook connections are revoked at Meta.
 
 | Problem type                     | Status | When                                                                    |
 | -------------------------------- | ------ | ----------------------------------------------------------------------- |
 | `oauth-state-invalid`            | 400    | the state is unknown, expired, used, another member's or a Facebook one |
-| `oauth-cancelled`                | 400    | `error=access_denied` on Instagram (with `lang`)                        |
-| `oauth-permission-missing`       | 400    | a required permission was not granted (with `lang`)                     |
-| `instagram-not-professional`     | 400    | the account is a personal one (with `lang`)                             |
-| `instagram-unavailable`          | 502    | Instagram refused the code, sent another error, or did not answer       |
-| `instagram-not-configured`       | 503    | `INSTAGRAM_APP_ID` or `INSTAGRAM_APP_SECRET` is empty                   |
+| `oauth-cancelled`                | 400    | `error=access_denied` in the dialog (with `lang`)                       |
+| `instagram-no-account`           | 400    | no Instagram professional account was granted (with `lang`)             |
+| `instagram-several-accounts`     | 400    | several accounts were granted: select only one (with `lang`)            |
+| `instagram-unavailable`          | 502    | Meta refused the code, sent another error, or did not answer            |
+| `instagram-not-configured`       | 503    | `META_APP_ID`, `META_APP_SECRET` or `META_INSTAGRAM_LOGIN_CONFIG_ID` is empty |
 
 ## Where to share a listing and the post text (SOC-03)
 
@@ -205,8 +214,9 @@ InstagramPublisher (every 10 s) ── lock a due INSTAGRAM row ── token dec
   | photo missing from the bucket / not convertible | `FAILED` `photo-unavailable` / `photo-conversion-failed` |
   | `190`, `102` | connection `NEEDS_RECONNECT`, post `FAILED` `needs-reconnect` |
 
-- **Removal**: the Instagram API with Instagram Login offers no deletion of a published media (Meta documents the
-  deletion endpoint for the Instagram API with Facebook Login only). `listing.deleted` cancels a `PENDING` row; a
+- **Removal**: no deletion of a published media yet. SOC-05 was built on Instagram Login, which has none; Meta
+  documents one for the Instagram API with Facebook Login, now used (Unified login), to add in a later change once
+  checked with a real account. `listing.deleted` cancels a `PENDING` row; a
   `PUBLISHED` one stays `PUBLISHED` with `last_error_code = delete-unsupported`, which the "as far as possible" of the
   account deletion screen covers. `user.deleted` deletes the rows with the connections, as for Facebook.
 
@@ -218,20 +228,67 @@ InstagramPublisher (every 10 s) ── lock a due INSTAGRAM row ── token dec
 | `status-checks` / `status-interval` | `5` / `12s` |
 | `quota-retry-delay` | `1h` |
 
+## Publication statuses on "My listings" (SOC-06)
+
+The seller sees, on each listing of "My listings", where it was published and what failed, and can act on it
+(`post` package: `SocialPostController`, `PostFollowUp`, `PostBadges`).
+
+| Endpoint (JWT) | Effect |
+| --- | --- |
+| `GET /social/posts?listingIds=a,b` | the posts of these listings (50 ids at most), Facebook first: `{ listings: [{ listingId, posts: [{ network, status, badge, reason, permalink, errorCode, retryable, manualRetriesLeft, updatedAt }] }] }`. Listings of other members and listings without a badge are left out, never revealed. |
+| `POST /social/posts/{listingId}/{network}/retry` | "Try again" a `FAILED` post: `PENDING`, due now, `attempts = 0`, one more `manual_retries`; the publishers of SOC-04/05 take it with the same content and pace. Answers the post as `GET` does. |
+| `GET /social/posts/blocked?network=FACEBOOK` | the posts of this network blocked by `needs-reconnect` or `permission-missing`, created less than 30 days ago, whose listing is still online: `{ network, total, listings: [{ listingId, title }] }` |
+| `POST /social/posts/relaunch` `{ network }` | puts those posts back in the queue (`attempts = 0`, no manual attempt counted): `{ relaunched: N }` |
+
+Badges (`PostBadges`):
+
+| Row | `badge` |
+| --- | --- |
+| `PUBLISHED` | `PUBLISHED`, with `permalink` |
+| `PENDING` | `PENDING` |
+| `FAILED` / `SKIPPED` with `needs-reconnect` or `permission-missing`, network not connected again since | `TO_RECONNECT` (no "Try again") |
+| the same, network connected again after the row was blocked | `FAILED`, `reason: NOT_CONNECTED`, can be tried again |
+| `FAILED`, other code | `FAILED`, `reason`: `MEDIA_REJECTED` (`media-rejected`), `RETRIES_EXHAUSTED` (every automatic attempt used: `attempts` ≥ 1 + the `retry-delays` of the network), `REJECTED` otherwise |
+| `SKIPPED` `not-connected`, `CANCELLED`, `DELETED` | none |
+
+- `retryable` is true for a `FAILED` badge with manual attempts left (3 per post, V5 `manual_retries`). The message of
+  Meta is never returned: only the stable `errorCode` and `reason`.
+- Problems (`409`): `not-retryable` (not a failure that can be tried again: published, pending, to reconnect),
+  `retry-limit-reached`, `listing-not-online`, `network-not-connected` (relaunch before the reconnection);
+  `404 post-not-found` for a listing of another member or without a post on this network; `503
+  listing-service-unavailable` when the status of the listing cannot be read (nothing changes).
+- **Listing online**: checked before any post goes back to the queue, with the internal endpoints of listing-service
+  (`GET /internal/listings/{id}/status`, `POST /internal/listings/statuses` by batches of 50) and the shared
+  `INTERNAL_API_TOKEN` in `X-Internal-Token`; never routed by the gateway.
+- **Email "connect again"** (`connection/ConnectionHealth`): when a connection goes from `CONNECTED` to
+  `NEEDS_RECONNECT` (invalid token at a publication or a removal),
+  `social.connection.needs-reconnect` is written to the outbox (V5 `outbox_events`, relay of `common`) in the same
+  transaction, at most once per connection within 24 hours (`reconnect_notified_at`, `soukly.social.reconnect-notice.interval`).
+  user-service sends the email; this service never sends one. Contract:
+  [`docs/events/social-events.md`](../../docs/events/social-events.md). The topic `soukly.social-events` and its DLQ
+  are declared at startup.
+
+| Setting | Default |
+| --- | --- |
+| `soukly.social.posts.follow-up.max-manual-retries` | `3` |
+| `soukly.social.posts.follow-up.relaunch-window` | `30d` |
+| `soukly.social.reconnect-notice.interval` | `24h` |
+| `soukly.social.outbox.*` | relay every second, batches of 100, sent events kept 7 days |
+
 ## Configuration
 
 | Variable                                  | Meaning                                                                                                                                   |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `SOCIAL_TOKEN_ENC_KEY`                    | 32 random bytes in base64 (`openssl rand -base64 32`). **Required**: the service does not start without a valid key. Never change it once tokens are stored. |
-| `META_APP_ID`, `META_APP_SECRET`          | the Meta app of the environment (one app per environment). Empty: Facebook cannot be connected (`503`).                                  |
+| `META_APP_ID`, `META_APP_SECRET`          | the Meta app of the environment (one app per environment), for Facebook and Instagram. Empty: no network can be connected (`503`).      |
+| `META_FACEBOOK_LOGIN_CONFIG_ID`           | Facebook Login for Business configuration of the Page connection (user access token, Pages). Empty: Facebook cannot be connected (`503`). |
+| `META_INSTAGRAM_LOGIN_CONFIG_ID`          | Facebook Login for Business configuration of the Instagram connection (system-user access token, expiry Never, Instagram accounts). Empty: Instagram cannot be connected (`503`). |
 | `META_GRAPH_VERSION`                      | Graph API version of the dialog and the calls, `v26.0` by default (latest version in October 2026).                                       |
-| `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET` | the Instagram app id and secret of the Meta app (*Instagram › API setup with Instagram login*), distinct from the Facebook ones. Empty: Instagram cannot be connected (`503`). |
-| `INSTAGRAM_GRAPH_VERSION`                 | version of the Instagram Graph API calls, `META_GRAPH_VERSION` by default                                                                 |
-| `INSTAGRAM_TOKEN_REFRESH_BEFORE`          | the daily task refreshes the Instagram tokens that expire within this delay, `10d` by default                                            |
 | `FRONT_BASE_URL` (else `PUBLIC_BASE_URL`) | origin of the redirect URIs `{FRONT_BASE_URL}/oauth/facebook/callback` and `/oauth/instagram/callback`                                  |
 | `USER_SERVICE_JWKS_URI`, `JWT_ISSUER`     | validation of the access tokens, as in the gateway                                                                                        |
-| `KAFKA_BOOTSTRAP_SERVERS`                 | Redpanda, for `user.deleted`                                                                                                              |
-| `LISTING_SERVICE_URL`                     | listing-service as this service reaches it, for the labels of the post texts (SOC-03), `http://localhost:8082` by default               |
+| `KAFKA_BOOTSTRAP_SERVERS`                 | Redpanda, for `user.deleted`, the listing events and the social events (SOC-06)                                                          |
+| `LISTING_SERVICE_URL`                     | listing-service as this service reaches it, for the labels of the post texts (SOC-03) and the statuses of the listings (SOC-06), `http://localhost:8082` by default |
+| `INTERNAL_API_TOKEN`                      | shared token sent in `X-Internal-Token` to the internal endpoints of listing-service (SOC-06)                                            |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | the bucket of the photos of listing-service, read and written for the Instagram versions (SOC-05); locally the root `.env` names the keys `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` |
 | `PHOTO_PUBLIC_BASE_URL`                   | public URL of the bucket root, the same as listing-service: Instagram fetches the JPEG versions from it                                   |
 | `VIPS_BIN_DIRECTORY`                      | directory of `vips` and `vipsheader` (package `libvips-tools`, in the image); empty = the `PATH`                                         |

@@ -28,8 +28,8 @@ import com.soukly.common.event.UserEvents;
  * {@link TestReferentials}, the photos are in the Garage of {@link TestGarage}. Tests use a new account id each time instead of resetting
  * the database.
  *
- * <p>The housekeeping, token refresh and publishing tasks never run on their own; the clock moves only when a test advances it
- * ({@link MutableClock}).
+ * <p>The housekeeping, token refresh, publishing and outbox relay tasks never run on their own; the clock moves only
+ * when a test advances it ({@link MutableClock}).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -71,14 +71,16 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.facebook.graph-base-url", TestGraph::baseUrl);
         registry.add("soukly.social.facebook.dialog-base-url", () -> "https://www.facebook.example.test");
         registry.add("soukly.social.facebook.front-base-url", () -> FRONT_BASE_URL);
+        registry.add("soukly.social.facebook.login-config-id", () -> TestGraph.LOGIN_CONFIG_ID);
         registry.add("soukly.social.instagram.app-id", () -> TestInstagram.APP_ID);
         registry.add("soukly.social.instagram.app-secret", () -> TestInstagram.APP_SECRET);
         registry.add("soukly.social.instagram.graph-version", () -> TestInstagram.VERSION);
         registry.add("soukly.social.instagram.graph-base-url", TestInstagram::baseUrl);
-        registry.add("soukly.social.instagram.api-base-url", TestInstagram::baseUrl);
-        registry.add("soukly.social.instagram.dialog-base-url", () -> "https://www.instagram.example.test");
+        registry.add("soukly.social.instagram.dialog-base-url", () -> "https://www.facebook.example.test");
+        registry.add("soukly.social.instagram.login-config-id", () -> TestInstagram.LOGIN_CONFIG_ID);
         registry.add("soukly.social.instagram.front-base-url", () -> FRONT_BASE_URL);
         registry.add("soukly.social.listing-service.base-url", TestReferentials::baseUrl);
+        registry.add("soukly.social.listing-service.internal-api-token", () -> TestReferentials.INTERNAL_TOKEN);
         registry.add("soukly.social.storage.endpoint", TestGarage::endpoint);
         registry.add("soukly.social.storage.region", () -> TestGarage.REGION);
         registry.add("soukly.social.storage.bucket", () -> TestGarage.BUCKET);
@@ -87,11 +89,12 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.photos.public-base-url", () -> PHOTO_BASE_URL);
         // Run by the tests only
         registry.add("soukly.social.facebook.purge-initial-delay", () -> "P1D");
-        registry.add("soukly.social.instagram.refresh-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.facebook.publish-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.instagram.publish-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.instagram.status-interval", () -> "10ms");
         registry.add("soukly.social.events.retry-interval", () -> "100ms");
+        registry.add("soukly.social.outbox.relay-initial-delay", () -> "P1D");
+        registry.add("soukly.social.outbox.purge-interval", () -> "P1D");
         // The pace per Page is kept (30 s, on the clock of the tests); the calls per minute are tested on their own
         registry.add("soukly.social.posts.facebook.calls-per-minute", () -> "100000");
         registry.add("soukly.social.posts.facebook.delete-retry-interval", () -> "10ms");

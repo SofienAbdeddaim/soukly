@@ -43,8 +43,8 @@ export interface ShowcaseLabels {
   alertInfo: string;
   alertSuccess: string;
   alertError: string;
-  /** ui-badge, one per tone: success, warning, danger, neutral. */
-  badges: [string, string, string, string];
+  /** ui-badge, one per tone: success, warning, danger, pending, neutral. */
+  badges: [string, string, string, string, string];
   cards: string;
   favorite: string;
   removeFavorite: string;
@@ -127,7 +127,13 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     alertInfo: 'Votre annonce sera visible après relecture.',
     alertSuccess: 'Votre compte est activé.',
     alertError: 'Email ou mot de passe incorrect.',
-    badges: ['En ligne · 58 j', 'Expire dans 2 j', 'Expirée le 10 oct.', 'Désactivée'],
+    badges: [
+      'En ligne · 58 j',
+      'Expire dans 2 j',
+      'Expirée le 10 oct.',
+      'Instagram · en cours',
+      'Désactivée',
+    ],
     cards: "Cartes d'annonce",
     favorite: 'Ajouter aux favoris',
     removeFavorite: 'Retirer des favoris',
@@ -224,7 +230,13 @@ export const LABELS: Record<ShowcaseLang, ShowcaseLabels> = {
     alertInfo: 'سيظهر إعلانك بعد المراجعة.',
     alertSuccess: 'تم تفعيل حسابك.',
     alertError: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
-    badges: ['منشور · 58 يومًا', 'ينتهي بعد يومين', 'انتهى في 10 أكتوبر', 'معطّل'],
+    badges: [
+      'منشور · 58 يومًا',
+      'ينتهي بعد يومين',
+      'انتهى في 10 أكتوبر',
+      'إنستغرام · قيد النشر',
+      'معطّل',
+    ],
     cards: 'بطاقات الإعلانات',
     favorite: 'أضف إلى المفضلة',
     removeFavorite: 'أزل من المفضلة',

@@ -20,10 +20,15 @@ public enum OAuthFailure {
     /** Facebook refused the code or did not answer. */
     FACEBOOK_UNAVAILABLE("facebook-unavailable", HttpStatus.BAD_GATEWAY, "Facebook unavailable",
             "Facebook did not complete the connection. Try again."),
-    /** The Instagram account is a personal one: only Business and Creator accounts can be posted to (SOC-02). */
-    INSTAGRAM_NOT_PROFESSIONAL("instagram-not-professional", HttpStatus.BAD_REQUEST,
-            "Instagram account not professional",
-            "Only an Instagram professional account (Business or Creator) can be connected."),
+    /**
+     * The login granted no Instagram account: a personal account, one outside the business portfolio of the person,
+     * or none selected in the dialog. Only professional accounts (Business or Creator) can be posted to.
+     */
+    INSTAGRAM_NO_ACCOUNT("instagram-no-account", HttpStatus.BAD_REQUEST, "No Instagram account",
+            "No Instagram professional account (Business or Creator) was shared with Soukly."),
+    /** The login granted several Instagram accounts: one account per member, the person selects only one. */
+    INSTAGRAM_SEVERAL_ACCOUNTS("instagram-several-accounts", HttpStatus.BAD_REQUEST, "Several Instagram accounts",
+            "Select only one Instagram account to share with Soukly."),
     /** Instagram refused the code or did not answer. */
     INSTAGRAM_UNAVAILABLE("instagram-unavailable", HttpStatus.BAD_GATEWAY, "Instagram unavailable",
             "Instagram did not complete the connection. Try again.");

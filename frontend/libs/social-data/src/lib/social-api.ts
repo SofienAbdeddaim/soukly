@@ -3,13 +3,17 @@ import { inject, Injectable } from '@angular/core';
 import { API_PREFIX, problemCode } from '@soukly/auth';
 import { firstValueFrom } from 'rxjs';
 import {
+  BlockedListings,
   Caption,
   CaptionRequest,
   FacebookCallbackOutcome,
   FacebookRedirect,
   InstagramCallbackOutcome,
+  ListingPosts,
   OAuthRedirect,
   PageCandidate,
+  PostStatusView,
+  RetryFailure,
   SocialConnection,
   SocialNetwork,
 } from './models';
@@ -22,7 +26,7 @@ interface CallbackBody {
 }
 
 /**
- * The social networks of the member, in social-publisher (SOC-01, SOC-02, SOC-03). Every request goes through
+ * The social networks of the member, in social-publisher (SOC-01 to SOC-03, SOC-06). Every request goes through
  * `API_PREFIX`, so `authInterceptor` adds the access token. Tokens never reach the browser: the
  * OAuth `code` is only forwarded to the API.
  */
@@ -134,6 +138,72 @@ export class SocialApi {
   disconnectInstagram(): Promise<void> {
     return firstValueFrom(this.http.delete<void>(`${API_PREFIX}/social/instagram`));
   }
+
+  /**
+   * The posts of these listings (SOC-06, 50 at most): the listings of other members and those
+   * without post are not in the answer.
+   */
+  async posts(listingIds: readonly string[]): Promise<ListingPosts[]> {
+    if (listingIds.length === 0) {
+      return [];
+    }
+    const body = await firstValueFrom(
+      this.http.get<{ listings: ListingPosts[] }>(`${API_PREFIX}/social/posts`, {
+        params: { listingIds: listingIds.join(',') },
+      }),
+    );
+    return body.listings;
+  }
+
+  /** Queues a failed post again; rejects with a {@link RetryError}. */
+  async retryPost(listingId: string, network: SocialNetwork): Promise<PostStatusView> {
+    try {
+      return await firstValueFrom(
+        this.http.post<PostStatusView>(
+          `${API_PREFIX}/social/posts/${encodeURIComponent(listingId)}/${network}/retry`,
+          null,
+        ),
+      );
+    } catch (error) {
+      throw new RetryError(toRetryFailure(problemCode(error)));
+    }
+  }
+
+  /** The listings still online whose post was blocked while the network was not connected. */
+  blockedPosts(network: SocialNetwork): Promise<BlockedListings> {
+    return firstValueFrom(
+      this.http.get<BlockedListings>(`${API_PREFIX}/social/posts/blocked`, {
+        params: { network },
+      }),
+    );
+  }
+
+  /** Queues the blocked posts of a network again; returns how many. */
+  async relaunchPosts(network: SocialNetwork): Promise<number> {
+    const body = await firstValueFrom(
+      this.http.post<{ relaunched: number }>(`${API_PREFIX}/social/posts/relaunch`, { network }),
+    );
+    return body.relaunched;
+  }
+}
+
+/** A retry refused by social-publisher, with its stable reason. */
+export class RetryError extends Error {
+  constructor(readonly failure: RetryFailure) {
+    super(`Retry refused: ${failure}`);
+    this.name = 'RetryError';
+  }
+}
+
+const RETRY_FAILURES: readonly RetryFailure[] = [
+  'not-retryable',
+  'retry-limit-reached',
+  'listing-not-online',
+  'post-not-found',
+];
+
+function toRetryFailure(code: string | null): RetryFailure {
+  return RETRY_FAILURES.find((failure) => failure === code) ?? 'unknown';
 }
 
 function problemLang(error: unknown): string | null {
