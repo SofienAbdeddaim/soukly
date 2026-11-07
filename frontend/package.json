@@ -40,7 +40,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-playwright": "^1.6.2",
     "jsdom": "^27.1.0",
-    "jsonc-eslint-parser": "^2.1.0",
+    "jsonc-eslint-parser": "^3.3.0",
     "markdown-it": "15.0.2",
     "ng-packagr": "22.2.4",
     "nx": "23.3.0",
