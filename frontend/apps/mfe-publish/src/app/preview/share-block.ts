@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { LucideShare2 } from '@lucide/angular';
 import { LocalePathPipe, LocaleService } from '@soukly/i18n';
 import { Listing, ShareNetwork } from '@soukly/listing-data';
 import { Caption, SocialApi, SocialConnection } from '@soukly/social-data';
@@ -37,7 +38,7 @@ interface ShareOption {
  */
 @Component({
   selector: 'app-share-block',
-  imports: [RouterLink, TranslocoPipe, LocalePathPipe, UiAlert, UiButton, UiSkeleton],
+  imports: [RouterLink, TranslocoPipe, LucideShare2, LocalePathPipe, UiAlert, UiButton, UiSkeleton],
   templateUrl: './share-block.html',
   styleUrl: './share-block.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

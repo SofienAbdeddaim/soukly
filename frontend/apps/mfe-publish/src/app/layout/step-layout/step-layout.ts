@@ -1,5 +1,6 @@
 import {
   afterNextRender,
+  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -30,7 +31,8 @@ import {
  *
  * The back link leads to the previous step (home from the first one). The title of the step is
  * the `h1` of the page and receives the focus when the step opens, so the change of step is
- * announced. Without a draft (`/publish/new`) there is no saving state.
+ * announced. Without a draft (`/publish/new`) there is no saving state. A `wide` step (the
+ * preview) gets a wider frame on large screens, where it may also drop the bottom bar.
  */
 @Component({
   selector: 'app-step-layout',
@@ -41,6 +43,10 @@ import {
 })
 export class StepLayout {
   readonly step = input.required<PublishStep>();
+  /** Wider frame from 1024px, for a step laid out in two columns (the preview). */
+  readonly wide = input(false, { transform: booleanAttribute });
+  /** False when the step shows its actions in its own content, so there is no bottom bar. */
+  readonly footer = input(true);
 
   protected readonly store = inject(DraftStore, { optional: true });
   private readonly locale = inject(LocaleService);

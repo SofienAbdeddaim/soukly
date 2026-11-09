@@ -1,0 +1,102 @@
+<article class="card" data-testid="preview-card">
+  <div class="card__media">
+    @if (cover(); as cover) {
+    <img class="card__image preview__image" [src]="cover.url" alt="" />
+    <span class="card__count" dir="ltr">
+      <svg lucideImage [size]="14" aria-hidden="true"></svg>
+      {{ 'publish.preview.photo-count' | transloco: { count: listing().photos.length } }}
+    </span>
+    } @else {
+    <div class="card__placeholder">
+      <svg lucideImage [size]="48" [strokeWidth]="1.5" aria-hidden="true"></svg>
+    </div>
+    }
+    <a class="chip card__photos-chip" [routerLink]="editLinks().photos" data-testid="edit-photos">
+      <svg lucidePencil [size]="15" aria-hidden="true"></svg>
+      <span aria-hidden="true">{{ 'publish.preview.chip.photos' | transloco }}</span>
+      <span class="ui-visually-hidden">{{ 'publish.preview.edit-photos' | transloco }}</span>
+    </a>
+  </div>
+
+  @if (thumbnails().length) {
+  <ul class="card__thumbnails" aria-hidden="true">
+    @for (photo of thumbnails(); track photo.id; let first = $first) {
+    <li class="card__thumbnail" [class.card__thumbnail--cover]="first">
+      <img [src]="photo.thumbnailUrl" alt="" />
+    </li>
+    } @if (hiddenCount()) {
+    <li class="card__thumbnail card__thumbnail--more" dir="ltr">+{{ hiddenCount() }}</li>
+    }
+  </ul>
+  }
+
+  <section class="card__section card__summary">
+    <h3 class="card__title preview__title">
+      <bdi>{{ listing().title ?? ('publish.preview.no-title' | transloco) }}</bdi>
+    </h3>
+    <p class="card__price-row">
+      <span class="card__price preview__price">
+        @if (onQuote()) { {{ 'publish.preview.on-quote' | transloco }} } @else if (price(); as
+        price) {
+        <bdi>{{ price }}</bdi>
+        }
+      </span>
+      @if (listing().negotiable && !onQuote()) {
+      <ui-badge tone="warning" data-testid="negotiable"
+        >{{ 'publish.preview.negotiable' | transloco }}</ui-badge
+      >
+      }
+    </p>
+    <div class="card__row">
+      @if (place(); as place) {
+      <p class="card__place preview__meta">
+        <svg lucideMapPin [size]="16" aria-hidden="true"></svg>
+        <span>
+          @if (place.delegation) { {{ 'publish.preview.place' | transloco: place }} } @else { {{
+          place.governorate }} }
+        </span>
+      </p>
+      }
+      <a
+        class="chip card__end"
+        [routerLink]="editLinks().priceLocation"
+        data-testid="edit-price-location"
+      >
+        <svg lucidePencil [size]="15" aria-hidden="true"></svg>
+        <span aria-hidden="true">{{ 'publish.preview.chip.price-location' | transloco }}</span>
+        <span class="ui-visually-hidden"
+          >{{ 'publish.preview.edit-price-location' | transloco }}</span
+        >
+      </a>
+    </div>
+  </section>
+
+  <section class="card__section">
+    <div class="card__row">
+      <h4 class="card__heading">{{ 'publish.preview.sections.details' | transloco }}</h4>
+      <a class="chip card__end" [routerLink]="editLinks().details" data-testid="edit-details">
+        <svg lucidePencil [size]="15" aria-hidden="true"></svg>
+        <span aria-hidden="true">{{ 'publish.preview.chip.details' | transloco }}</span>
+        <span class="ui-visually-hidden">{{ 'publish.preview.edit-details' | transloco }}</span>
+      </a>
+    </div>
+    @if (attributes().length) {
+    <dl class="card__attributes" data-testid="preview-attributes">
+      @for (line of attributes(); track line.code) {
+      <div class="card__attribute preview__attribute">
+        <dt>{{ line.label }}</dt>
+        <dd>
+          <bdi
+            >{{ line.value ?? ((line.checked ? 'publish.preview.yes' : 'publish.preview.no') |
+            transloco) }}</bdi
+          >
+        </dd>
+      </div>
+      }
+    </dl>
+    } @if (listing().description; as description) {
+    <h4 class="card__heading">{{ 'publish.preview.sections.description' | transloco }}</h4>
+    <p class="card__description preview__description"><bdi>{{ description }}</bdi></p>
+    }
+  </section>
+</article>

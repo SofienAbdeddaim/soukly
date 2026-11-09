@@ -1,0 +1,59 @@
+/* Component styles only (rendered in the shell): libs/ui tokens, logical properties only (RTL). */
+:host {
+  display: block;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-warning-surface);
+  list-style: none;
+}
+
+.fact {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-inline-size: 0;
+  padding: 12px;
+}
+
+.fact + .fact {
+  border-inline-start: 1px solid var(--color-warning-border);
+}
+
+.fact svg {
+  flex: none;
+  margin-block-start: 2px;
+}
+
+.fact__text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.fact__title {
+  font-weight: 600;
+}
+
+.fact__detail {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+/* Stacked when narrow, and in the side column of the wide preview. */
+@media (max-width: 359px), (min-width: 1024px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fact + .fact {
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--color-warning-border);
+  }
+}

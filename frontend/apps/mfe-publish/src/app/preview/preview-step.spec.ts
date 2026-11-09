@@ -93,7 +93,8 @@ describe('PreviewStep', () => {
       'https://photos.test/a.webp',
     );
     expect(text('.preview__title')).toBe('Peugeot 208 diesel, première main');
-    expect(text('.preview__price')).toBe('32 000 DT · négociable');
+    expect(text('.preview__price')).toBe('32 000 DT');
+    expect(text('[data-testid=negotiable]')).toBe('Négociable');
     expect(text('.preview__meta')).toBe('Sakiet Ezzit, Sfax');
     expect(
       [...element.querySelectorAll('.preview__attribute')].map((line) =>
@@ -106,12 +107,47 @@ describe('PreviewStep', () => {
       'Carburant Diesel',
       'Boîte de vitesses Manuelle',
     ]);
-    expect(text('.preview__online')).toContain('En ligne pendant 60 jours');
+    expect(
+      [...element.querySelectorAll('.fact__text')].map((fact) =>
+        [...fact.children].map((part) => part.textContent?.trim()),
+      ),
+    ).toEqual([
+      ['60 jours', 'en ligne après publication'],
+      ['Rappel par email', '3 jours avant la fin'],
+    ]);
     expect(element.querySelector('a[href="/fr/legal/posting-rules"]')?.textContent).toContain(
       'règles de publication',
     );
     expect(element.querySelector('[data-testid=missing-fields]')).toBeNull();
     expect(publish.disabled).toBe(false);
+    expect(text('[data-testid=publish]')).toBe("Publier l'annonce");
+  });
+
+  it('links each part of the card to the step where it is filled in', async () => {
+    const { element } = await setup(COMPLETE);
+    const link = (testId: string) => element.querySelector(`[data-testid=${testId}]`);
+
+    expect(link('edit-photos')?.getAttribute('href')).toBe(`/fr/publish/${TEST_ID}/photos`);
+    expect(link('edit-photos')?.textContent).toContain('Modifier les photos');
+    expect(link('edit-details')?.getAttribute('href')).toBe(`/fr/publish/${TEST_ID}/details`);
+    expect(link('edit-price-location')?.getAttribute('href')).toBe(
+      `/fr/publish/${TEST_ID}/price-location`,
+    );
+    // One photo: no thumbnails under the cover
+    expect(element.querySelector('.card__thumbnails')).toBeNull();
+  });
+
+  it('shows the thumbnails of the first photos and counts the others', async () => {
+    const photos = Array.from({ length: 6 }, (_, position) => ({
+      ...COMPLETE.photos[0],
+      id: `p${position}`,
+      thumbnailUrl: `https://photos.test/p${position}-400.webp`,
+      position,
+    }));
+    const { element, text } = await setup(draftListing({ ...COMPLETE, photos }));
+
+    expect(element.querySelectorAll('.card__thumbnail img')).toHaveLength(4);
+    expect(text('.card__thumbnail--more')).toBe('+2');
   });
 
   it('lists what is missing, each with a link to its step, and cannot publish', async () => {
@@ -134,10 +170,11 @@ describe('PreviewStep', () => {
   });
 
   it('shows "on quote" instead of a price', async () => {
-    const { text } = await setup(
+    const { element, text } = await setup(
       draftListing({ ...COMPLETE, kind: 'SERVICE', priceMode: 'ON_QUOTE', price: null }),
     );
     expect(text('.preview__price')).toBe('Sur devis');
+    expect(element.querySelector('[data-testid=negotiable]')).toBeNull();
   });
 
   it('publishes, then opens the confirmation page in place of the preview', async () => {

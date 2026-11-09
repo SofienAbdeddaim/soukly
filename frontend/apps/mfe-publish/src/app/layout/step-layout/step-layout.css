@@ -94,6 +94,12 @@
   box-shadow: 0 -8px 12px -8px rgb(0 0 0 / 0.12);
 }
 
+@media (min-width: 1024px) {
+  .flow--wide {
+    max-inline-size: 1040px;
+  }
+}
+
 @media (min-width: 768px) {
   .flow__header {
     margin-block-start: 24px;
