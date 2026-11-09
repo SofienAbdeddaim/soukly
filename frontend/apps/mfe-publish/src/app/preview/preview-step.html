@@ -1,120 +1,88 @@
-<app-step-layout step="preview">
-  <h2 class="step__title">{{ 'publish.preview.title' | transloco }}</h2>
+<app-step-layout step="preview" wide [footer]="!wide()">
+  <div class="preview">
+    <header class="preview__head">
+      <h2 class="step__title">{{ 'publish.preview.title' | transloco }}</h2>
+      <p class="step__intro">{{ 'publish.preview.intro' | transloco }}</p>
+    </header>
 
-  @if (missing().length) {
-  <ui-alert type="info" #missingAlert data-testid="missing-fields">
-    <p class="preview__missing-title">{{ 'publish.preview.missing' | transloco }}</p>
-    <ul class="preview__missing">
-      @for (item of missing(); track item.field) {
-      <li>
-        <a [routerLink]="stepLink(item.step)" [attr.data-field]="item.field">
-          {{ item.label ?? (fieldKey(item.field) | transloco) }}
-        </a>
-      </li>
+    <div class="preview__main">
+      @if (missing().length) {
+      <ui-alert type="info" #missingAlert data-testid="missing-fields">
+        <p class="preview__missing-title">{{ 'publish.preview.missing' | transloco }}</p>
+        <ul class="preview__missing">
+          @for (item of missing(); track item.field) {
+          <li>
+            <a [routerLink]="stepLink(item.step)" [attr.data-field]="item.field">
+              {{ item.label ?? (fieldKey(item.field) | transloco) }}
+            </a>
+          </li>
+          }
+        </ul>
+      </ui-alert>
+      } @if (failed()) {
+      <ui-alert type="error" data-testid="publish-error">
+        {{ 'publish.preview.error' | transloco }}
+      </ui-alert>
+      } @if (listing(); as listing) {
+      <app-preview-card
+        [listing]="listing"
+        [price]="price()"
+        [place]="place()"
+        [attributes]="attributes()"
+        [editLinks]="editLinks()"
+      />
       }
-    </ul>
-  </ui-alert>
-  } @if (failed()) {
-  <ui-alert type="error" data-testid="publish-error">
-    {{ 'publish.preview.error' | transloco }}
-  </ui-alert>
-  } @if (listing(); as listing) {
-  <article class="preview__card" data-testid="preview-card">
-    <div class="preview__media">
-      @if (cover(); as cover) {
-      <img class="preview__image" [src]="cover.url" alt="" />
-      <span class="preview__count" dir="ltr">
-        {{ 'publish.preview.photo-count' | transloco: { count: listing.photos.length } }}
-      </span>
-      } @else {
-      <div class="preview__placeholder">
-        <svg lucideImage [size]="48" [strokeWidth]="1.5" aria-hidden="true"></svg>
+    </div>
+
+    @if (listing()) {
+    <aside class="preview__aside">
+      <app-share-block />
+      <app-publication-facts />
+      @if (wide()) {
+      <div class="preview__actions preview__actions--aside">
+        <ng-container [ngTemplateOutlet]="actions" />
       </div>
+      <app-save-status class="preview__save" />
       }
-    </div>
-    <div class="preview__body">
-      <h3 class="preview__title">
-        {{ listing.title ?? ('publish.preview.no-title' | transloco) }}
-      </h3>
-      <p class="preview__price">
-        @if (listing.priceMode === 'ON_QUOTE') { {{ 'publish.preview.on-quote' | transloco }} }
-        @else if (price(); as price) {
-        <bdi>{{ price }}</bdi>
-        } @if (listing.negotiable && listing.priceMode !== 'ON_QUOTE') {
-        <span class="preview__negotiable"
-          >&ngsp;· {{ 'publish.preview.negotiable' | transloco }}</span
-        >
-        }
+      <p class="step__muted preview__rules">
+        {{ 'publish.preview.rules-before' | transloco }}
+        <a [href]="'/legal/posting-rules' | localePath" target="_blank" rel="noopener"
+          >{{ 'publish.preview.rules-link' | transloco }}</a
+        >{{ 'publish.preview.rules-after' | transloco }}
       </p>
-      @if (place(); as place) {
-      <p class="preview__meta">
-        @if (place.delegation) { {{ 'publish.preview.place' | transloco: place }} } @else { {{
-        place.governorate }} }
-      </p>
-      }
-    </div>
-  </article>
-
-  @if (attributes().length) {
-  <dl class="preview__attributes" data-testid="preview-attributes">
-    @for (line of attributes(); track line.code) {
-    <div class="preview__attribute">
-      <dt>{{ line.label }}</dt>
-      <dd>
-        <bdi
-          >{{ line.value ?? ((line.checked ? 'publish.preview.yes' : 'publish.preview.no') |
-          transloco) }}</bdi
-        >
-      </dd>
-    </div>
+    </aside>
     }
-  </dl>
-  } @if (listing.description) {
-  <p class="preview__description">{{ listing.description }}</p>
+  </div>
+
+  @if (!wide()) {
+  <div stepActions class="preview__actions">
+    <ng-container [ngTemplateOutlet]="actions" />
+  </div>
   }
+</app-step-layout>
 
-  <ul class="preview__edit">
-    <li>
-      <a [routerLink]="stepLink('photos')">{{ 'publish.preview.edit-photos' | transloco }}</a>
-    </li>
-    <li>
-      <a [routerLink]="stepLink('details')">{{ 'publish.preview.edit-details' | transloco }}</a>
-    </li>
-    <li>
-      <a [routerLink]="stepLink('price-location')">
-        {{ 'publish.preview.edit-price-location' | transloco }}
-      </a>
-    </li>
-  </ul>
-
-  <app-share-block />
-
-  <p class="preview__online">
-    <span>{{ 'publish.preview.online' | transloco }}</span>
-    <span class="step__muted">{{ 'publish.preview.reminder' | transloco }}</span>
-  </p>
-  <p class="step__muted">
-    {{ 'publish.preview.rules-before' | transloco }}
-    <a [href]="'/legal/posting-rules' | localePath" target="_blank" rel="noopener"
-      >{{ 'publish.preview.rules-link' | transloco }}</a
-    >{{ 'publish.preview.rules-after' | transloco }}
-  </p>
-  }
-
-  <a ui-button variant="ghost" size="lg" stepActions [routerLink]="stepLink('price-location')">
-    {{ 'publish.preview.edit' | transloco }}
+<ng-template #actions>
+  <a
+    ui-button
+    variant="ghost"
+    size="lg"
+    class="preview__back"
+    [routerLink]="stepLink('price-location')"
+  >
+    <svg uiButtonIcon lucideArrowLeft class="ui-flip-rtl" [size]="18" aria-hidden="true"></svg>
+    {{ 'publish.preview.back' | transloco }}
   </a>
   <button
     ui-button
-    stepActions
     type="button"
     size="lg"
-    class="step__primary"
+    class="step__primary preview__publish"
     data-testid="publish"
     [disabled]="missing().length > 0"
     [loading]="publishing()"
     (click)="publish()"
   >
+    <svg uiButtonIcon lucideSend class="ui-flip-rtl" [size]="18" aria-hidden="true"></svg>
     {{ 'publish.preview.publish' | transloco }}
   </button>
-</app-step-layout>
+</ng-template>
