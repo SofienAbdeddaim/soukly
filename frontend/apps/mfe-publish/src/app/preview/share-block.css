@@ -10,16 +10,64 @@
   background-color: var(--color-surface);
 }
 
+.share {
+  gap: 12px;
+}
+
+/* Floated so the legend is a plain row of the block instead of a gap cut in its border. */
 .share__legend {
-  padding-inline: 4px;
+  float: inline-start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  inline-size: 100%;
+  padding: 0;
+}
+
+.share__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-pending-surface);
+  color: var(--color-brand-track);
+}
+
+.share__heading {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.share__title {
   font-size: 1rem;
   font-weight: 600;
+}
+
+.share__subtitle {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
 }
 
 .share__option {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding-inline: 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: border-color 120ms ease;
+}
+
+.share__option--checked {
+  border-color: var(--color-primary);
+  background-color: var(--color-bg);
+}
+
+.share__option:has(.share__checkbox:focus-visible) {
+  border-color: var(--color-text);
 }
 
 .share__label {
@@ -50,7 +98,7 @@
 
 .share__checkbox:focus-visible {
   outline: 2px solid transparent;
-  box-shadow: var(--focus-ring);
+  box-shadow: none;
 }
 
 .share__logo {
@@ -91,8 +139,7 @@
 }
 
 .share__reconnect,
-.share__muted a,
-.share__empty a {
+.share__muted a {
   color: var(--color-primary);
   font-weight: 500;
   text-decoration: underline;
@@ -123,7 +170,8 @@
 
 .share__summary:focus-visible {
   outline: 2px solid transparent;
-  box-shadow: var(--focus-ring);
+  box-shadow: none;
+  text-decoration: underline;
 }
 
 .share__post {
@@ -165,5 +213,33 @@
 }
 
 .share__empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg);
+}
+
+.share__logos {
+  display: flex;
+  flex: none;
+}
+
+.share__logos .share__logo {
+  border: 2px solid var(--color-surface);
+}
+
+.share__logos .share__logo + .share__logo {
+  margin-inline-start: -8px;
+}
+
+.share__empty-text {
+  min-inline-size: 0;
   line-height: 1.5;
+}
+
+.share__connect {
+  align-self: stretch;
 }
