@@ -10,9 +10,10 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { LucideImage } from '@lucide/angular';
+import { LucideArrowLeft, LucideSend } from '@lucide/angular';
 import { problemCode } from '@soukly/auth';
 import { formatPrice, LocalePathPipe, LocaleService } from '@soukly/i18n';
 import {
@@ -28,8 +29,12 @@ import {
 } from '@soukly/listing-data';
 import { UiAlert, UiButton } from '@soukly/ui';
 import { DraftStore } from '../draft/draft-store';
+import { SaveStatus } from '../layout/save-status/save-status';
 import { StepLayout } from '../layout/step-layout/step-layout';
+import { mediaQuery } from '../shared/media-query';
 import { PublishStep, stepCommands, stepOfField } from '../shared/publish-steps';
+import { AttributeLine, PreviewCard, PreviewEditLinks } from './preview-card';
+import { PublicationFacts } from './publication-facts';
 import { ShareBlock } from './share-block';
 
 /** Members of `missingFields` with their own label; `attributes.<code>` take the attribute's. */
@@ -50,31 +55,29 @@ interface MissingField {
   label: string | null;
 }
 
-interface AttributeLine {
-  code: string;
-  label: string;
-  /** Text of the value; null for a yes/no, translated by the template. */
-  value: string | null;
-  checked: boolean;
-}
-
 /**
  * Step 5 (`/{lang}/publish/{id}/preview`): the listing as it will look, the elements still
  * missing (each a link to its step, publishing disabled meanwhile), where to share it (SOC-03),
- * then "Publish". A success
+ * how long it stays online, then "Publish". From 1024px the step is laid out in two columns: the
+ * card, and a side column with sharing and the actions, so there is no bottom bar. A success
  * leads to the confirmation page; `422 listing-incomplete` reads the draft again, so the list of
  * missing elements is up to date.
  */
 @Component({
   selector: 'app-preview-step',
   imports: [
+    NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,
     LocalePathPipe,
-    LucideImage,
+    LucideArrowLeft,
+    LucideSend,
     StepLayout,
+    SaveStatus,
     UiAlert,
     UiButton,
+    PreviewCard,
+    PublicationFacts,
     ShareBlock,
   ],
   templateUrl: './preview-step.html',
@@ -97,7 +100,14 @@ export class PreviewStep {
   protected readonly failed = signal(false);
 
   protected readonly listing = this.store.listing;
-  protected readonly cover = computed(() => this.listing()?.photos[0] ?? null);
+  /** Two columns, actions in the side column (same breakpoint as the CSS). */
+  protected readonly wide = mediaQuery('(min-width: 1024px)');
+
+  protected readonly editLinks = computed<PreviewEditLinks>(() => ({
+    photos: this.stepLink('photos'),
+    details: this.stepLink('details'),
+    priceLocation: this.stepLink('price-location'),
+  }));
 
   /** "32 000 DT", or null when the listing is "on quote" or has no price yet. */
   protected readonly price = computed(() => {

@@ -3,7 +3,13 @@
   data-testid="share-block"
   [attr.aria-busy]="state() === 'loading' ? 'true' : null"
 >
-  <legend class="share__legend">{{ 'publish.share.title' | transloco }}</legend>
+  <legend class="share__legend">
+    <span class="share__icon" aria-hidden="true"><svg lucideShare2 [size]="18"></svg></span>
+    <span class="share__heading">
+      <span class="share__title">{{ 'publish.share.title' | transloco }}</span>
+      <span class="share__subtitle">{{ 'publish.share.subtitle' | transloco }}</span>
+    </span>
+  </legend>
 
   @switch (state()) { @case ('loading') {
   <ui-skeleton variant="card" blockSize="52px" />
@@ -15,7 +21,11 @@
     {{ 'publish.share.retry' | transloco }}
   </button>
   } @case ('ready') { @if (options().length) { @for (option of options(); track option.network) {
-  <div class="share__option" [class.share__option--disabled]="option.needsReconnect">
+  <div
+    class="share__option"
+    [class.share__option--checked]="option.checked"
+    [class.share__option--disabled]="option.needsReconnect"
+  >
     <label class="share__label" [attr.data-testid]="'share-' + option.network">
       <input
         type="checkbox"
@@ -86,14 +96,21 @@
     >
   </p>
   } @else {
-  <p class="share__empty" data-testid="share-none">
-    {{ 'publish.share.none' | transloco }}
-    <a
-      [routerLink]="'/account/social' | localePath"
-      [queryParams]="{ returnTo: returnTo() }"
-      data-testid="share-connect"
-      >{{ 'publish.share.connect' | transloco }}</a
-    >
-  </p>
+  <div class="share__empty" data-testid="share-none">
+    <span class="share__logos" aria-hidden="true">
+      <span class="share__logo share__logo--facebook">f</span>
+      <span class="share__logo share__logo--instagram">IG</span>
+    </span>
+    <p class="share__empty-text">{{ 'publish.share.none' | transloco }}</p>
+  </div>
+  <a
+    ui-button
+    variant="ghost"
+    class="share__connect"
+    [routerLink]="'/account/social' | localePath"
+    [queryParams]="{ returnTo: returnTo() }"
+    data-testid="share-connect"
+    >{{ 'publish.share.connect' | transloco }}</a
+  >
   } } }
 </fieldset>

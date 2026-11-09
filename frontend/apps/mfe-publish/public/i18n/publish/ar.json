@@ -152,6 +152,7 @@
   },
   "preview": {
     "title": "تحقّق من إعلانك",
+    "intro": "هكذا سيراه المشترون.",
     "missing": "ما زال ينقص:",
     "fields": {
       "categoryCode": "الصنف",
@@ -173,14 +174,27 @@
     "edit-photos": "تعديل الصور",
     "edit-details": "تعديل التفاصيل",
     "edit-price-location": "تعديل السعر والمكان",
-    "online": "منشور لمدة 60 يومًا",
-    "reminder": "تذكير قبل 3 أيام",
     "rules-before": "بالنشر، تؤكّد أن إعلانك يحترم",
     "rules-link": "قواعد النشر",
     "rules-after": ".",
-    "edit": "تعديل",
-    "publish": "نشر",
-    "place": "{{ delegation }}، {{ governorate }}"
+    "publish": "انشر الإعلان",
+    "place": "{{ delegation }}، {{ governorate }}",
+    "back": "رجوع",
+    "chip": {
+      "photos": "الصور",
+      "price-location": "السعر والمكان",
+      "details": "تعديل"
+    },
+    "sections": {
+      "details": "التفاصيل",
+      "description": "الوصف"
+    },
+    "facts": {
+      "online": "60 يومًا",
+      "online-detail": "على الموقع بعد النشر",
+      "reminder": "تذكير بالبريد الإلكتروني",
+      "reminder-detail": "قبل 3 أيام من انتهائه"
+    }
   },
   "done": {
     "title": "إعلانك منشور الآن",
@@ -216,6 +230,7 @@
   },
   "share": {
     "title": "مشاركة الإعلان",
+    "subtitle": "انشره أيضًا على فيسبوك وإنستغرام.",
     "network": {
       "FACEBOOK": "صفحة فيسبوك",
       "INSTAGRAM": "إنستغرام"

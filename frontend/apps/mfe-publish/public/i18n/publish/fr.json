@@ -152,6 +152,7 @@
   },
   "preview": {
     "title": "Vérifiez votre annonce",
+    "intro": "Voici ce que verront les acheteurs.",
     "missing": "Il manque encore :",
     "fields": {
       "categoryCode": "Catégorie",
@@ -167,20 +168,33 @@
     "photo-count": "1 / {{ count }}",
     "no-title": "Sans titre",
     "on-quote": "Sur devis",
-    "negotiable": "négociable",
+    "negotiable": "Négociable",
     "yes": "Oui",
     "no": "Non",
     "edit-photos": "Modifier les photos",
     "edit-details": "Modifier les détails",
     "edit-price-location": "Modifier le prix et le lieu",
-    "online": "En ligne pendant 60 jours",
-    "reminder": "Rappel 3 jours avant",
     "rules-before": "En publiant, vous confirmez que votre annonce respecte les",
     "rules-link": "règles de publication",
     "rules-after": ".",
-    "edit": "Modifier",
-    "publish": "Publier",
-    "place": "{{ delegation }}, {{ governorate }}"
+    "publish": "Publier l'annonce",
+    "place": "{{ delegation }}, {{ governorate }}",
+    "back": "Retour",
+    "chip": {
+      "photos": "Photos",
+      "price-location": "Prix et lieu",
+      "details": "Modifier"
+    },
+    "sections": {
+      "details": "Détails",
+      "description": "Description"
+    },
+    "facts": {
+      "online": "60 jours",
+      "online-detail": "en ligne après publication",
+      "reminder": "Rappel par email",
+      "reminder-detail": "3 jours avant la fin"
+    }
   },
   "done": {
     "title": "Votre annonce est en ligne",
@@ -216,6 +230,7 @@
   },
   "share": {
     "title": "Partager l'annonce",
+    "subtitle": "Diffusez-la aussi sur Facebook et Instagram.",
     "network": {
       "FACEBOOK": "Page Facebook",
       "INSTAGRAM": "Instagram"

@@ -133,7 +133,7 @@ test.describe('publish form', () => {
     const card = page.getByTestId('preview-card');
     await expect(card).toContainText('Peugeot 208 diesel, première main');
     await expect(card).toContainText(/32\s000\sDT/u);
-    await expect(card).toContainText('négociable');
+    await expect(card).toContainText('Négociable');
     await expect(card).toContainText('Sfax');
     await expect(page.getByTestId('missing-fields')).toHaveCount(0);
     await expectNoSeriousA11yViolations(page);
@@ -203,6 +203,47 @@ test.describe('publish form', () => {
 
     await missing.getByRole('link', { name: 'Gouvernorat' }).click();
     await expect(step(page, 'Prix et lieu')).toBeVisible();
+  });
+
+  test('wide preview: two columns, the actions in the side column, edit links per part', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await fakeAccountApi(page, { signedIn: true });
+    await fakeListingApi(page, [
+      draft({
+        title: 'Peugeot 208 diesel',
+        description: 'Très bon état, entretien suivi, carnet à jour.',
+        priceMode: 'FIXED',
+        price: 32000,
+        governorateCode: 'sfax',
+        delegationCode: 'sfax.sakiet-ezzit',
+        attributes: {
+          brand: 'Peugeot',
+          year: 2019,
+          'mileage-km': 62000,
+          fuel: 'diesel',
+          gearbox: 'manual',
+        },
+        photos: [fakePhoto('a', 0), fakePhoto('b', 1)],
+      }),
+    ]);
+
+    await page.goto(`/fr/publish/${LISTING_ID}/preview`);
+    const card = page.getByTestId('preview-card');
+    const publish = page.getByTestId('publish');
+    await expect(publish).toHaveText("Publier l'annonce");
+    await expect(page.getByRole('complementary')).toContainText("Publier l'annonce");
+    // No bottom bar: the button sits on the right of the card, not under it.
+    const cardBox = await card.boundingBox();
+    const publishBox = await publish.boundingBox();
+    expect(cardBox).not.toBeNull();
+    expect(publishBox?.x ?? 0).toBeGreaterThan((cardBox?.x ?? 0) + (cardBox?.width ?? 0));
+    await expect(page.getByTestId('save-status')).toHaveCount(1);
+    await expectNoSeriousA11yViolations(page);
+
+    await card.getByRole('link', { name: 'Modifier les détails' }).click();
+    await expect(step(page, 'Détails')).toBeVisible();
   });
 
   test('resume: the photos and the category are kept, the details are empty', async ({ page }) => {
