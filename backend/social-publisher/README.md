@@ -275,6 +275,28 @@ Badges (`PostBadges`):
 | `soukly.social.reconnect-notice.interval` | `24h` |
 | `soukly.social.outbox.*` | relay every second, batches of 100, sent events kept 7 days |
 
+## Posting every listing on Soukly's own Page and Instagram (SOC-07)
+
+Soukly's own Facebook Page and Instagram account are the connections of one Soukly account (`HOUSE_USER_ID`), made in
+"My networks" like any member's: tokens are encrypted, checked and marked `NEEDS_RECONNECT` the same way, and that
+account receives the email "connect again" (SOC-06), which is the alert when the house connection breaks.
+
+- `listing.published` with `houseShare` true (absent = true, events of older versions) records one row per network in
+  `house_posts`, whatever `shareTo` holds: `PENDING` when Soukly's account is connected, `SKIPPED` otherwise. A listing
+  of the Soukly account itself gets none (it uses `shareTo`).
+- The same publishers as SOC-04/05 publish them (one instance per channel, `PostChannelsConfig`), with the house
+  connection, `utm_campaign=soukly_house`, at most one post on the Page every `soukly.social.house.page-interval`
+  (2 minutes) and `calls-per-minute` (10). Instagram keeps its daily limit (`content_publishing_limit`). A house post
+  still waiting after `max-age` (48 hours) is `SKIPPED` with `stale`.
+- The text is the `CaptionBuilder` text, which never carries the seller's name, phone number or email.
+- Removal: `listing.deleted` removes the posts of both channels; `listing.deactivated` and `listing.expired` remove the
+  house posts only (the posts on the seller's own accounts stay, as in SOC-04); `user.deleted` removes the house posts of
+  the seller. Instagram posts stay with `delete-unsupported`, as in SOC-05.
+- Metrics: `social.house_posts{network,status}` and `social.house_posts.publish`.
+
+To set it up: create (or use) a Soukly account for Soukly, connect Soukly's Page and Instagram in "My networks", then set
+its id as `HOUSE_USER_ID` and restart social-publisher.
+
 ## Configuration
 
 | Variable                                  | Meaning                                                                                                                                   |
@@ -292,6 +314,7 @@ Badges (`PostBadges`):
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | the bucket of the photos of listing-service, read and written for the Instagram versions (SOC-05); locally the root `.env` names the keys `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` |
 | `PHOTO_PUBLIC_BASE_URL`                   | public URL of the bucket root, the same as listing-service: Instagram fetches the JPEG versions from it                                   |
 | `VIPS_BIN_DIRECTORY`                      | directory of `vips` and `vipsheader` (package `libvips-tools`, in the image); empty = the `PATH`                                         |
+| `HOUSE_USER_ID`                           | id (UUID) of the Soukly account that connected Soukly's own Page and Instagram account in "My networks" (SOC-07). Empty: no house post. |
 
 Running it locally (Docker infrastructure up, `.env` copied from `.env.example`):
 

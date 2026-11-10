@@ -1,7 +1,7 @@
 ---
 title: Privacy policy
-version: 2026-10-22
-effectiveDate: 2026-10-22
+version: 2026-11-10
+effectiveDate: 2026-11-10
 draft: true
 ---
 
@@ -26,6 +26,8 @@ This data is used to run your account, publish your listings, let buyers contact
 ## Sharing with Facebook and Instagram {#social-networks}
 
 Nothing is published on your social networks without your consent. If you link your accounts, Soukly publishes the text and photos of your listings there, without your phone number or email address. You can unlink your accounts at any time.
+
+Your listings may also be posted on Soukly's Facebook and Instagram pages, with the same content and without your name, phone number or email address, unless you untick "Soukly's pages" for the listing.
 
 ## Hosting and transfers {#hosting}
 

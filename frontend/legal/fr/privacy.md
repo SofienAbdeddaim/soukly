@@ -1,7 +1,7 @@
 ---
 title: Politique de confidentialité
-version: 2026-10-22
-effectiveDate: 2026-10-22
+version: 2026-11-10
+effectiveDate: 2026-11-10
 draft: true
 ---
 
@@ -26,6 +26,8 @@ Ces données servent à faire fonctionner votre compte, à publier vos annonces,
 ## Partage avec Facebook et Instagram {#social-networks}
 
 Rien n'est publié sur vos réseaux sans votre accord. Si vous reliez vos comptes, Soukly y publie le texte et les photos de vos annonces, sans votre numéro de téléphone ni votre adresse email. Vous pouvez délier vos comptes à tout moment.
+
+Vos annonces peuvent aussi être diffusées sur les pages Facebook et Instagram de Soukly, avec le même contenu et sans votre nom, votre numéro de téléphone ni votre adresse email, sauf si vous décochez « Pages Soukly » pour l'annonce.
 
 ## Hébergement et transferts {#hosting}
 

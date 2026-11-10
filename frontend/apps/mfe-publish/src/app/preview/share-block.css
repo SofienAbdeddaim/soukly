@@ -121,6 +121,16 @@
   background-color: var(--color-instagram);
 }
 
+/* Its detail wraps on two lines on a phone: room above and below it. */
+.share__option--house .share__label {
+  padding-block: 8px;
+}
+
+.share__logo--soukly {
+  background-color: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
 .share__text {
   display: flex;
   flex-direction: column;

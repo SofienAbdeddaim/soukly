@@ -35,6 +35,10 @@ interface ShareOption {
  * network to connect again cannot be ticked. "See the post text" asks social-publisher for the
  * text: the front end never builds it. With Instagram alone, the text is the Instagram caption,
  * with the short address of the listing instead of its link (SOC-05).
+ *
+ * "Soukly's pages" (SOC-07) is always offered, ticked by default: the listing is also posted on
+ * Soukly's own Facebook Page and Instagram account, without the seller's contact details, even
+ * when the member has no network of their own.
  */
 @Component({
   selector: 'app-share-block',
@@ -100,6 +104,9 @@ export class ShareBlock implements OnInit {
       this.options().some((option) => option.checked && option.network === 'INSTAGRAM'),
   );
 
+  /** "Soukly's pages" (SOC-07): ticked unless the seller unticked it. */
+  protected readonly houseShare = computed(() => this.listing()?.houseShare !== false);
+
   /** The way back to this step after connecting again on "My networks". */
   protected readonly returnTo = computed(() => this.document.location.pathname);
 
@@ -142,6 +149,11 @@ export class ShareBlock implements OnInit {
     // The text shown was for the previous language, maybe: it is read again on the next opening
     this.caption.set(null);
     this.captionState.set('idle');
+  }
+
+  /** The language of the page is the language of the posts on Soukly's pages too. */
+  protected toggleHouse(checked: boolean): void {
+    void this.store.save({ houseShare: checked, shareLanguage: this.locale.lang() });
   }
 
   /** "See the post text": the text is read when the element opens. */

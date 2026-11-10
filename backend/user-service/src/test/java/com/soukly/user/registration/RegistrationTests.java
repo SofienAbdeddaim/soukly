@@ -113,7 +113,7 @@ class RegistrationTests extends IntegrationTest {
     @Test
     void registrationRecordsTheCurrentTermsVersionAndTheProfileReturnsIt() throws Exception {
         register(EMAIL, "20123456", "fr").andExpect(status().isAccepted());
-        assertThat(user(EMAIL)).containsEntry("terms_version", "2026-10-22");
+        assertThat(user(EMAIL)).containsEntry("terms_version", "2026-11-10");
         verify(TestSmtpServer.token(SMTP.awaitEmails(1).getFirst())).andExpect(status().isNoContent());
 
         String login = new SessionCalls(mockMvc).login(EMAIL, PASSWORD).andExpect(status().isOk()).andReturn()
@@ -121,7 +121,7 @@ class RegistrationTests extends IntegrationTest {
         mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION,
                 "Bearer " + JsonPath.read(login, "$.accessToken")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.termsVersion").value("2026-10-22"));
+                .andExpect(jsonPath("$.termsVersion").value("2026-11-10"));
     }
 
     @ParameterizedTest

@@ -183,8 +183,26 @@ test.describe('share the listing', () => {
     await expect(page.getByTestId('share-none')).toContainText(
       'Reliez Facebook ou Instagram pour partager vos annonces',
     );
-    await expect(page.getByTestId('share-block').getByRole('checkbox')).toHaveCount(0);
+    // Only Soukly's pages (SOC-07)
+    await expect(page.getByTestId('share-block').getByRole('checkbox')).toHaveCount(1);
+    await expect(checkbox(page, /Pages Soukly/)).toBeChecked();
     expect(listings.patches).toEqual([]);
+  });
+
+  test("Soukly's pages: ticked by default, unticked and saved with the language", async ({
+    page,
+  }) => {
+    const { listings } = await preview(page, { facebook: connection() }, { shareTo: ['FACEBOOK'] });
+
+    const house = checkbox(page, /Pages Soukly/);
+    await expect(house).toBeChecked();
+    await expect(page.getByTestId('share-HOUSE')).toContainText('sans vos coordonnées');
+    await expectNoSeriousA11yViolations(page);
+
+    await house.uncheck();
+    await expect.poll(() => listings.listings.get(LISTING_ID)?.houseShare).toBe(false);
+    expect(listings.patches.at(-1)).toEqual({ houseShare: false, shareLanguage: 'fr' });
+    await expect(checkbox(page, /Sfax Auto Occasion/)).toBeChecked();
   });
 
   test.describe('in Arabic', () => {

@@ -27,8 +27,9 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Reads {@code soukly.listing-events} in the group {@code social-publisher} (SOC-04): {@code listing.published}
- * records the posts to publish, {@code listing.deleted} removes them. Every other type ({@code listing.updated},
- * {@code listing.renewed}, {@code listing.deactivated}, {@code listing.expired}...) is ignored in V1. Never calls Meta
+ * records the posts to publish, {@code listing.deleted} removes them, {@code listing.deactivated} and
+ * {@code listing.expired} remove the posts on Soukly's own accounts (SOC-07). Every other type
+ * ({@code listing.updated}, {@code listing.renewed}...) is ignored in V1. Never calls Meta
  * for a publication: the tasks of {@link FacebookPublisher} and {@link InstagramPublisher} do. A failure is retried, then the message goes to
  * {@code soukly.listing-events.dlq} ({@code EventsConfig}).
  */
@@ -52,7 +53,10 @@ class ListingEventsConsumer {
     void onEvent(ConsumerRecord<String, String> record) {
         EventEnvelope<JsonNode> event = parse(record);
         boolean published = ListingEvents.PUBLISHED.equals(event.type());
-        if (!published && !ListingEvents.DELETED.equals(event.type())) {
+        boolean deleted = ListingEvents.DELETED.equals(event.type());
+        boolean offTheSite = ListingEvents.DEACTIVATED.equals(event.type())
+                || ListingEvents.EXPIRED.equals(event.type());
+        if (!published && !deleted && !offTheSite) {
             return;
         }
         if (event.schemaVersion() != ListingEvents.SCHEMA_VERSION) {
@@ -68,9 +72,11 @@ class ListingEventsConsumer {
             if (published) {
                 Published data = published(event);
                 posts.recordPublished(event.eventId(), event.listingId(), event.ownerId(), data.shareTo(),
-                        data.content(), requestId);
-            } else {
+                        data.houseShare(), data.content(), requestId);
+            } else if (deleted) {
                 posts.removeDeleted(event.eventId(), event.listingId());
+            } else {
+                posts.removeFromHouse(event.eventId(), event.listingId());
             }
         } finally {
             MDC.remove("listingId");
@@ -96,8 +102,12 @@ class ListingEventsConsumer {
         return event;
     }
 
-    /** What SOC-04 reads of {@code listing.published}; anything else of the event is ignored. */
-    private record Published(List<String> shareTo, PostContent content) {
+    /**
+     * What SOC-04 and SOC-07 read of {@code listing.published}; anything else of the event is ignored.
+     *
+     * @param content null when the listing is posted nowhere
+     */
+    private record Published(List<String> shareTo, boolean houseShare, PostContent content) {
     }
 
     private static Published published(EventEnvelope<JsonNode> event) {
@@ -111,10 +121,17 @@ class ListingEventsConsumer {
         if (networks != null && networks.isArray()) {
             networks.forEach(network -> shareTo.add(network.asString()));
         }
-        if (shareTo.isEmpty()) {
-            return new Published(shareTo, null);
+        // Absent from the events of a version before SOC-07: true
+        JsonNode house = data.get("houseShare");
+        boolean houseShare = house == null || house.isNull() || house.asBoolean();
+        if (shareTo.isEmpty() && !houseShare) {
+            return new Published(shareTo, false, null);
         }
         String language = text(data, "shareLanguage");
+        if (language == null && shareTo.isEmpty()) {
+            // Only Soukly's pages, from a version that left the language out without a network: French
+            language = CaptionLanguage.FR.code();
+        }
         if (language == null || CaptionLanguage.of(language).isEmpty()) {
             throw new InvalidEventException("Invalid data.shareLanguage in event " + eventId);
         }
@@ -130,7 +147,7 @@ class ListingEventsConsumer {
         }
         JsonNode price = data.get("price");
         JsonNode negotiable = data.get("negotiable");
-        return new Published(shareTo, new PostContent(text(data, "title"), text(data, "description"),
+        return new Published(shareTo, houseShare, new PostContent(text(data, "title"), text(data, "description"),
                 text(data, "categoryCode"), text(data, "priceMode"),
                 price == null || !price.isNumber() ? null : price.asLong(),
                 negotiable != null && negotiable.asBoolean(), text(data, "governorateCode"),

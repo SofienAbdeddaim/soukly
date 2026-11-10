@@ -51,6 +51,7 @@ export function draftListing(overrides: Partial<Listing> = {}): Listing {
     expiresAt: null,
     shareTo: null,
     shareLanguage: null,
+    houseShare: true,
     ...overrides,
   };
 }

@@ -99,7 +99,8 @@ public class ListingService {
      * @throws InvalidListingException     an invalid value
      * @throws CategoryLockedException     another category for a listing that was published
      * @throws ListingIncompleteException  the change would empty a required field of a listing that was published
-     * @throws ShareLockedException        {@code shareTo} or {@code shareLanguage} for a listing that is not a draft
+     * @throws ShareLockedException        {@code shareTo}, {@code shareLanguage} or {@code houseShare} for a listing that
+     *                                     is not a draft
      */
     @Transactional
     public ListingView update(UUID ownerId, UUID id, String ifMatch, JsonNode patch) {
@@ -324,7 +325,8 @@ public class ListingService {
 
     /** Whether {@code patch} names the networks or the language of the sharing, locked once published (SOC-03). */
     private static boolean changesShare(JsonNode patch) {
-        return patch.isObject() && (patch.has(DraftEditor.SHARE_TO) || patch.has(DraftEditor.SHARE_LANGUAGE));
+        return patch.isObject() && (patch.has(DraftEditor.SHARE_TO) || patch.has(DraftEditor.SHARE_LANGUAGE)
+                || patch.has(DraftEditor.HOUSE_SHARE));
     }
 
     /** Whether {@code patch} names a category other than the current one. */
