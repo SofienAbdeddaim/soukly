@@ -11,10 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.soukly.social.caption.CaptionBuilder;
@@ -53,10 +50,11 @@ import com.soukly.social.photo.PhotoVariantService;
  * token puts the connection in {@code NEEDS_RECONNECT}. The caption comes from
  * {@link CaptionBuilder#buildForInstagram}: no link, the short address of the listing instead. Tokens are never
  * logged.
+ *
+ * <p>One instance per {@link PostChannel} ({@code PostChannelsConfig}), like {@link FacebookPublisher}: the house
+ * posts (SOC-07) go on Soukly's own Instagram account, and are skipped ({@code stale}) once older than
+ * {@code max-age}, so that a reached limit does not pile up old listings.
  */
-@Component
-@EnableScheduling
-@EnableConfigurationProperties(InstagramPostingProperties.class)
 public class InstagramPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(InstagramPublisher.class);
@@ -70,6 +68,8 @@ public class InstagramPublisher {
     private static final List<String> FAILED_STATUSES = List.of("ERROR", "EXPIRED");
 
     private final SocialPostRepository posts;
+    private final PostChannel channel;
+    private final HouseProperties house;
     private final SocialConnectionRepository connections;
     private final ConnectionHealth connectionHealth;
     private final InstagramGraphClient instagram;
@@ -84,11 +84,13 @@ public class InstagramPublisher {
     private final PostAttempts attempts;
     private final AtomicBoolean running = new AtomicBoolean();
 
-    InstagramPublisher(SocialPostRepository posts, SocialConnectionRepository connections,
+    InstagramPublisher(SocialPostRepository posts, HouseProperties house, SocialConnectionRepository connections,
             ConnectionHealth connectionHealth, InstagramGraphClient instagram, InstagramProperties instagramProperties,
             InstagramPostingProperties properties, CaptionBuilder captions, ReferentialLabels labels,
             PhotoVariantService variants, PostMetrics metrics, TransactionTemplate transactions, Clock clock) {
         this.posts = posts;
+        this.channel = posts.channel();
+        this.house = house;
         this.connections = connections;
         this.connectionHealth = connectionHealth;
         this.instagram = instagram;
@@ -115,7 +117,8 @@ public class InstagramPublisher {
 
     /** Publishes the posts that are due; does nothing while another run of this instance is in progress. */
     public Result publishDue() {
-        if (!instagramProperties.configured() || !running.compareAndSet(false, true)) {
+        if (!instagramProperties.configured() || channel == PostChannel.HOUSE && !house.enabled()
+                || !running.compareAndSet(false, true)) {
             return new Result(0, 0, 0, 0);
         }
         try {
@@ -148,7 +151,11 @@ public class InstagramPublisher {
     }
 
     private PostAttempts.Outcome publish(SocialPost post) {
-        Optional<PublishingAccount> found = connections.findForPublishing(post.userId(), Network.INSTAGRAM);
+        if (FacebookPublisher.isStale(post, channel, house, clock.instant())) {
+            return attempts.skipped(post, FacebookPublisher.STALE);
+        }
+        Optional<PublishingAccount> found = connections.findForPublishing(
+                FacebookPublisher.accountOwner(post, channel, house), Network.INSTAGRAM);
         if (found.isEmpty() || found.get().status() == ConnectionStatus.NEEDS_RECONNECT) {
             return attempts.skipped(post, found.isEmpty() ? ListingPosts.NOT_CONNECTED : ListingPosts.NEEDS_RECONNECT);
         }
@@ -178,9 +185,10 @@ public class InstagramPublisher {
             }
             String mediaId = instagram.publish(account.externalId(), account.token(), container);
             posts.markPublished(post.id(), account.externalId(), mediaId, permalink(mediaId, account.token()));
-            metrics.entered(Network.INSTAGRAM, PostStatus.PUBLISHED);
-            metrics.published(Network.INSTAGRAM, "published", FacebookPublisher.elapsed(start));
-            log.info("Listing {} published on Instagram with {} photo(s)", post.listingId(), images.size());
+            metrics.entered(channel, Network.INSTAGRAM, PostStatus.PUBLISHED);
+            metrics.published(channel, Network.INSTAGRAM, "published", FacebookPublisher.elapsed(start));
+            log.info("Listing {} published on Instagram{} with {} photo(s)", post.listingId(),
+                    channel == PostChannel.HOUSE ? " (Soukly's account)" : "", images.size());
             return PostAttempts.Outcome.PUBLISHED;
         } catch (CaptionUnavailableException e) {
             return attempts.temporaryFailure(post, FacebookPublisher.CAPTION_UNAVAILABLE,

@@ -1,7 +1,7 @@
 ---
 title: Terms of use
-version: 2026-10-22
-effectiveDate: 2026-10-22
+version: 2026-11-10
+effectiveDate: 2026-11-10
 draft: true
 ---
 
@@ -24,6 +24,8 @@ A seller's phone number is only shown to signed-in members. Exchanges and transa
 ## Sharing on social networks {#social-sharing}
 
 If you link your Facebook or Instagram accounts, Soukly can publish your listings there on your behalf. See the [privacy policy](/en/legal/privacy).
+
+Soukly can also post your listings on its own Facebook and Instagram pages, with their photos and text, but without your name or phone number. You can refuse it for each listing by unticking "Soukly's pages" on the Preview step. The post is removed when the listing is deleted, deactivated or expires.
 
 ## Responsibilities {#liability}
 

@@ -1,6 +1,7 @@
 package com.soukly.social.support;
 
 import java.util.Base64;
+import java.util.UUID;
 
 import org.apache.kafka.clients.admin.NewTopic;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,9 @@ public abstract class IntegrationTest {
         31, 32 });
 
     public static final String FRONT_BASE_URL = "https://soukly.example.test";
+
+    /** The Soukly account of Soukly's own Page and Instagram account (SOC-07). */
+    public static final UUID HOUSE_USER = UUID.fromString("0f0f0f0f-5a5a-4c4c-8d8d-000000000007");
 
     /** Public URL of the bucket of the photos: the photo URLs of the events start with it. */
     public static final String PHOTO_BASE_URL = "https://photos.example.test";
@@ -87,6 +91,9 @@ public abstract class IntegrationTest {
         registry.add("soukly.social.storage.access-key", () -> TestGarage.ACCESS_KEY);
         registry.add("soukly.social.storage.secret-key", () -> TestGarage.SECRET_KEY);
         registry.add("soukly.social.photos.public-base-url", () -> PHOTO_BASE_URL);
+        registry.add("soukly.social.house.user-id", HOUSE_USER::toString);
+        // The clock goes back to the same instant every test: the calls of a minute add up across the tests
+        registry.add("soukly.social.house.calls-per-minute", () -> "10000");
         // Run by the tests only
         registry.add("soukly.social.facebook.purge-initial-delay", () -> "P1D");
         registry.add("soukly.social.posts.facebook.publish-initial-delay", () -> "P1D");

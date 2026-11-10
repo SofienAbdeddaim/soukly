@@ -50,9 +50,10 @@ class DraftEditor {
     static final String ATTRIBUTES = "attributes";
     static final String SHARE_TO = "shareTo";
     static final String SHARE_LANGUAGE = "shareLanguage";
+    static final String HOUSE_SHARE = "houseShare";
 
     private static final Set<String> FIELDS = Set.of(CATEGORY_CODE, TITLE, DESCRIPTION, PRICE_MODE, PRICE,
-            NEGOTIABLE, GOVERNORATE_CODE, DELEGATION_CODE, ATTRIBUTES, SHARE_TO, SHARE_LANGUAGE);
+            NEGOTIABLE, GOVERNORATE_CODE, DELEGATION_CODE, ATTRIBUTES, SHARE_TO, SHARE_LANGUAGE, HOUSE_SHARE);
 
     /** Languages of the post texts (SOC-03): those of the site. */
     static final Set<String> SHARE_LANGUAGES = Set.of("fr", "ar", "en");
@@ -144,6 +145,17 @@ class DraftEditor {
         if (patch.has(SHARE_LANGUAGE)) {
             draft.shareLanguage = code(patch.get(SHARE_LANGUAGE), SHARE_LANGUAGE, "share-language.invalid",
                     SHARE_LANGUAGES::contains, errors);
+        }
+        if (patch.has(HOUSE_SHARE)) {
+            // null restores the default: shared on Soukly's pages
+            JsonNode value = patch.get(HOUSE_SHARE);
+            if (value.isNull()) {
+                draft.houseShare = true;
+            } else if (value.isBoolean()) {
+                draft.houseShare = value.booleanValue();
+            } else {
+                errors.add(new FieldError(HOUSE_SHARE, "house-share.invalid"));
+            }
         }
 
         coherence(draft, errors);
@@ -366,6 +378,7 @@ class DraftEditor {
         final Map<String, Object> attributes = new LinkedHashMap<>();
         List<ShareNetwork> shareTo;
         String shareLanguage;
+        boolean houseShare = true;
 
         Draft() {
         }
@@ -382,6 +395,7 @@ class DraftEditor {
             attributes.putAll(content.attributes());
             shareTo = content.shareTo();
             shareLanguage = content.shareLanguage();
+            houseShare = content.houseShare();
         }
 
         /** Attributes in the display order of the subcategory. */
@@ -390,7 +404,7 @@ class DraftEditor {
             definitions.keySet().stream().filter(attributes::containsKey)
                     .forEach(code -> ordered.put(code, attributes.get(code)));
             return new ListingContent(categoryCode, title, description, priceMode, price, negotiable,
-                    governorateCode, delegationCode, ordered, shareTo, shareLanguage);
+                    governorateCode, delegationCode, ordered, shareTo, shareLanguage, houseShare);
         }
     }
 }

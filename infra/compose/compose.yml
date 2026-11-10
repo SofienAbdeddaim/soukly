@@ -209,6 +209,8 @@ services:
       META_GRAPH_VERSION: ${META_GRAPH_VERSION:-v26.0}
       META_FACEBOOK_LOGIN_CONFIG_ID: ${META_FACEBOOK_LOGIN_CONFIG_ID:-}
       META_INSTAGRAM_LOGIN_CONFIG_ID: ${META_INSTAGRAM_LOGIN_CONFIG_ID:-}
+      # Soukly account whose Page and Instagram receive every listing (SOC-07); empty turns it off
+      HOUSE_USER_ID: ${HOUSE_USER_ID:-}
       # Access tokens validated again by the service (SOC-01), with the same JWKS and issuer as the gateway.
       USER_SERVICE_JWKS_URI: http://user-service:8081/.well-known/jwks.json
       JWT_ISSUER: ${JWT_ISSUER:-soukly-user-service}
