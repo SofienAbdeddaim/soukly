@@ -3,18 +3,17 @@ package com.soukly.social.post;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -44,10 +43,12 @@ import com.soukly.social.graph.GraphApiException;
  * published less than {@code page-interval} ago is postponed, and the run stops when the calls of the minute are used.
  * A temporary failure is tried again after the {@code retry-delays}; an invalid token puts the connection in
  * {@code NEEDS_RECONNECT}. Tokens are never logged; the messages of Meta are logged cleaned ({@code GraphError}).
+ *
+ * <p>One instance per {@link PostChannel} ({@code PostChannelsConfig}): the posts on the seller's Page, published with
+ * the seller's connection, and the posts on Soukly's own Page (SOC-07), published with the connection of the Soukly
+ * account of {@link HouseProperties}, at their own pace, and skipped ({@code stale}) once older than
+ * {@code max-age}.
  */
-@Component
-@EnableScheduling
-@EnableConfigurationProperties(FacebookPostingProperties.class)
 public class FacebookPublisher {
 
     private static final Logger log = LoggerFactory.getLogger(FacebookPublisher.class);
@@ -56,8 +57,12 @@ public class FacebookPublisher {
     static final int MAX_PER_RUN = 100;
 
     static final String CAPTION_UNAVAILABLE = "caption-unavailable";
+    static final String STALE = "stale";
 
     private final SocialPostRepository posts;
+    private final PostChannel channel;
+    private final HouseProperties house;
+    private final Clock clock;
     private final SocialConnectionRepository connections;
     private final ConnectionHealth connectionHealth;
     private final FacebookGraphClient facebook;
@@ -71,11 +76,14 @@ public class FacebookPublisher {
     private final PostAttempts attempts;
     private final AtomicBoolean running = new AtomicBoolean();
 
-    FacebookPublisher(SocialPostRepository posts, SocialConnectionRepository connections,
+    FacebookPublisher(SocialPostRepository posts, HouseProperties house, SocialConnectionRepository connections,
             ConnectionHealth connectionHealth, FacebookGraphClient facebook, FacebookProperties facebookProperties,
             FacebookPostingProperties properties, CaptionBuilder captions, ReferentialLabels labels,
             PostMetrics metrics, TransactionTemplate transactions, Clock clock) {
         this.posts = posts;
+        this.channel = posts.channel();
+        this.house = house;
+        this.clock = clock;
         this.connections = connections;
         this.connectionHealth = connectionHealth;
         this.facebook = facebook;
@@ -85,7 +93,9 @@ public class FacebookPublisher {
         this.labels = labels;
         this.metrics = metrics;
         this.transactions = transactions;
-        this.limiter = new PublishRateLimiter(properties.pageInterval(), properties.callsPerMinute(), clock);
+        this.limiter = channel == PostChannel.HOUSE
+                ? new PublishRateLimiter(house.pageInterval(), house.callsPerMinute(), clock)
+                : new PublishRateLimiter(properties.pageInterval(), properties.callsPerMinute(), clock);
         this.attempts = new PostAttempts(Network.FACEBOOK, posts, metrics, properties.retryDelays(), clock);
     }
 
@@ -101,7 +111,8 @@ public class FacebookPublisher {
 
     /** Publishes the posts that are due; does nothing while another run of this instance is in progress. */
     public Result publishDue() {
-        if (!facebookProperties.configured() || !running.compareAndSet(false, true)) {
+        if (!facebookProperties.configured() || channel == PostChannel.HOUSE && !house.enabled()
+                || !running.compareAndSet(false, true)) {
             return new Result(0, 0, 0, 0);
         }
         try {
@@ -134,7 +145,11 @@ public class FacebookPublisher {
     }
 
     private PostAttempts.Outcome publish(SocialPost post) {
-        Optional<PublishingAccount> found = connections.findForPublishing(post.userId(), Network.FACEBOOK);
+        if (isStale(post, channel, house, clock.instant())) {
+            return attempts.skipped(post, STALE);
+        }
+        Optional<PublishingAccount> found = connections.findForPublishing(accountOwner(post, channel, house),
+                Network.FACEBOOK);
         if (found.isEmpty() || found.get().status() == ConnectionStatus.NEEDS_RECONNECT) {
             // Disconnected, or Meta refused the token, since the listing was published
             return attempts.skipped(post, found.isEmpty() ? ListingPosts.NOT_CONNECTED : ListingPosts.NEEDS_RECONNECT);
@@ -149,7 +164,8 @@ public class FacebookPublisher {
         }
         long start = System.nanoTime();
         try {
-            String message = captions.build(captionInput(content, labels, trackedLink(content.listingUrl()))).text();
+            String message = captions.build(captionInput(content, labels,
+                    trackedLink(content.listingUrl(), channel))).text();
             List<String> photoIds = new ArrayList<>();
             for (URI photo : photos) {
                 photoIds.add(facebook.uploadUnpublishedPhoto(page.externalId(), page.token(), photo));
@@ -157,9 +173,10 @@ public class FacebookPublisher {
             String postId = facebook.createPost(page.externalId(), page.token(), message, photoIds);
             limiter.posted(page.externalId());
             posts.markPublished(post.id(), page.externalId(), postId, permalink(postId, page.token()));
-            metrics.entered(Network.FACEBOOK, PostStatus.PUBLISHED);
-            metrics.published(Network.FACEBOOK, "published", elapsed(start));
-            log.info("Listing {} published on Facebook with {} photo(s)", post.listingId(), photoIds.size());
+            metrics.entered(channel, Network.FACEBOOK, PostStatus.PUBLISHED);
+            metrics.published(channel, Network.FACEBOOK, "published", elapsed(start));
+            log.info("Listing {} published on Facebook{} with {} photo(s)", post.listingId(),
+                    channel == PostChannel.HOUSE ? " (Soukly's Page)" : "", photoIds.size());
             return PostAttempts.Outcome.PUBLISHED;
         } catch (CaptionUnavailableException e) {
             return attempts.temporaryFailure(post, CAPTION_UNAVAILABLE, elapsed(start));
@@ -202,14 +219,24 @@ public class FacebookPublisher {
                 category, governorate, delegation, link, language);
     }
 
-    /** The link of the post, with the parameters that attribute the visits to it. */
-    static URI trackedLink(URI listingUrl) {
+    /** The link of the post, with the parameters that attribute the visits to it and to its channel. */
+    static URI trackedLink(URI listingUrl, PostChannel channel) {
         return UriComponentsBuilder.fromUri(listingUrl)
                 .queryParam("utm_source", "facebook")
                 .queryParam("utm_medium", "social")
-                .queryParam("utm_campaign", "soukly_share")
+                .queryParam("utm_campaign", channel.campaign())
                 .build()
                 .toUri();
+    }
+
+    /** The Soukly account whose connection publishes the post: the seller's, or Soukly's own for the house posts. */
+    static UUID accountOwner(SocialPost post, PostChannel channel, HouseProperties house) {
+        return channel == PostChannel.HOUSE ? house.userId() : post.userId();
+    }
+
+    /** A house post that waited longer than {@code max-age}: old listings do not flood Soukly's Page. */
+    static boolean isStale(SocialPost post, PostChannel channel, HouseProperties house, Instant now) {
+        return channel == PostChannel.HOUSE && post.createdAt().plus(house.maxAge()).isBefore(now);
     }
 
     static Duration elapsed(long start) {

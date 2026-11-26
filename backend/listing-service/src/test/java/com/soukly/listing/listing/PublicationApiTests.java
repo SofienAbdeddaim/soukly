@@ -94,7 +94,8 @@ class PublicationApiTests extends IntegrationTest {
         // Exactly the members of the contract: no name, email or phone number of the seller
         assertThat(names(data)).containsExactlyInAnyOrder("title", "description", "categoryCode", "kind",
                 "priceMode", "price", "currency", "negotiable", "governorateCode", "delegationCode",
-                "coverPhotoUrl", "photoUrls", "publicUrls", "shareTo", "expiresAt", "shareLanguage", "shortRef");
+                "coverPhotoUrl", "photoUrls", "publicUrls", "shareTo", "expiresAt", "shareLanguage", "shortRef",
+                "houseShare");
         assertThat(data.get("title").asString()).isEqualTo("Canapé d'angle en cuir");
         assertThat(data.get("description").asString()).startsWith("Canapé d'angle en cuir marron");
         assertThat(data.get("categoryCode").asString()).isEqualTo("home.furniture");
@@ -117,8 +118,9 @@ class PublicationApiTests extends IntegrationTest {
                 .isEqualTo("https://soukly.example.test/en/listings/" + id);
         assertThat(data.get("shareTo").isArray()).isTrue();
         assertThat(data.get("shareTo")).isEmpty();
-        // No choice on the preview (SOC-03): no network, so no language
-        assertThat(data.get("shareLanguage").isNull()).isTrue();
+        // No choice on the preview (SOC-03): no network of the seller, but Soukly's pages by default (SOC-07), so French
+        assertThat(data.get("houseShare").asBoolean()).isTrue();
+        assertThat(data.get("shareLanguage").asString()).isEqualTo("fr");
         assertThat(Instant.parse(data.get("expiresAt").asString())).isEqualTo(now.plus(TTL));
     }
 

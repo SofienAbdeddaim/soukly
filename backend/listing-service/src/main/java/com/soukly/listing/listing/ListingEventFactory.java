@@ -41,7 +41,7 @@ class ListingEventFactory {
                 content.categoryCode(), content.kind().name(), content.priceMode().name(), content.price(), CURRENCY,
                 content.negotiable(), content.governorateCode(), content.delegationCode(), photoUrls.getFirst(),
                 photoUrls, publicUrls(listing.id()), shareTo(content), listing.expiresAt(), shareLanguage(content),
-                listing.shortRef());
+                listing.shortRef(), content.houseShare());
         return envelope(ListingEvents.PUBLISHED, listing, now, data);
     }
 
@@ -65,9 +65,13 @@ class ListingEventFactory {
         return content.shareTo() == null ? List.of() : content.shareTo().stream().map(Enum::name).toList();
     }
 
-    /** The language only matters with a network; without a language, French, the default language of the site. */
+    /**
+     * The language only matters when the listing is posted somewhere: on a network of the seller or on Soukly's
+     * pages (SOC-07); without a language, French, the default language of the site.
+     */
     private static String shareLanguage(ListingContent content) {
-        if (content.shareTo() == null || content.shareTo().isEmpty()) {
+        boolean sellerNetworks = content.shareTo() != null && !content.shareTo().isEmpty();
+        if (!sellerNetworks && !content.houseShare()) {
             return null;
         }
         return content.shareLanguage() == null ? DEFAULT_SHARE_LANGUAGE : content.shareLanguage();

@@ -153,7 +153,9 @@ describe('ShareBlock', () => {
     const connect = element.querySelector('[data-testid=share-connect]') as HTMLAnchorElement;
     expect(connect.textContent?.trim()).toBe('Relier un réseau');
     expect(connect.getAttribute('href')).toMatch(/^\/fr\/account\/social\?returnTo=/);
-    expect(element.querySelector('input')).toBeNull();
+    // Only the box of Soukly's pages
+    expect(element.querySelectorAll('input')).toHaveLength(1);
+    expect(element.querySelector('[data-testid=share-HOUSE] input')).not.toBeNull();
   });
 
   it('reads the post text when it is opened, and offers to try again on an error', async () => {
@@ -252,5 +254,36 @@ describe('ShareBlock', () => {
 
     expect(store.listing()?.shareTo).toBeNull();
     expect(store.saveState()).toBe('idle');
+  });
+
+  it("ticks Soukly's pages by default, without the seller's contact details", async () => {
+    const { box, element } = await setup({ ...DRAFT, shareTo: ['FACEBOOK'] }, [FACEBOOK]);
+
+    expect(box('HOUSE')?.checked).toBe(true);
+    expect(element.querySelector('[data-testid=share-HOUSE]')?.textContent).toContain(
+      'Pages Soukly',
+    );
+    expect(element.querySelector('[data-testid=share-HOUSE]')?.textContent).toContain(
+      'sans vos coordonnées',
+    );
+  });
+
+  it("saves Soukly's pages unticked with the language of the page", async () => {
+    const { box, render, store } = await setup(
+      { ...DRAFT, shareTo: ['FACEBOOK'] },
+      [FACEBOOK],
+      'en',
+    );
+
+    box('HOUSE')?.click();
+    await render();
+
+    expect(answerSave({ ...DRAFT, shareTo: ['FACEBOOK'] }, 1)).toEqual({
+      houseShare: false,
+      shareLanguage: 'en',
+    });
+    await render();
+    expect(store.listing()?.houseShare).toBe(false);
+    expect(box('HOUSE')?.checked).toBe(false);
   });
 });

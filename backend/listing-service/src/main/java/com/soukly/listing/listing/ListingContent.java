@@ -13,10 +13,12 @@ import java.util.Map;
  * @param shareTo       networks to share the listing to when it is published (SOC-03), in the order of
  *                      {@link ShareNetwork}; null until the seller chose (the preview then ticks their preferences)
  * @param shareLanguage language of the post texts, {@code fr}, {@code ar} or {@code en}, or null
+ * @param houseShare    whether the listing is also posted on Soukly's own Page and Instagram account (SOC-07);
+ *                      true unless the seller unticked it
  */
 public record ListingContent(String categoryCode, String title, String description, PriceMode priceMode, Long price,
         boolean negotiable, String governorateCode, String delegationCode, Map<String, Object> attributes,
-        List<ShareNetwork> shareTo, String shareLanguage) {
+        List<ShareNetwork> shareTo, String shareLanguage, boolean houseShare) {
 
     public ListingContent {
         // Insertion order kept: the display order of the subcategory
@@ -28,7 +30,7 @@ public record ListingContent(String categoryCode, String title, String descripti
     public ListingContent(String categoryCode, String title, String description, PriceMode priceMode, Long price,
             boolean negotiable, String governorateCode, String delegationCode, Map<String, Object> attributes) {
         this(categoryCode, title, description, priceMode, price, negotiable, governorateCode, delegationCode,
-                attributes, null, null);
+                attributes, null, null, true);
     }
 
     public ListingKind kind() {

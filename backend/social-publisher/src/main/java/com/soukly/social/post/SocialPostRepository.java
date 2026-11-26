@@ -11,30 +11,37 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Repository;
 
 import com.soukly.social.connection.Network;
 
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * The {@code social_posts} table (SOC-04): one row per listing and per network, never two
- * ({@code social_posts_listing_network_key}).
+ * The posts of a {@link PostChannel}: the {@code social_posts} table (SOC-04) for the seller's accounts, or
+ * {@code house_posts} (SOC-07) for Soukly's own; one row per listing and per network, never two (unique constraint of
+ * each table). One instance per channel ({@code PostChannelsConfig}); the one of the seller is the primary bean.
  */
-@Repository
 class SocialPostRepository {
 
     private static final String COLUMNS = "id, listing_id, user_id, network, status, content, external_account_id, "
-            + "external_post_id, attempts, request_id";
+            + "external_post_id, attempts, request_id, created_at";
 
     private final JdbcTemplate jdbc;
     private final JsonMapper json;
     private final Clock clock;
+    private final PostChannel channel;
+    private final String table;
 
-    SocialPostRepository(JdbcTemplate jdbc, JsonMapper json, Clock clock) {
+    SocialPostRepository(JdbcTemplate jdbc, JsonMapper json, Clock clock, PostChannel channel) {
         this.jdbc = jdbc;
         this.json = json;
         this.clock = clock;
+        this.channel = channel;
+        this.table = channel.table();
+    }
+
+    PostChannel channel() {
+        return channel;
     }
 
     /**
@@ -46,12 +53,12 @@ class SocialPostRepository {
             String reason, String requestId) {
         Timestamp now = Timestamp.from(clock.instant());
         return jdbc.update("""
-                INSERT INTO social_posts (id, listing_id, user_id, network, status, content, last_error_code,
+                INSERT INTO %s (id, listing_id, user_id, network, status, content, last_error_code,
                     next_attempt_at, request_id, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?)
                 ON CONFLICT (listing_id, network) DO NOTHING
-                """, UUID.randomUUID(), listingId, userId, network.name(), status.name(), json.writeValueAsString(content),
-                reason, status == PostStatus.PENDING ? now : null, requestId, now, now) == 1;
+                """.formatted(table), UUID.randomUUID(), listingId, userId, network.name(), status.name(),
+                json.writeValueAsString(content), reason, status == PostStatus.PENDING ? now : null, requestId, now, now) == 1;
     }
 
     /**
@@ -60,7 +67,7 @@ class SocialPostRepository {
      * skipped ({@code SKIP LOCKED}).
      */
     Optional<SocialPost> lockNextDue(Network network) {
-        return jdbc.query("SELECT " + COLUMNS + " FROM social_posts WHERE network = ? AND status = 'PENDING' "
+        return jdbc.query("SELECT " + COLUMNS + " FROM " + table + " WHERE network = ? AND status = 'PENDING' "
                 + "AND next_attempt_at <= ? ORDER BY next_attempt_at, created_at LIMIT 1 FOR UPDATE SKIP LOCKED",
                 this::post, network.name(), Timestamp.from(clock.instant())).stream().findFirst();
     }
@@ -68,31 +75,31 @@ class SocialPostRepository {
     void markPublished(UUID id, String accountId, String postId, String permalink) {
         Timestamp now = Timestamp.from(clock.instant());
         jdbc.update("""
-                UPDATE social_posts SET status = 'PUBLISHED', external_account_id = ?, external_post_id = ?,
+                UPDATE %s SET status = 'PUBLISHED', external_account_id = ?, external_post_id = ?,
                     permalink = ?, last_error_code = NULL, next_attempt_at = NULL, published_at = ?, updated_at = ?
                 WHERE id = ?
-                """, accountId, postId, permalink, now, now, id);
+                """.formatted(table), accountId, postId, permalink, now, now, id);
     }
 
     /** {@code SKIPPED} or {@code FAILED}, with the reason; never tried again. */
     void markEnded(UUID id, PostStatus status, String reason, int attempts) {
         jdbc.update("""
-                UPDATE social_posts SET status = ?, last_error_code = ?, attempts = ?, next_attempt_at = NULL,
+                UPDATE %s SET status = ?, last_error_code = ?, attempts = ?, next_attempt_at = NULL,
                     updated_at = ? WHERE id = ?
-                """, status.name(), reason, attempts, Timestamp.from(clock.instant()), id);
+                """.formatted(table), status.name(), reason, attempts, Timestamp.from(clock.instant()), id);
     }
 
     /** A temporary failure: tried again at {@code next}. */
     void retryAt(UUID id, int attempts, String reason, Instant next) {
         jdbc.update("""
-                UPDATE social_posts SET attempts = ?, last_error_code = ?, next_attempt_at = ?, updated_at = ?
+                UPDATE %s SET attempts = ?, last_error_code = ?, next_attempt_at = ?, updated_at = ?
                 WHERE id = ?
-                """, attempts, reason, Timestamp.from(next), Timestamp.from(clock.instant()), id);
+                """.formatted(table), attempts, reason, Timestamp.from(next), Timestamp.from(clock.instant()), id);
     }
 
     /** Waits for the pace of the publications, without counting an attempt. */
     void postpone(UUID id, Instant next) {
-        jdbc.update("UPDATE social_posts SET next_attempt_at = ?, updated_at = ? WHERE id = ?", Timestamp.from(next),
+        jdbc.update("UPDATE " + table + " SET next_attempt_at = ?, updated_at = ? WHERE id = ?", Timestamp.from(next),
                 Timestamp.from(clock.instant()), id);
     }
 
@@ -104,47 +111,48 @@ class SocialPostRepository {
      */
     List<Network> cancelPendingOfListing(UUID listingId) {
         return jdbc.query("""
-                UPDATE social_posts SET status = 'CANCELLED', next_attempt_at = NULL, updated_at = ?
+                UPDATE %s SET status = 'CANCELLED', next_attempt_at = NULL, updated_at = ?
                 WHERE listing_id = ? AND status = 'PENDING' RETURNING network
-                """, (rs, row) -> Network.valueOf(rs.getString("network")), Timestamp.from(clock.instant()),
-                listingId);
+                """.formatted(table), (rs, row) -> Network.valueOf(rs.getString("network")),
+                Timestamp.from(clock.instant()), listingId);
     }
 
     /** Same as {@link #cancelPendingOfListing} for every listing of a member. */
     List<Network> cancelPendingOfUser(UUID userId) {
         return jdbc.query("""
-                UPDATE social_posts SET status = 'CANCELLED', next_attempt_at = NULL, updated_at = ?
+                UPDATE %s SET status = 'CANCELLED', next_attempt_at = NULL, updated_at = ?
                 WHERE user_id = ? AND status = 'PENDING' RETURNING network
-                """, (rs, row) -> Network.valueOf(rs.getString("network")), Timestamp.from(clock.instant()), userId);
+                """.formatted(table), (rs, row) -> Network.valueOf(rs.getString("network")),
+                Timestamp.from(clock.instant()), userId);
     }
 
     List<SocialPost> publishedOfListing(UUID listingId) {
-        return jdbc.query("SELECT " + COLUMNS + " FROM social_posts WHERE listing_id = ? AND status = 'PUBLISHED' "
+        return jdbc.query("SELECT " + COLUMNS + " FROM " + table + " WHERE listing_id = ? AND status = 'PUBLISHED' "
                 + "ORDER BY network", this::post, listingId);
     }
 
     List<SocialPost> publishedOfUser(UUID userId) {
-        return jdbc.query("SELECT " + COLUMNS + " FROM social_posts WHERE user_id = ? AND status = 'PUBLISHED' "
+        return jdbc.query("SELECT " + COLUMNS + " FROM " + table + " WHERE user_id = ? AND status = 'PUBLISHED' "
                 + "ORDER BY created_at", this::post, userId);
     }
 
     void markDeleted(UUID id) {
         Timestamp now = Timestamp.from(clock.instant());
         jdbc.update("""
-                UPDATE social_posts SET status = 'DELETED', last_error_code = NULL, deleted_at = ?, updated_at = ?
+                UPDATE %s SET status = 'DELETED', last_error_code = NULL, deleted_at = ?, updated_at = ?
                 WHERE id = ?
-                """, now, now, id);
+                """.formatted(table), now, now, id);
     }
 
     /** The post could not be removed: it stays {@code PUBLISHED} with the reason. */
     void markNotDeleted(UUID id, String reason) {
-        jdbc.update("UPDATE social_posts SET last_error_code = ?, updated_at = ? WHERE id = ?", reason,
+        jdbc.update("UPDATE " + table + " SET last_error_code = ?, updated_at = ? WHERE id = ?", reason,
                 Timestamp.from(clock.instant()), id);
     }
 
     /** Deletes every post row of a member (account deleted). */
     int deleteAll(UUID userId) {
-        return jdbc.update("DELETE FROM social_posts WHERE user_id = ?", userId);
+        return jdbc.update("DELETE FROM " + table + " WHERE user_id = ?", userId);
     }
 
     private static final String ROW_COLUMNS = "listing_id, network, status, permalink, last_error_code, attempts, "
@@ -155,12 +163,12 @@ class SocialPostRepository {
         if (listingIds.isEmpty()) {
             return List.of();
         }
-        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM social_posts WHERE user_id = ? AND listing_id = ANY (?) "
+        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM " + table + " WHERE user_id = ? AND listing_id = ANY (?) "
                 + "ORDER BY listing_id, network", this::row, userId, listingIds.toArray(UUID[]::new));
     }
 
     Optional<PostRow> row(UUID userId, UUID listingId, Network network) {
-        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM social_posts WHERE user_id = ? AND listing_id = ? "
+        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM " + table + " WHERE user_id = ? AND listing_id = ? "
                 + "AND network = ?", this::row, userId, listingId, network.name()).stream().findFirst();
     }
 
@@ -169,7 +177,7 @@ class SocialPostRepository {
      * {@code since}, the oldest first.
      */
     List<PostRow> blocked(UUID userId, Network network, Collection<String> codes, Instant since) {
-        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM social_posts WHERE user_id = ? AND network = ? "
+        return jdbc.query("SELECT " + ROW_COLUMNS + " FROM " + table + " WHERE user_id = ? AND network = ? "
                 + "AND status IN ('FAILED', 'SKIPPED') AND last_error_code = ANY (?) AND created_at > ? "
                 + "ORDER BY created_at, listing_id", this::row, userId, network.name(),
                 codes.toArray(String[]::new), Timestamp.from(since));
@@ -184,11 +192,11 @@ class SocialPostRepository {
     boolean retryByHand(UUID userId, UUID listingId, Network network, int maxManualRetries) {
         Timestamp now = Timestamp.from(clock.instant());
         return jdbc.update("""
-                UPDATE social_posts SET status = 'PENDING', attempts = 0, next_attempt_at = ?, last_error_code = NULL,
+                UPDATE %s SET status = 'PENDING', attempts = 0, next_attempt_at = ?, last_error_code = NULL,
                     manual_retries = manual_retries + 1, updated_at = ?
                 WHERE user_id = ? AND listing_id = ? AND network = ? AND status IN ('FAILED', 'SKIPPED')
                     AND manual_retries < ?
-                """, now, now, userId, listingId, network.name(), maxManualRetries) == 1;
+                """.formatted(table), now, now, userId, listingId, network.name(), maxManualRetries) == 1;
     }
 
     /**
@@ -203,11 +211,12 @@ class SocialPostRepository {
         }
         Timestamp now = Timestamp.from(clock.instant());
         return jdbc.update("""
-                UPDATE social_posts SET status = 'PENDING', attempts = 0, next_attempt_at = ?, last_error_code = NULL,
+                UPDATE %s SET status = 'PENDING', attempts = 0, next_attempt_at = ?, last_error_code = NULL,
                     updated_at = ?
                 WHERE user_id = ? AND network = ? AND listing_id = ANY (?) AND status IN ('FAILED', 'SKIPPED')
                     AND last_error_code = ANY (?)
-                """, now, now, userId, network.name(), listingIds.toArray(UUID[]::new), codes.toArray(String[]::new));
+                """.formatted(table), now, now, userId, network.name(), listingIds.toArray(UUID[]::new),
+                codes.toArray(String[]::new));
     }
 
     private PostRow row(ResultSet rs, int row) throws SQLException {
@@ -222,6 +231,6 @@ class SocialPostRepository {
                 rs.getObject("user_id", UUID.class), Network.valueOf(rs.getString("network")),
                 PostStatus.valueOf(rs.getString("status")), json.readValue(rs.getString("content"), PostContent.class),
                 rs.getString("external_account_id"), rs.getString("external_post_id"), rs.getInt("attempts"),
-                rs.getString("request_id"));
+                rs.getString("request_id"), rs.getTimestamp("created_at").toInstant());
     }
 }

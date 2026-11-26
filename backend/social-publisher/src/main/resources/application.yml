@@ -127,6 +127,15 @@ soukly:
     # connection within this delay
     reconnect-notice:
       interval: 24h
+    # Soukly's own Page and Instagram account (SOC-07): connected in "My networks" by the Soukly account user-id;
+    # every listing whose seller left "houseShare" ticked is also posted there. Empty user-id: off.
+    house:
+      user-id: ${HOUSE_USER_ID:}
+      # At most one post on the Page every page-interval, and calls-per-minute publishing calls in all
+      page-interval: 2m
+      calls-per-minute: 10
+      # A post still waiting after max-age is skipped (stale): old listings do not flood the Page
+      max-age: 48h
     # Publication of the listings on the Facebook Pages (SOC-04)
     posts:
       # What the seller can do on "My listings" (SOC-06): "Try again" per post, and the age of the posts blocked by a

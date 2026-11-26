@@ -20,7 +20,23 @@
   <button ui-button variant="secondary" type="button" (click)="load()">
     {{ 'publish.share.retry' | transloco }}
   </button>
-  } @case ('ready') { @if (options().length) { @for (option of options(); track option.network) {
+  } @case ('ready') {
+  <div class="share__option share__option--house" [class.share__option--checked]="houseShare()">
+    <label class="share__label" data-testid="share-HOUSE">
+      <input
+        type="checkbox"
+        class="share__checkbox"
+        [checked]="houseShare()"
+        (change)="toggleHouse($any($event.target).checked)"
+      />
+      <span class="share__logo share__logo--soukly" aria-hidden="true">S</span>
+      <span class="share__text">
+        <span class="share__name">{{ 'publish.share.house.name' | transloco }}</span>
+        <span class="share__network">{{ 'publish.share.house.detail' | transloco }}</span>
+      </span>
+    </label>
+  </div>
+  @if (options().length) { @for (option of options(); track option.network) {
   <div
     class="share__option"
     [class.share__option--checked]="option.checked"

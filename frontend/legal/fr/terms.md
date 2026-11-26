@@ -1,7 +1,7 @@
 ---
 title: Conditions d'utilisation
-version: 2026-10-22
-effectiveDate: 2026-10-22
+version: 2026-11-10
+effectiveDate: 2026-11-10
 draft: true
 ---
 
@@ -24,6 +24,8 @@ Le numéro de téléphone d'un vendeur n'est affiché qu'aux membres connectés.
 ## Partage sur les réseaux {#social-sharing}
 
 Si vous reliez vos comptes Facebook ou Instagram, Soukly peut y publier vos annonces en votre nom. Voir la [politique de confidentialité](/fr/legal/privacy).
+
+Soukly peut aussi diffuser vos annonces sur ses propres pages Facebook et Instagram, avec leurs photos et leur texte, mais sans votre nom ni votre numéro de téléphone. Vous pouvez le refuser pour chaque annonce en décochant « Pages Soukly » à l'étape Aperçu. Le post est retiré quand l'annonce est supprimée, désactivée ou expirée.
 
 ## Responsabilités {#liability}
 

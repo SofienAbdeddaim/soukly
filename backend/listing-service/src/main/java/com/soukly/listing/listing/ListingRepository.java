@@ -27,7 +27,7 @@ class ListingRepository {
     private static final String COLUMNS = """
             id, owner_id, status, category_code, title, description, price_mode, price_tnd, negotiable,
             governorate_code, delegation_code, attributes, version, created_at, updated_at, published_at, expires_at,
-            reminder_sent_at, deleted_at, share_to, share_language, short_ref""";
+            reminder_sent_at, deleted_at, share_to, share_language, short_ref, house_share""";
 
     private final JdbcClient jdbc;
     private final JsonMapper json;
@@ -80,11 +80,11 @@ class ListingRepository {
     boolean insert(Listing listing) {
         return jdbc.sql("""
                 INSERT INTO listings (id, owner_id, status, category_code, title, description, price_mode, price_tnd,
-                        negotiable, governorate_code, delegation_code, attributes, share_to, share_language, version,
-                        created_at, updated_at, published_at, short_ref)
+                        negotiable, governorate_code, delegation_code, attributes, share_to, share_language, house_share,
+                        version, created_at, updated_at, published_at, short_ref)
                 VALUES (:id, :owner, :status, :category, :title, :description, :priceMode, :price, :negotiable,
                         :governorate, :delegation, CAST(:attributes AS jsonb), CAST(:shareTo AS text[]),
-                        :shareLanguage, :version, :createdAt, :updatedAt, :publishedAt, :shortRef)
+                        :shareLanguage, :houseShare, :version, :createdAt, :updatedAt, :publishedAt, :shortRef)
                 ON CONFLICT (short_ref) DO NOTHING""")
                 .param("id", listing.id())
                 .param("owner", listing.ownerId())
@@ -129,7 +129,8 @@ class ListingRepository {
                 SET category_code = :category, title = :title, description = :description, price_mode = :priceMode,
                     price_tnd = :price, negotiable = :negotiable, governorate_code = :governorate,
                     delegation_code = :delegation, attributes = CAST(:attributes AS jsonb),
-                    share_to = CAST(:shareTo AS text[]), share_language = :shareLanguage, version = :version,
+                    share_to = CAST(:shareTo AS text[]), share_language = :shareLanguage, house_share = :houseShare,
+                    version = :version,
                     updated_at = :updatedAt
                 WHERE id = :id""")
                 .param("id", listing.id())
@@ -322,6 +323,7 @@ class ListingRepository {
         params.put("shareTo", content.shareTo() == null ? null
                 : content.shareTo().stream().map(Enum::name).collect(Collectors.joining(",", "{", "}")));
         params.put("shareLanguage", content.shareLanguage());
+        params.put("houseShare", content.houseShare());
         return params;
     }
 
@@ -333,7 +335,8 @@ class ListingRepository {
                 rs.getString("description"), priceMode == null ? null : PriceMode.valueOf(priceMode),
                 price, rs.getBoolean("negotiable"), rs.getString("governorate_code"),
                 rs.getString("delegation_code"), json.readValue(rs.getString("attributes"), ATTRIBUTES),
-                shareTo(rs.getArray("share_to")), rs.getString("share_language"));
+                shareTo(rs.getArray("share_to")), rs.getString("share_language"),
+                rs.getBoolean("house_share"));
         return new Listing(rs.getObject("id", UUID.class), rs.getObject("owner_id", UUID.class),
                 ListingStatus.valueOf(rs.getString("status")), content, rs.getLong("version"),
                 instant(rs, "created_at"), instant(rs, "updated_at"), instant(rs, "published_at"),

@@ -22,8 +22,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Where a draft is shared (SOC-03): {@code shareTo} and {@code shareLanguage} change while it is a draft, are copied
- * into {@code listing.published}, then are locked.
+ * Where a draft is shared (SOC-03, SOC-07): {@code shareTo}, {@code shareLanguage} and {@code houseShare} change
+ * while it is a draft, are copied into {@code listing.published}, then are locked.
  */
 class ShareChoiceApiTests extends IntegrationTest {
 
@@ -125,6 +125,42 @@ class ShareChoiceApiTests extends IntegrationTest {
     }
 
     @Test
+    void souklyPagesAreTickedByDefaultAndCanBeUnticked() throws Exception {
+        UUID id = TestListings.completeDraft(mockMvc, jdbc, owner, 1);
+        read(id).andExpect(jsonPath("$.houseShare").value(true));
+
+        update(id, "\"1\"", "{\"houseShare\":false}").andExpect(status().isOk());
+        read(id).andExpect(jsonPath("$.houseShare").value(false));
+        update(id, "\"2\"", "{\"houseShare\":\"no\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("houseShare"))
+                .andExpect(jsonPath("$.errors[0].code").value("house-share.invalid"));
+
+        TestListings.publish(mockMvc, owner, id);
+
+        JsonNode data = json.readTree(jdbc.queryForObject(
+                "SELECT payload::text FROM outbox_events WHERE aggregate_id = ? AND type = 'listing.published'",
+                String.class, id)).get("data");
+        assertThat(data.get("houseShare").asBoolean()).isFalse();
+        // Posted nowhere: no language
+        assertThat(data.get("shareLanguage").isNull()).isTrue();
+    }
+
+    @Test
+    void theLanguageIsKeptForSouklyPagesWithoutANetwork() throws Exception {
+        UUID id = TestListings.completeDraft(mockMvc, jdbc, owner, 1);
+        update(id, "\"1\"", "{\"shareTo\":[],\"shareLanguage\":\"ar\"}").andExpect(status().isOk());
+
+        TestListings.publish(mockMvc, owner, id);
+
+        JsonNode data = json.readTree(jdbc.queryForObject(
+                "SELECT payload::text FROM outbox_events WHERE aggregate_id = ? AND type = 'listing.published'",
+                String.class, id)).get("data");
+        assertThat(data.get("houseShare").asBoolean()).isTrue();
+        assertThat(data.get("shareLanguage").asString()).isEqualTo("ar");
+    }
+
+    @Test
     void theChoiceIsLockedOnceTheListingIsPublished() throws Exception {
         UUID id = TestListings.published(mockMvc, jdbc, owner, TestListings.COMPLETE_FURNITURE, 1);
 
@@ -132,6 +168,9 @@ class ShareChoiceApiTests extends IntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type").value("urn:soukly:problem:share-locked"));
         update(id, "\"2\"", "{\"shareLanguage\":\"ar\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.type").value("urn:soukly:problem:share-locked"));
+        update(id, "\"2\"", "{\"houseShare\":false}")
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.type").value("urn:soukly:problem:share-locked"));
         // The rest of the listing still changes (ANN-05)

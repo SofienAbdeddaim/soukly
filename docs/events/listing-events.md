@@ -100,7 +100,8 @@ The order of the members of a JSON object is not significant. Java classes of th
   "shareTo": ["FACEBOOK", "INSTAGRAM"],
   "shareLanguage": "fr",
   "expiresAt": "2026-12-11T20:00:00Z",
-  "shortRef": "8F3C2K9A"
+  "shortRef": "8F3C2K9A",
+  "houseShare": true
 }
 ```
 
@@ -120,9 +121,10 @@ The order of the members of a JSON object is not significant. Java classes of th
 | `photoUrls` | array of strings | public URLs of the WebP versions of at most 1600 px, in the seller's order (1 to 10) |
 | `publicUrls` | object | URL of the listing page in each language: `{PUBLIC_BASE_URL}/{lang}/listings/{listingId}` (route of CATA-03) |
 | `shareTo` | array of strings | social networks the seller chose for this listing (SOC-03), `FACEBOOK` and/or `INSTAGRAM` in this order, without duplicates; `[]` when they chose none or published without choosing. listing-service does not check the connections: `social-publisher` skips a network that is not connected or needs a reconnection and records why |
-| `shareLanguage` | string or null | language of the post texts, `fr`, `ar` or `en` (the language of the page when the seller chose); `fr` when a network was chosen without a language, `null` when `shareTo` is empty |
+| `shareLanguage` | string or null | language of the post texts, `fr`, `ar` or `en` (the language of the page when the seller chose); `fr` when the listing is posted somewhere without a chosen language; `null` when it is posted nowhere (`shareTo` empty and `houseShare` false) |
 | `expiresAt` | ISO-8601 instant | end of visibility, 60 days after the publication |
 | `shortRef` | string | short reference of the listing (SOC-05): 8 characters among `23456789ABCDEFGHJKLMNPQRSTUVWXYZ` (no `0`, `O`, `1`, `I`), unique, upper case. Written in the Instagram captions as `{host of PUBLIC_BASE_URL}/r/{shortRef}`; `GET /api/listings/by-ref/{ref}` resolves it in any case |
+| `houseShare` | boolean | whether the listing is also posted on Soukly's own Facebook Page and Instagram account (SOC-07), whatever `shareTo` holds; `true` unless the seller unticked it. Absent from the events of a version before SOC-07: consumers read an absent member as `true` |
 
 ### `listing.renewed`, `listing.expiring-soon`, `listing.expired`
 
@@ -200,3 +202,4 @@ written by the seller and may be shown publicly; they are not considered persona
 | AUTH-05 | `listing.deleted` also for each listing of a deleted account; the outbox relay moved to `common` (same behavior), shared with the user events |
 | SOC-03 | `listing.published`: `shareTo` now carries the choice of the seller, new member `shareLanguage` (added, `schemaVersion` still 1) |
 | SOC-05 | `listing.published`: new member `shortRef` (added, `schemaVersion` still 1) |
+| SOC-07 | `listing.published`: new member `houseShare` (added, `schemaVersion` still 1); `shareLanguage` is now also set when `shareTo` is empty but `houseShare` is true |

@@ -28,12 +28,25 @@ class PostMetrics {
     }
 
     void entered(Network network, PostStatus status, int posts) {
-        registry.counter("social.posts", "network", network.name(), "status", status.name()).increment(posts);
+        entered(PostChannel.SELLER, network, status, posts);
+    }
+
+    /** {@code social.posts} for the seller's accounts, {@code social.house_posts} for Soukly's (SOC-07). */
+    void entered(PostChannel channel, Network network, PostStatus status) {
+        entered(channel, network, status, 1);
+    }
+
+    void entered(PostChannel channel, Network network, PostStatus status, int posts) {
+        registry.counter(channel.metric(), "network", network.name(), "status", status.name()).increment(posts);
     }
 
     /** @param outcome {@code published}, {@code retry}, {@code failed} */
     void published(Network network, String outcome, Duration duration) {
-        Timer.builder("social.posts.publish")
+        published(PostChannel.SELLER, network, outcome, duration);
+    }
+
+    void published(PostChannel channel, Network network, String outcome, Duration duration) {
+        Timer.builder(channel.metric() + ".publish")
                 .description("Duration of a publication on a social network")
                 .tag("network", network.name())
                 .tag("outcome", outcome)

@@ -113,6 +113,11 @@ export interface Listing {
   /** Language of the post texts, `fr`, `ar` or `en`, or null. */
   shareLanguage?: string | null;
   /**
+   * Also posted on Soukly's own Facebook Page and Instagram account (SOC-07); true unless the
+   * seller unticked it. Missing from the answers of older versions.
+   */
+  houseShare?: boolean;
+  /**
    * Short reference of the listing (SOC-05), 8 characters such as `8F3C2K9A`: written in the
    * Instagram captions as `{host}/r/{shortRef}`. Missing from the answers of older versions.
    */
@@ -170,6 +175,8 @@ export interface ListingPatch {
   /** Draft only (SOC-03): `409 share-locked` once published. */
   shareTo?: ShareNetwork[] | null;
   shareLanguage?: string | null;
+  /** Draft only (SOC-07): `409 share-locked` once published. */
+  houseShare?: boolean | null;
 }
 
 /** Statuses listed on "My listings" (ANN-05), one tab each, in the order of the tabs. */

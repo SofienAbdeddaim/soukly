@@ -43,8 +43,9 @@ final class PostAttempts {
     /** Disconnected, or the network refused the token, since the listing was published. */
     Outcome skipped(SocialPost post, String reason) {
         posts.markEnded(post.id(), PostStatus.SKIPPED, reason, post.attempts());
-        metrics.entered(network, PostStatus.SKIPPED);
-        log.info("{} post of listing {} skipped: {}", network.displayName(), post.listingId(), reason);
+        metrics.entered(posts.channel(), network, PostStatus.SKIPPED);
+        log.info("{}{} post of listing {} skipped: {}", network.displayName(), posts.channel().label(),
+                post.listingId(), reason);
         return Outcome.ENDED;
     }
 
@@ -56,17 +57,17 @@ final class PostAttempts {
             return failed(post, reason, attempts, elapsed);
         }
         posts.retryAt(post.id(), attempts, reason, clock.instant().plus(delay.get()));
-        metrics.published(network, "retry", elapsed);
-        log.info("{} post of listing {} tried again in {} (attempt {}): {}", network.displayName(), post.listingId(),
-                delay.get(), attempts, reason);
+        metrics.published(posts.channel(), network, "retry", elapsed);
+        log.info("{}{} post of listing {} tried again in {} (attempt {}): {}", network.displayName(),
+                posts.channel().label(), post.listingId(), delay.get(), attempts, reason);
         return Outcome.RETRIED;
     }
 
     /** Waits until {@code notBefore}, without counting an attempt (pace, or a limit of the network). */
     Outcome postponed(SocialPost post, Instant notBefore, String reason) {
         posts.postpone(post.id(), notBefore);
-        log.info("{} post of listing {} postponed until {}: {}", network.displayName(), post.listingId(), notBefore,
-                reason);
+        log.info("{}{} post of listing {} postponed until {}: {}", network.displayName(), posts.channel().label(),
+                post.listingId(), notBefore, reason);
         return Outcome.POSTPONED;
     }
 
@@ -76,9 +77,10 @@ final class PostAttempts {
 
     private Outcome failed(SocialPost post, String reason, int attempts, Duration elapsed) {
         posts.markEnded(post.id(), PostStatus.FAILED, reason, attempts);
-        metrics.entered(network, PostStatus.FAILED);
-        metrics.published(network, "failed", elapsed);
-        log.warn("{} post of listing {} failed: {}", network.displayName(), post.listingId(), reason);
+        metrics.entered(posts.channel(), network, PostStatus.FAILED);
+        metrics.published(posts.channel(), network, "failed", elapsed);
+        log.warn("{}{} post of listing {} failed: {}", network.displayName(), posts.channel().label(),
+                post.listingId(), reason);
         return Outcome.ENDED;
     }
 }

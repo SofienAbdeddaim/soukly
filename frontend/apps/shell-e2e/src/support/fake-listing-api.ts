@@ -207,6 +207,7 @@ export interface FakeListing {
   /** SOC-03: null (absent) until the seller chose. */
   shareTo?: string[] | null;
   shareLanguage?: string | null;
+  houseShare?: boolean;
   /** SOC-05: short reference of the Instagram captions. */
   shortRef?: string;
 }
@@ -293,6 +294,7 @@ function view(listing: FakeListing, warnings: string[] = []) {
     status: listing.status ?? 'DRAFT',
     shareTo: listing.shareTo ?? null,
     shareLanguage: listing.shareLanguage ?? null,
+    houseShare: listing.houseShare ?? true,
     shortRef: listing.shortRef ?? '7K4M2QX9',
     kind: kindOf(listing),
     missingFields: missingFields(listing),

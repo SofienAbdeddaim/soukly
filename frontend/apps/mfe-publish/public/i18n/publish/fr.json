@@ -231,6 +231,10 @@
   "share": {
     "title": "Partager l'annonce",
     "subtitle": "Diffusez-la aussi sur Facebook et Instagram.",
+    "house": {
+      "name": "Pages Soukly",
+      "detail": "Aussi sur le Facebook et l'Instagram de Soukly, sans vos coordonnées"
+    },
     "network": {
       "FACEBOOK": "Page Facebook",
       "INSTAGRAM": "Instagram"

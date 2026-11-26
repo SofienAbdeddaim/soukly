@@ -231,6 +231,10 @@
   "share": {
     "title": "Share the listing",
     "subtitle": "Post it on Facebook and Instagram too.",
+    "house": {
+      "name": "Soukly's pages",
+      "detail": "Also on Soukly's Facebook and Instagram, without your contact details"
+    },
     "network": {
       "FACEBOOK": "Facebook Page",
       "INSTAGRAM": "Instagram"
