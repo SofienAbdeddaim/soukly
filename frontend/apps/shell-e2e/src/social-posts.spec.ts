@@ -212,3 +212,27 @@ test.describe('publication statuses', () => {
     await expectNoSeriousA11yViolations(page);
   });
 });
+
+test.describe('on an Android phone', () => {
+  test.use({
+    userAgent:
+      'Mozilla/5.0 (Linux; Android 14; SM-A546B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36',
+  });
+
+  test('the link to a published post opens the app, with the web page as fallback', async ({
+    page,
+  }) => {
+    await open(page);
+
+    const peugeot = card(page, 'Peugeot 208 diesel');
+    const facebook = peugeot.getByRole('link', { name: 'Facebook : publié, ouvrir le post' });
+    await expect(facebook).toHaveAttribute(
+      'href',
+      'intent://www.facebook.com/1001_1#Intent;scheme=https;package=com.facebook.katana;' +
+        `S.browser_fallback_url=${encodeURIComponent('https://www.facebook.com/1001_1')};end`,
+    );
+    await expect(facebook).not.toHaveAttribute('target', /.*/);
+    const instagram = peugeot.getByRole('link', { name: 'Instagram : publié, ouvrir le post' });
+    await expect(instagram).toHaveAttribute('href', /;package=com\.instagram\.android;/);
+  });
+});

@@ -9,10 +9,10 @@ import {
   output,
 } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { FacebookFailure } from '@soukly/social-data';
+import { FacebookFailure, SocialAppLink } from '@soukly/social-data';
 import { UiButton } from '@soukly/ui';
 
-/** Where Facebook explains how to create a Page; opened in a new tab. */
+/** Where Facebook explains how to create a Page; opened in the app on phones, a new tab on desktop. */
 export const FACEBOOK_CREATE_PAGE_URL = 'https://www.facebook.com/pages/create';
 
 /**
@@ -22,7 +22,7 @@ export const FACEBOOK_CREATE_PAGE_URL = 'https://www.facebook.com/pages/create';
  */
 @Component({
   selector: 'app-facebook-failure',
-  imports: [TranslocoPipe, UiButton],
+  imports: [TranslocoPipe, SocialAppLink, UiButton],
   template: `
     @if (failure() === 'facebook-no-page') {
       <span class="failure__logo" aria-hidden="true">f</span>
@@ -34,9 +34,7 @@ export const FACEBOOK_CREATE_PAGE_URL = 'https://www.facebook.com/pages/create';
     @if (failure() === 'facebook-no-page') {
       <a
         class="failure__help"
-        [href]="createPageUrl"
-        target="_blank"
-        rel="noopener noreferrer"
+        [dataSocialAppLink]="createPageUrl"
         data-testid="facebook-create-page"
       >
         {{ 'account.social.failure.facebook-no-page.help' | transloco }}
