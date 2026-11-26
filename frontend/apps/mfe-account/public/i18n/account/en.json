@@ -511,6 +511,7 @@
       "FAILED": "{{ network }} · failed"
     },
     "open": "{{ network }}: posted, open the post (new tab)",
+    "open-same-tab": "{{ network }}: posted, open the post",
     "reconnect": {
       "FACEBOOK": "Your Facebook Page needs to be connected again.",
       "INSTAGRAM": "Your Instagram account needs to be connected again.",

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, input, output } from '@angu
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LocalePathPipe, LocaleService } from '@soukly/i18n';
-import { PostStatusView, SocialNetwork } from '@soukly/social-data';
+import { PostStatusView, SocialAppLink, SocialNetwork } from '@soukly/social-data';
 import { UiBadge, UiBadgeTone, UiButton } from '@soukly/ui';
 import { pluralKey } from '../shared/plural';
 
@@ -15,13 +15,14 @@ const TONES: Record<PostStatusView['badge'], UiBadgeTone> = {
 
 /**
  * Where a listing was posted (SOC-06): one pill per network, Facebook first, as social-publisher
- * computes them. A published post links to the post in a new tab; a network to connect again
+ * computes them. A published post links to the post (in the app on phones and tablets, in a new
+ * tab on desktop); a network to connect again
  * links to "My networks"; a failure gives its reason (never the message of Meta) and "Try again"
  * while tries are left. Nothing at all when the listing has no post.
  */
 @Component({
   selector: 'app-social-post-badges',
-  imports: [RouterLink, TranslocoPipe, LocalePathPipe, UiBadge, UiButton],
+  imports: [RouterLink, TranslocoPipe, LocalePathPipe, SocialAppLink, UiBadge, UiButton],
   template: `
     @if (posts().length) {
       <ul
@@ -35,10 +36,12 @@ const TONES: Record<PostStatusView['badge'], UiBadgeTone> = {
             @if (post.badge === 'PUBLISHED' && post.permalink) {
               <a
                 class="posts__link"
-                [href]="post.permalink"
-                target="_blank"
-                rel="noopener noreferrer"
-                [attr.aria-label]="'account.posts.open' | transloco: { network: name }"
+                [dataSocialAppLink]="post.permalink"
+                #appLink="socialAppLink"
+                [attr.aria-label]="
+                  'account.posts.' + (appLink.opensNewTab() ? 'open' : 'open-same-tab')
+                    | transloco: { network: name }
+                "
                 data-testid="post-badge"
               >
                 <ui-badge [tone]="tone(post)">
